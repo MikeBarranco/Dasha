@@ -134,3 +134,15 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Dasha
+# Herramientas locales de asistencia (no forman parte del proyecto)
+.claude/
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+
+# Configuracion local de editores
+.vscode/
+.idea/
