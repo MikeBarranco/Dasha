@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: dasha-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: dasha_admin
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dasha_dev}
+      POSTGRES_DB: dasha
+    ports:
+      - '5432:5432'
+    volumes:
+      - dasha_db_data:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    container_name: dasha-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      CORS_ORIGIN: http://localhost:8080
+      DATABASE_URL: postgresql://dasha_admin:${DB_PASSWORD:-dasha_dev}@db:5432/dasha
+    ports:
+      - '3000:3000'
+    depends_on:
+      - db
+
+  frontend:
+    build: ./frontend
+    container_name: dasha-frontend
+    restart: unless-stopped
+    ports:
+      - '8080:80'
+    depends_on:
+      - backend
+
+volumes:
+  dasha_db_data:

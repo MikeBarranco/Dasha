@@ -53,6 +53,28 @@ npm run dev
 Las variables de entorno se documentan en el archivo `.env.example` de cada
 paquete. Nunca se deben subir archivos `.env` reales al repositorio.
 
+### Base de datos local con Docker
+
+Para levantar PostgreSQL con PostGIS en local (recomendado para desarrollo):
+
+```
+copia .env.example a .env
+docker compose up -d db
+```
+
+La base queda disponible en `localhost:5432` (usuario `dasha_admin`, base
+`dasha`).
+
+Para construir y ejecutar todo el stack en contenedores, como en produccion:
+
+```
+docker compose up --build
+```
+
+- Frontend: http://localhost:8080
+- Backend: http://localhost:3000
+- Base de datos: localhost:5432
+
 ## Entornos y ramas
 
 - `main`: produccion. Solo versiones validadas.
