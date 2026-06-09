@@ -62,7 +62,7 @@ copia .env.example a .env
 docker compose up -d db
 ```
 
-La base queda disponible en `localhost:5432` (usuario `dasha_admin`, base
+La base queda disponible en `localhost:5432` (usuario `admin_dasha`, base
 `dasha`).
 
 Para construir y ejecutar todo el stack en contenedores, como en produccion:

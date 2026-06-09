@@ -4,7 +4,7 @@ services:
     container_name: dasha-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: dasha_admin
+      POSTGRES_USER: admin_dasha
       POSTGRES_PASSWORD: ${DB_PASSWORD:-dasha_dev}
       POSTGRES_DB: dasha
     ports:
@@ -20,7 +20,7 @@ services:
       NODE_ENV: production
       PORT: 3000
       CORS_ORIGIN: http://localhost:8080
-      DATABASE_URL: postgresql://dasha_admin:${DB_PASSWORD:-dasha_dev}@db:5432/dasha
+      DATABASE_URL: postgresql://admin_dasha:${DB_PASSWORD:-dasha_dev}@db:5432/dasha
     ports:
       - '3000:3000'
     depends_on:
