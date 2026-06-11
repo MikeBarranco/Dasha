@@ -1,4 +1,5 @@
 import { MapPin } from 'lucide-react';
+import { motion } from 'motion/react';
 import { PageHeader } from '../components/ui/PageHeader';
 
 const stats = [
@@ -16,11 +17,17 @@ export function MapaPage() {
       />
 
       <div className="grid grid-cols-3 gap-3 sm:max-w-xl">
-        {stats.map((stat) => (
-          <div key={stat.label} className="rounded-2xl border border-neutral-200 bg-white p-4">
+        {stats.map((stat, index) => (
+          <motion.div
+            key={stat.label}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: index * 0.07, ease: 'easeOut' }}
+            className="rounded-2xl border border-neutral-200 bg-white p-4"
+          >
             <p className="font-display text-2xl font-bold text-cobalto">{stat.value}</p>
             <p className="mt-1 text-xs text-neutral-500">{stat.label}</p>
-          </div>
+          </motion.div>
         ))}
       </div>
 
