@@ -38,7 +38,7 @@ export function LocationPicker() {
       attributionControl: false,
     });
     mapRef.current = map;
-    map.addControl(new maplibregl.AttributionControl({ compact: true }));
+    map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
 
     return () => {
       map.remove();

@@ -151,7 +151,7 @@ export function ReportarPage() {
         </motion.div>
         <h2 className="mt-6 font-display text-2xl font-bold text-cobalto">¡Reporte publicado!</h2>
         <p className="mt-2 text-neutral-500">
-          Avisamos a los voluntarios cercanos. Gracias por ayudar 🐾
+          Avisamos a los voluntarios cercanos. Gracias por ayudar.
         </p>
         <div className="mt-8 flex gap-3">
           <button
