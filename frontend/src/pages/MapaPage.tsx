@@ -1,6 +1,10 @@
-import { MapPin } from 'lucide-react';
+import { lazy, Suspense } from 'react';
 import { motion } from 'motion/react';
 import { PageHeader } from '../components/ui/PageHeader';
+
+const MapView = lazy(() =>
+  import('../components/map/MapView').then((module) => ({ default: module.MapView })),
+);
 
 const stats = [
   { label: 'Reportes activos', value: '128' },
@@ -31,14 +35,10 @@ export function MapaPage() {
         ))}
       </div>
 
-      <div className="mt-6 flex min-h-[360px] flex-col items-center justify-center rounded-3xl border border-neutral-200 bg-gradient-to-br from-cobalto/5 to-purpura/5 px-6 text-center">
-        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-cobalto text-white">
-          <MapPin className="h-7 w-7" />
-        </span>
-        <p className="mt-4 max-w-sm text-sm text-neutral-500">
-          Aquí vivirá el mapa interactivo de Puebla con los pines de cada rescate. Lo construimos en
-          el siguiente paso.
-        </p>
+      <div className="mt-6 h-[60vh] min-h-[420px] overflow-hidden rounded-3xl border border-neutral-200">
+        <Suspense fallback={<div className="h-full w-full animate-pulse bg-neutral-100" />}>
+          <MapView />
+        </Suspense>
       </div>
     </div>
   );
