@@ -26,7 +26,16 @@ export function RehabilitacionPage() {
             transition={{ duration: 0.3, delay: index * 0.05, ease: 'easeOut' }}
             className="overflow-hidden rounded-2xl border border-neutral-200 bg-white text-left transition-shadow hover:shadow-md"
           >
-            <img src={animal.photo} alt={animal.name} className="h-40 w-full object-cover" />
+            <div className="relative">
+              <img
+                src={animal.photos[animal.photos.length - 1]}
+                alt={animal.name}
+                className="h-52 w-full object-cover"
+              />
+              <span className="absolute bottom-2 left-2 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white">
+                Conóceme
+              </span>
+            </div>
             <div className="p-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-display text-lg font-bold text-cobalto">{animal.name}</h3>
