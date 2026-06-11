@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import maplibregl, { type StyleSpecification } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { mockReports, type Severity } from '../../data/mockReports';
+import { mockReports, type Report, type Severity } from '../../data/mockReports';
 
 const PUEBLA_CENTER: [number, number] = [-98.2, 19.04];
 const PIN_MIN_ZOOM = 13.5;
@@ -38,9 +38,18 @@ function extendBounds(bounds: maplibregl.LngLatBounds, coords: unknown): void {
   for (const part of coords) extendBounds(bounds, part);
 }
 
-export function MapView() {
+type MapViewProps = {
+  onSelectReport: (report: Report) => void;
+};
+
+export function MapView({ onSelectReport }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const onSelectRef = useRef(onSelectReport);
+
+  useEffect(() => {
+    onSelectRef.current = onSelectReport;
+  }, [onSelectReport]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -154,12 +163,12 @@ export function MapView() {
         element.style.cursor = 'pointer';
         element.style.display = 'none';
 
-        const reportPopup = new maplibregl.Popup({ offset: 26, closeButton: false }).setText(
-          `${report.species === 'perro' ? 'Perro' : 'Gato'} · ${report.condition} · ${report.colonia}`,
-        );
+        element.addEventListener('click', (event) => {
+          event.stopPropagation();
+          onSelectRef.current(report);
+        });
         const marker = new maplibregl.Marker({ element })
           .setLngLat([report.lng, report.lat])
-          .setPopup(reportPopup)
           .addTo(map);
         markers.push(marker);
       }
