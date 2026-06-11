@@ -1,5 +1,6 @@
-import { motion } from 'motion/react';
-import { X, Navigation, Share2, Clock, MapPin } from 'lucide-react';
+import { useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
+import { X, Navigation, Share2, Clock, MapPin, Maximize2 } from 'lucide-react';
 import type { Report, Severity } from '../../data/mockReports';
 
 const severityLabel: Record<Severity, string> = {
@@ -20,6 +21,8 @@ type ReportDetailProps = {
 };
 
 export function ReportDetail({ report, onClose }: ReportDetailProps) {
+  const [showPhoto, setShowPhoto] = useState(false);
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
       <motion.div
@@ -38,7 +41,14 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
       >
         <div className="relative">
-          <img src={report.photo} alt={report.condition} className="h-56 w-full object-cover" />
+          <button
+            type="button"
+            onClick={() => setShowPhoto(true)}
+            className="block w-full"
+            aria-label="Ver foto completa"
+          >
+            <img src={report.photo} alt={report.condition} className="h-56 w-full object-cover" />
+          </button>
           <span
             className={`absolute left-3 top-3 rounded-full px-3 py-1 text-xs font-semibold ${severityClasses[report.severity]}`}
           >
@@ -52,6 +62,9 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
           >
             <X className="h-5 w-5" />
           </button>
+          <span className="pointer-events-none absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-black/55 px-2.5 py-1 text-xs font-medium text-white">
+            <Maximize2 className="h-3.5 w-3.5" /> Ver foto
+          </span>
         </div>
 
         <div className="p-5">
@@ -91,6 +104,32 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
           </div>
         </div>
       </motion.div>
+
+      <AnimatePresence>
+        {showPhoto && (
+          <motion.div
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowPhoto(false)}
+          >
+            <img
+              src={report.photo}
+              alt={report.condition}
+              className="max-h-full max-w-full rounded-xl object-contain"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPhoto(false)}
+              aria-label="Cerrar foto"
+              className="absolute right-4 top-4 rounded-full bg-white/90 p-2 text-neutral-800 shadow"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

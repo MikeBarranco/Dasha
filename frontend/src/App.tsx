@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { ScrollToTop } from './components/layout/ScrollToTop';
 import { AppLayout } from './components/layout/AppLayout';
 import { MapaPage } from './pages/MapaPage';
 import { ReportarPage } from './pages/ReportarPage';
@@ -9,6 +10,7 @@ import { PerfilPage } from './pages/PerfilPage';
 function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Routes>
         <Route element={<AppLayout />}>
           <Route index element={<MapaPage />} />
