@@ -1,5 +1,5 @@
 import { Link, NavLink } from 'react-router-dom';
-import { Bell, PawPrint } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import { cn } from '../../lib/cn';
 
 const navItems = [
@@ -14,9 +14,7 @@ export function TopBar() {
     <header className="sticky top-0 z-40 border-b border-neutral-200/70 bg-lino/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 md:px-8">
         <Link to="/" className="flex items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cobalto text-white">
-            <PawPrint className="h-5 w-5" />
-          </span>
+          <img src="/brand/logo-mark.png" alt="Dasha" className="h-9 w-9 rounded-full" />
           <span className="font-display text-xl font-bold text-cobalto">Dasha</span>
         </Link>
 
