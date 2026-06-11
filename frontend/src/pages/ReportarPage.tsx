@@ -13,6 +13,7 @@ type Urgency = 'critica' | 'media' | 'baja';
 
 const conditionOptions = ['Herido', 'Desnutrido', 'Enfermo', 'Asustado', 'Estable', 'Parece perdido'];
 const sizes = ['Pequeño', 'Mediano', 'Grande'];
+const colorOptions = ['Negro', 'Café', 'Blanco', 'Gris', 'Beige', 'Manchado'];
 
 const conditionSeverity: Record<string, Urgency> = {
   Herido: 'critica',
@@ -105,6 +106,7 @@ export function ReportarPage() {
   const [species, setSpecies] = useState<'perro' | 'gato' | null>(null);
   const [conditions, setConditions] = useState<string[]>([]);
   const [size, setSize] = useState<string | null>(null);
+  const [color, setColor] = useState<string | null>(null);
   const [description, setDescription] = useState('');
   const [isAggressive, setIsAggressive] = useState(false);
   const [hasCollar, setHasCollar] = useState(false);
@@ -129,6 +131,7 @@ export function ReportarPage() {
     setSpecies(null);
     setConditions([]);
     setSize(null);
+    setColor(null);
     setDescription('');
     setIsAggressive(false);
     setHasCollar(false);
@@ -308,6 +311,22 @@ export function ReportarPage() {
             </div>
           </div>
 
+          <div>
+            <p className="mb-2 text-sm font-medium text-neutral-700">
+              Color principal <span className="font-normal text-neutral-400">(opcional)</span>
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {colorOptions.map((value) => (
+                <SelectChip
+                  key={value}
+                  label={value}
+                  selected={color === value}
+                  onClick={() => setColor(value)}
+                />
+              ))}
+            </div>
+          </div>
+
           <div className="space-y-2">
             <ToggleRow label="¿Es agresivo?" value={isAggressive} onChange={setIsAggressive} />
             <ToggleRow label="¿Lleva collar?" value={hasCollar} onChange={setHasCollar} />
@@ -316,6 +335,9 @@ export function ReportarPage() {
           <div>
             <p className="mb-2 text-sm font-medium text-neutral-700">
               Descripción <span className="font-normal text-neutral-400">(opcional)</span>
+            </p>
+            <p className="mb-2 text-xs text-neutral-400">
+              Entre más detalles, mejor: lugar exacto, comportamiento, si tiene dueño.
             </p>
             <textarea
               value={description}
