@@ -28,6 +28,9 @@ RUN npm ci --omit=dev
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
+# Copiamos la carpeta Prisma (Necesaria para ejecutar migraciones en producción)
+COPY --from=builder /app/prisma ./prisma
+
 # Copiamos la carpeta compilada
 COPY --from=builder /app/dist ./dist
 
