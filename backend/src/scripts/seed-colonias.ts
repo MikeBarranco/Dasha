@@ -44,7 +44,7 @@ async function main() {
         count++;
         if (count % 100 === 0) console.log(`...insertadas ${count} colonias`);
       } catch (error) {
-        console.error(`Error al insertar colonia ${name}:`, error.message);
+        console.error(`Error al insertar colonia ${name}:`, (error as Error).message);
       }
     } else {
       console.log('Omitiendo feature sin geometría o que no es Polygon.');
