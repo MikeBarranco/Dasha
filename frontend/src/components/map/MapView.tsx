@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import maplibregl, { type StyleSpecification } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { mockReports, type Report, type Severity } from '../../data/mockReports';
+import { MapLegend } from './MapLegend';
 
 const PUEBLA_CENTER: [number, number] = [-98.2, 19.04];
 const PIN_MIN_ZOOM = 13.5;
@@ -214,5 +215,10 @@ export function MapView({ onSelectReport }: MapViewProps) {
     };
   }, []);
 
-  return <div ref={containerRef} className="h-full w-full" />;
+  return (
+    <div className="relative h-full w-full">
+      <div ref={containerRef} className="h-full w-full" />
+      <MapLegend />
+    </div>
+  );
 }
