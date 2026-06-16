@@ -3,7 +3,7 @@ import { Species, Size, Condition, Urgency, ReportStatus } from '@prisma/client'
 
 export const createReportSchema = z.object({
   body: z.object({
-    userId: z.string().uuid({ message: 'userId inválido' }), // Temporalmente en el body
+    userId: z.string().uuid().optional(), // Ya no es obligatorio en el body, se tomará del JWT
     species: z.nativeEnum(Species),
     primaryColor: z.string().min(3),
     secondaryColor: z.string().optional(),

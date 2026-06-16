@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import reportRoutes from './report.routes';
+import authRoutes from './auth.routes';
 
 const router = Router();
 
+router.use('/auth', authRoutes);
 router.use('/reports', reportRoutes);
 
 router.get('/health', (req, res) => {

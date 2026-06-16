@@ -14,6 +14,7 @@ export class ReportController {
   static async createReport(req: Request, res: Response, next: NextFunction) {
     try {
       const { photoBase64, ...restData } = req.body;
+      const userId = (req as any).user?.id; // Inyectado por el auth.middleware
       
       // Subir la imagen a Cloudinary (Base64)
       const uploadResult = await cloudinary.uploader.upload(photoBase64, {
@@ -23,6 +24,7 @@ export class ReportController {
       // Asegurar regla estricta de BD.txt (guardar url y public_id obligatoriamente)
       const data = {
         ...restData,
+        userId: userId || restData.userId, // Prioriza el del JWT
         photos: [
           {
             url: uploadResult.secure_url,
