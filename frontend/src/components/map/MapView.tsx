@@ -121,23 +121,39 @@ export function MapView({ onSelectReport }: MapViewProps) {
         id: 'colonias-hover',
         type: 'line',
         source: 'colonias',
-        paint: { 'line-color': '#1C4E80', 'line-width': 2 },
-        filter: ['==', ['get', 'name'], ''],
+        paint: {
+          'line-color': '#1C4E80',
+          'line-width': ['case', ['boolean', ['feature-state', 'hover'], false], 2.5, 0],
+          'line-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 1, 0],
+        },
       });
+
+      let hoveredName: string | null = null;
 
       map.on('mousemove', 'colonias-fill', (e) => {
         if (!e.features || e.features.length === 0) return;
         const name = String(e.features[0].properties?.name ?? '');
-        const count = counts.get(name) ?? 0;
         map.getCanvas().style.cursor = 'pointer';
-        map.setFilter('colonias-hover', ['==', ['get', 'name'], name]);
-        const text = count > 0 ? `${name} · ${count} reporte${count === 1 ? '' : 's'}` : name;
-        popup.setLngLat(e.lngLat).setText(text).addTo(map);
+
+        if (name !== hoveredName) {
+          if (hoveredName !== null) {
+            map.setFeatureState({ source: 'colonias', id: hoveredName }, { hover: false });
+          }
+          hoveredName = name;
+          map.setFeatureState({ source: 'colonias', id: name }, { hover: true });
+          const count = counts.get(name) ?? 0;
+          popup.setText(count > 0 ? `${name} · ${count} reporte${count === 1 ? '' : 's'}` : name);
+          popup.addTo(map);
+        }
+        popup.setLngLat(e.lngLat);
       });
 
       map.on('mouseleave', 'colonias-fill', () => {
         map.getCanvas().style.cursor = '';
-        map.setFilter('colonias-hover', ['==', ['get', 'name'], '']);
+        if (hoveredName !== null) {
+          map.setFeatureState({ source: 'colonias', id: hoveredName }, { hover: false });
+          hoveredName = null;
+        }
         popup.remove();
       });
 
