@@ -1,0 +1,981 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  extensions = [postgis]
+}
+
+// -----------------------------------------------------------------------------
+// ENUMS
+// -----------------------------------------------------------------------------
+
+enum Role {
+  citizen
+  volunteer
+  ally_admin
+  ally_staff
+  admin
+}
+
+enum VolunteerStatus {
+  pending
+  approved
+  rejected
+  inactive
+}
+
+enum AuthProviderType {
+  google
+  facebook
+}
+
+enum Species {
+  dog
+  cat
+}
+
+enum Size {
+  small
+  medium
+  large
+}
+
+enum Condition {
+  injured
+  malnourished
+  sick
+  stable
+  lost
+  aggressive
+}
+
+enum Urgency {
+  low
+  medium
+  high
+  critical
+}
+
+enum ReportStatus {
+  active
+  in_progress
+  rescued
+  in_treatment
+  recovering
+  looking_for_foster
+  in_foster
+  looking_for_adoption
+  adopted
+  closed
+  duplicate
+  not_found
+  deceased
+}
+
+enum ActionType {
+  created
+  sighting_added
+  accepted
+  on_the_way
+  sheltered
+  sent_to_vet
+  record_created
+  status_changed
+  resource_offered
+  resource_delivered
+  donation_made
+  donation_approved
+  foster_assigned
+  adopted
+  flagged
+  note
+}
+
+enum RescueStatus {
+  accepted
+  on_the_way
+  arrived
+  completed
+  cancelled
+}
+
+enum OrgType {
+  veterinary
+  shelter
+  ngo
+  educational
+}
+
+enum RoleInOrg {
+  admin
+  veterinarian
+  assistant
+}
+
+enum AnimalGender {
+  male
+  female
+  unknown
+}
+
+enum AnimalStatus {
+  in_treatment
+  recovering
+  looking_for_foster
+  in_foster
+  looking_for_adoption
+  adopted
+  deceased
+}
+
+enum RecordType {
+  checkup
+  surgery
+  vaccination
+  medication
+  lab
+  imaging
+  other
+}
+
+enum ResourceType {
+  money
+  food
+  transport
+  foster
+  medical_service
+  supplies
+  other
+}
+
+enum ResourceStatus {
+  offered
+  accepted
+  delivered
+  cancelled
+}
+
+enum DonationStatus {
+  pending
+  approved
+  rejected
+}
+
+enum EventCategory {
+  sterilization
+  vaccination
+  grooming
+  donation
+  adoption
+  talk
+  other
+}
+
+enum AchievementCategory {
+  reporter
+  volunteer
+  donor
+  foster
+  social
+  special
+}
+
+enum RequirementType {
+  reports_count
+  rescues_count
+  donations_count
+  foster_count
+  resources_count
+  forum_count
+  points
+  special
+}
+
+enum AchievementTier {
+  bronze
+  silver
+  gold
+  special
+}
+
+enum ReputationReason {
+  report
+  report_validated
+  rescue
+  foster
+  donation
+  forum_helpful
+  penalty
+  other
+}
+
+enum FosterStatus {
+  proposed
+  active
+  ended
+}
+
+enum AdoptionStatus {
+  pending
+  approved
+  rejected
+  withdrawn
+}
+
+enum MatchStatus {
+  suggested
+  confirmed
+  dismissed
+}
+
+enum FlagReason {
+  spam
+  fake
+  inappropriate
+  duplicate
+  dangerous
+  other
+}
+
+enum FlagStatus {
+  open
+  reviewed
+  dismissed
+  actioned
+}
+
+enum ForumCategory {
+  health
+  nutrition
+  training
+  legal
+  general
+}
+
+enum NotifType {
+  rescue_alert
+  status_change
+  achievement
+  event_reminder
+  closure
+  resource
+  lost_match
+  system
+}
+
+// -----------------------------------------------------------------------------
+// MODELS
+// -----------------------------------------------------------------------------
+
+model User {
+  id               String                                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email            String                                 @unique @db.VarChar(255)
+  name             String                                 @db.VarChar(150)
+  phone            String?                                @db.VarChar(20)
+  passwordHash     String?                                @map("password_hash") @db.VarChar(255)
+  avatarUrl        String?                                @map("avatar_url")
+  avatarPublicId   String?                                @map("avatar_public_id") @db.VarChar(255)
+  role             Role                                   @default(citizen)
+  volunteerStatus  VolunteerStatus?                       @map("volunteer_status")
+  ineFrontUrl      String?                                @map("ine_front_url")
+  ineBackUrl       String?                                @map("ine_back_url")
+  selfieUrl        String?                                @map("selfie_url")
+  isFoster         Boolean                                @default(false) @map("is_foster")
+  fosterCapacity   Int?                                   @map("foster_capacity")
+  isActive         Boolean                                @default(true) @map("is_active")
+  isAvailable      Boolean                                @default(false) @map("is_available")
+  searchRadiusKm   Int                                    @default(5) @map("search_radius_km")
+  lastLocation     Unsupported("geography(Point, 4326)")? @map("last_location")
+  lastLocationAt   DateTime?                              @map("last_location_at") @db.Timestamptz
+  level            Int                                    @default(1)
+  experiencePoints Int                                    @default(0) @map("experience_points")
+  reputationScore  Int                                    @default(0) @map("reputation_score")
+  notifPrefs       Json?                                  @map("notif_prefs")
+  createdAt        DateTime                               @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime                               @default(now()) @map("updated_at") @db.Timestamptz
+  lastLogin        DateTime?                              @map("last_login") @db.Timestamptz
+
+  // Relaciones
+  authProviders        AuthProvider[]
+  avatars              UserAvatar[]
+  reports              Report[]               @relation("ReportUser")
+  assignedReports      Report[]               @relation("ReportVolunteer")
+  reportPhotos         ReportPhoto[]          @relation("ReportPhotoUploader")
+  statusHistory        ReportStatusHistory[]  @relation("StatusHistoryChanger")
+  caseActions          CaseAction[]           @relation("CaseActionActor")
+  rescueAssignments    RescueAssignment[]     @relation("RescueVolunteer")
+  orgEmployees         OrganizationEmployee[]
+  animalAdoptions      AnimalProfile[]        @relation("AnimalAdopter")
+  fosteredAnimals      AnimalProfile[]        @relation("AnimalFoster")
+  medicalRecords       MedicalRecord[]        @relation("MedicalVeterinarian")
+  vaccinations         Vaccination[]          @relation("VaccineVeterinarian")
+  resourcesOffered     Resource[]             @relation("ResourceProvider")
+  resourcesAccepted    Resource[]             @relation("ResourceAccepter")
+  donationsMade        Donation[]             @relation("DonationUser")
+  donationsApproved    Donation[]             @relation("DonationApprover")
+  eventReminders       EventReminder[]
+  achievements         UserAchievement[]
+  reputationEvents     ReputationEvent[]
+  fosterAssignments    FosterAssignment[]     @relation("FosterUser")
+  adoptionApplications AdoptionApplication[]  @relation("AdoptionApplicant")
+  adoptionsReviewed    AdoptionApplication[]  @relation("AdoptionReviewer")
+  lostPets             LostPet[]              @relation("LostPetOwner")
+  reportFlags          ReportFlag[]           @relation("FlaggedByUser")
+  flagsReviewed        ReportFlag[]           @relation("FlagReviewer")
+  forumPosts           ForumPost[]
+  forumReplies         ForumReply[]
+  forumVotes           ForumVote[]
+  pushSubscriptions    PushSubscription[]
+  notifications        Notification[]
+  discountCodes        DiscountCode[]
+  auditLogs            AuditLog[]
+
+  @@map("users")
+}
+
+model AuthProvider {
+  id         String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String           @map("user_id") @db.Uuid
+  provider   AuthProviderType
+  providerId String           @map("provider_id") @db.VarChar(255)
+  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerId])
+  @@map("auth_providers")
+}
+
+model UserAvatar {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  avatarUrl String   @map("avatar_url")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("user_avatars")
+}
+
+model Report {
+  id               String                                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String                                @map("user_id") @db.Uuid
+  species          Species
+  primaryColor     String                                @map("primary_color") @db.VarChar(50)
+  secondaryColor   String?                               @map("secondary_color") @db.VarChar(50)
+  size             Size
+  condition        Condition
+  urgency          Urgency                               @default(medium)
+  isMoving         Boolean?                              @map("is_moving")
+  isAggressive     Boolean?                              @map("is_aggressive")
+  hasCollar        Boolean?                              @map("has_collar")
+  description      String
+  location         Unsupported("geography(Point, 4326)")?
+  address          String?                               @db.VarChar(255)
+  colonyId         String?                               @map("colony_id") @db.VarChar(50)
+  aiValidated      Boolean                               @default(false) @map("ai_validated")
+  aiConfidence     Decimal?                              @map("ai_confidence") @db.Decimal(5, 2)
+  status           ReportStatus                          @default(active)
+  volunteerId      String?                               @map("volunteer_id") @db.Uuid
+  destinationOrgId String?                               @map("destination_org_id") @db.Uuid
+  isDuplicateOf    String?                               @map("is_duplicate_of") @db.Uuid
+  seenCount        Int                                   @default(1) @map("seen_count")
+  lastSeenAt       DateTime                              @default(now()) @map("last_seen_at") @db.Timestamptz
+  createdAt        DateTime                              @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime                              @default(now()) @map("updated_at") @db.Timestamptz
+  closedAt         DateTime?                             @map("closed_at") @db.Timestamptz
+
+  user             User                  @relation("ReportUser", fields: [userId], references: [id])
+  volunteer        User?                 @relation("ReportVolunteer", fields: [volunteerId], references: [id])
+  destinationOrg   Organization?         @relation("ReportDestination", fields: [destinationOrgId], references: [id])
+  originalReport   Report?               @relation("ReportDuplicate", fields: [isDuplicateOf], references: [id])
+  duplicateReports Report[]              @relation("ReportDuplicate")
+  colony           Colony?               @relation(fields: [colonyId], references: [id])
+  animalProfile    AnimalProfile?
+  photos           ReportPhoto[]
+  statusHistory    ReportStatusHistory[]
+  caseActions      CaseAction[]
+  rescues          RescueAssignment[]
+  resources        Resource[]
+  lostPet          LostPet?
+  lostMatches      LostPetMatch[]
+  flags            ReportFlag[]
+
+  @@map("reports")
+}
+
+model ReportPhoto {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reportId   String   @map("report_id") @db.Uuid
+  url        String
+  publicId   String   @map("public_id") @db.VarChar(255)
+  orderIndex Int      @default(0) @map("order_index")
+  uploadedBy String   @map("uploaded_by") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  report   Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  uploader User   @relation("ReportPhotoUploader", fields: [uploadedBy], references: [id])
+
+  @@map("report_photos")
+}
+
+model ReportStatusHistory {
+  id         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reportId   String        @map("report_id") @db.Uuid
+  fromStatus ReportStatus? @map("from_status")
+  toStatus   ReportStatus  @map("to_status")
+  changedBy  String        @map("changed_by") @db.Uuid
+  notes      String?
+  createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz
+
+  report  Report @relation(fields: [reportId], references: [id])
+  changer User   @relation("StatusHistoryChanger", fields: [changedBy], references: [id])
+
+  @@map("report_status_history")
+}
+
+model CaseAction {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reportId    String?    @map("report_id") @db.Uuid
+  animalId    String?    @map("animal_id") @db.Uuid
+  actorId     String?    @map("actor_id") @db.Uuid
+  actionType  ActionType @map("action_type")
+  description String?
+  metadata    Json?
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz
+
+  report Report?        @relation(fields: [reportId], references: [id])
+  animal AnimalProfile? @relation(fields: [animalId], references: [id])
+  actor  User?          @relation("CaseActionActor", fields: [actorId], references: [id])
+
+  @@map("case_actions")
+}
+
+model RescueAssignment {
+  id              String                                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reportId        String                                 @map("report_id") @db.Uuid
+  volunteerId     String                                 @map("volunteer_id") @db.Uuid
+  status          RescueStatus                           @default(accepted)
+  acceptedAt      DateTime                               @default(now()) @map("accepted_at") @db.Timestamptz
+  etaMinutes      Int?                                   @map("eta_minutes")
+  startLocation   Unsupported("geography(Point, 4326)")? @map("start_location")
+  completedAt     DateTime?                              @map("completed_at") @db.Timestamptz
+  cancelledReason String?                                @map("cancelled_reason")
+
+  report    Report @relation(fields: [reportId], references: [id])
+  volunteer User   @relation("RescueVolunteer", fields: [volunteerId], references: [id])
+
+  @@map("rescue_assignments")
+}
+
+model Organization {
+  id           String                                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String                                 @db.VarChar(200)
+  description  String?
+  logoUrl      String?                                @map("logo_url")
+  logoPublicId String?                                @map("logo_public_id") @db.VarChar(255)
+  address      String?                                @db.VarChar(255)
+  phone        String?                                @db.VarChar(20)
+  whatsapp     String?                                @db.VarChar(20)
+  location     Unsupported("geography(Point, 4326)")?
+  website      String?                                @db.VarChar(255)
+  schedule     Json?
+  orgType      OrgType                                @map("org_type")
+  isVerified   Boolean                                @default(false) @map("is_verified")
+  bankName     String?                                @map("bank_name") @db.VarChar(100)
+  clabe        String?                                @db.VarChar(18)
+  holderName   String?                                @map("holder_name") @db.VarChar(200)
+  isActive     Boolean                                @default(true) @map("is_active")
+  createdAt    DateTime                               @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime                               @default(now()) @map("updated_at") @db.Timestamptz
+
+  employees        OrganizationEmployee[]
+  events           Event[]
+  discountCodes    DiscountCode[]
+  animals          AnimalProfile[]        @relation("AnimalOrganization")
+  reportsDestined  Report[]               @relation("ReportDestination")
+  resourcesOffered Resource[]             @relation("ResourceOrganization")
+
+  @@map("organizations")
+}
+
+model OrganizationEmployee {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  roleInOrg      RoleInOrg @map("role_in_org")
+  isVerified     Boolean   @default(false) @map("is_verified")
+  invitedEmail   String?   @map("invited_email") @db.VarChar(255)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@unique([organizationId, userId])
+  @@map("organization_employees")
+}
+
+model AnimalProfile {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reportId        String        @unique @map("report_id") @db.Uuid
+  organizationId  String?       @map("organization_id") @db.Uuid
+  name            String        @db.VarChar(100)
+  species         Species
+  breed           String?       @db.VarChar(100)
+  ageEstimation   String?       @map("age_estimation") @db.VarChar(50)
+  weightKg        Decimal?      @map("weight_kg") @db.Decimal(5, 2)
+  color           String?       @db.VarChar(100)
+  gender          AnimalGender?
+  isNeutered      Boolean       @default(false) @map("is_neutered")
+  microchipId     String?       @map("microchip_id") @db.VarChar(50)
+  story           String?
+  status          AnimalStatus
+  diagnosis       String?
+  treatment       String?
+  totalCostNeeded Decimal       @default(0) @map("total_cost_needed") @db.Decimal(10, 2)
+  totalRaised     Decimal       @default(0) @map("total_raised") @db.Decimal(10, 2)
+  currentFosterId String?       @map("current_foster_id") @db.Uuid
+  adoptedByUserId String?       @map("adopted_by_user_id") @db.Uuid
+  adoptedAt       DateTime?     @map("adopted_at") @db.Timestamptz
+  isPublic        Boolean       @default(true) @map("is_public")
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime      @default(now()) @map("updated_at") @db.Timestamptz
+
+  report               Report                @relation(fields: [reportId], references: [id])
+  organization         Organization?         @relation("AnimalOrganization", fields: [organizationId], references: [id])
+  currentFoster        User?                 @relation("AnimalFoster", fields: [currentFosterId], references: [id])
+  adopter              User?                 @relation("AnimalAdopter", fields: [adoptedByUserId], references: [id])
+  photos               AnimalPhoto[]
+  medicalRecords       MedicalRecord[]
+  vaccinations         Vaccination[]
+  resources            Resource[]
+  donations            Donation[]
+  caseActions          CaseAction[]
+  fosterAssignments    FosterAssignment[]
+  adoptionApplications AdoptionApplication[]
+
+  @@map("animal_profiles")
+}
+
+model AnimalPhoto {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  animalId   String   @map("animal_id") @db.Uuid
+  url        String
+  publicId   String   @map("public_id") @db.VarChar(255)
+  caption    String?  @db.VarChar(200)
+  orderIndex Int      @default(0) @map("order_index")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  animal AnimalProfile @relation(fields: [animalId], references: [id], onDelete: Cascade)
+
+  @@map("animal_photos")
+}
+
+model MedicalRecord {
+  id             String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  animalId       String     @map("animal_id") @db.Uuid
+  veterinarianId String     @map("veterinarian_id") @db.Uuid
+  recordType     RecordType @map("record_type")
+  description    String
+  diagnosis      String?
+  prescription   String?
+  cost           Decimal    @default(0) @db.Decimal(10, 2)
+  photoUrls      Json?      @map("photo_urls")
+  createdAt      DateTime   @default(now()) @map("created_at") @db.Timestamptz
+
+  animal       AnimalProfile @relation(fields: [animalId], references: [id])
+  veterinarian User          @relation("MedicalVeterinarian", fields: [veterinarianId], references: [id])
+
+  @@map("medical_records")
+}
+
+model Vaccination {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  animalId       String    @map("animal_id") @db.Uuid
+  vaccineName    String    @map("vaccine_name") @db.VarChar(100)
+  appliedDate    DateTime  @map("applied_date") @db.Date
+  nextDueDate    DateTime? @map("next_due_date") @db.Date
+  veterinarianId String    @map("veterinarian_id") @db.Uuid
+  notes          String?
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  animal       AnimalProfile @relation(fields: [animalId], references: [id])
+  veterinarian User          @relation("VaccineVeterinarian", fields: [veterinarianId], references: [id])
+
+  @@map("vaccinations")
+}
+
+model Resource {
+  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  providerId     String         @map("provider_id") @db.Uuid
+  organizationId String?        @map("organization_id") @db.Uuid
+  reportId       String?        @map("report_id") @db.Uuid
+  animalId       String?        @map("animal_id") @db.Uuid
+  resourceType   ResourceType   @map("resource_type")
+  title          String         @db.VarChar(150)
+  description    String?
+  quantity       String?        @db.VarChar(100)
+  estimatedValue Decimal?       @map("estimated_value") @db.Decimal(10, 2)
+  status         ResourceStatus @default(offered)
+  acceptedBy     String?        @map("accepted_by") @db.Uuid
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime       @default(now()) @map("updated_at") @db.Timestamptz
+
+  provider     User           @relation("ResourceProvider", fields: [providerId], references: [id])
+  organization Organization?  @relation("ResourceOrganization", fields: [organizationId], references: [id])
+  report       Report?        @relation(fields: [reportId], references: [id])
+  animal       AnimalProfile? @relation(fields: [animalId], references: [id])
+  accepter     User?          @relation("ResourceAccepter", fields: [acceptedBy], references: [id])
+
+  @@map("resources")
+}
+
+model Donation {
+  id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  animalId     String         @map("animal_id") @db.Uuid
+  userId       String         @map("user_id") @db.Uuid
+  amount       Decimal        @db.Decimal(10, 2)
+  currency     String         @default("MXN") @db.VarChar(3)
+  status       DonationStatus @default(pending)
+  approvedBy   String?        @map("approved_by") @db.Uuid
+  approvedAt   DateTime?      @map("approved_at") @db.Timestamptz
+  rejectReason String?        @map("reject_reason")
+  isAnonymous  Boolean        @default(false) @map("is_anonymous")
+  createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz
+
+  animal        AnimalProfile  @relation(fields: [animalId], references: [id])
+  user          User           @relation("DonationUser", fields: [userId], references: [id])
+  approver      User?          @relation("DonationApprover", fields: [approvedBy], references: [id])
+  donationProof DonationProof?
+
+  @@map("donations")
+}
+
+model DonationProof {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  donationId     String   @unique @map("donation_id") @db.Uuid
+  proofUrl       String   @map("proof_url")
+  publicId       String   @map("public_id") @db.VarChar(255)
+  amountDeclared Decimal  @map("amount_declared") @db.Decimal(10, 2)
+  notes          String?
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  donation Donation @relation(fields: [donationId], references: [id])
+
+  @@map("donation_proofs")
+}
+
+model Event {
+  id              String                                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId  String                                 @map("organization_id") @db.Uuid
+  title           String                                 @db.VarChar(200)
+  description     String
+  category        EventCategory
+  eventDate       DateTime                               @map("event_date") @db.Timestamptz
+  endDate         DateTime?                              @map("end_date") @db.Timestamptz
+  location        Unsupported("geography(Point, 4326)")?
+  address         String                                 @db.VarChar(255)
+  imageUrl        String?                                @map("image_url")
+  imagePublicId   String?                                @map("image_public_id") @db.VarChar(255)
+  maxParticipants Int?                                   @map("max_participants")
+  isActive        Boolean                                @default(true) @map("is_active")
+  createdAt       DateTime                               @default(now()) @map("created_at") @db.Timestamptz
+
+  organization   Organization    @relation(fields: [organizationId], references: [id])
+  eventReminders EventReminder[]
+
+  @@map("events")
+}
+
+model EventReminder {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventId     String   @map("event_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  reminded24h Boolean  @default(false) @map("reminded_24h")
+  reminded1h  Boolean  @default(false) @map("reminded_1h")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  event Event @relation(fields: [eventId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@unique([eventId, userId])
+  @@map("event_reminders")
+}
+
+model Achievement {
+  id               String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code             String              @unique @db.VarChar(50)
+  name             String              @db.VarChar(100)
+  description      String
+  iconUrl          String              @map("icon_url")
+  category         AchievementCategory
+  requirementType  RequirementType     @map("requirement_type")
+  requirementValue Int                 @map("requirement_value")
+  tier             AchievementTier     @default(bronze)
+  pointsReward     Int                 @default(0) @map("points_reward")
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz
+
+  userAchievements UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  achievementId String   @map("achievement_id") @db.Uuid
+  earnedAt      DateTime @default(now()) @map("earned_at") @db.Timestamptz
+  sharedCount   Int      @default(0) @map("shared_count")
+
+  user        User        @relation(fields: [userId], references: [id])
+  achievement Achievement @relation(fields: [achievementId], references: [id])
+
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
+
+model ReputationEvent {
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String           @map("user_id") @db.Uuid
+  points      Int
+  reason      ReputationReason
+  referenceId String?          @map("reference_id") @db.Uuid
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("reputation_events")
+}
+
+model FosterAssignment {
+  id        String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  animalId  String       @map("animal_id") @db.Uuid
+  fosterId  String       @map("foster_id") @db.Uuid
+  status    FosterStatus @default(active)
+  startDate DateTime?    @map("start_date") @db.Date
+  endDate   DateTime?    @map("end_date") @db.Date
+  notes     String?
+  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz
+
+  animal AnimalProfile @relation(fields: [animalId], references: [id])
+  foster User          @relation("FosterUser", fields: [fosterId], references: [id])
+
+  @@map("foster_assignments")
+}
+
+model AdoptionApplication {
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  animalId    String         @map("animal_id") @db.Uuid
+  applicantId String         @map("applicant_id") @db.Uuid
+  message     String?
+  status      AdoptionStatus @default(pending)
+  reviewedBy  String?        @map("reviewed_by") @db.Uuid
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz
+
+  animal    AnimalProfile @relation(fields: [animalId], references: [id])
+  applicant User          @relation("AdoptionApplicant", fields: [applicantId], references: [id])
+  reviewer  User?         @relation("AdoptionReviewer", fields: [reviewedBy], references: [id])
+
+  @@map("adoption_applications")
+}
+
+model LostPet {
+  id               String                                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reportId         String                                @unique @map("report_id") @db.Uuid
+  ownerId          String                                @map("owner_id") @db.Uuid
+  petName          String?                               @map("pet_name") @db.VarChar(100)
+  distinctiveMarks String?                               @map("distinctive_marks")
+  lastSeenLocation Unsupported("geography(Point, 4326)") @map("last_seen_location")
+  lastSeenAt       DateTime                              @map("last_seen_at") @db.Timestamptz
+  searchRadiusKm   Int                                   @default(3) @map("search_radius_km")
+  reward           Decimal?                              @db.Decimal(10, 2)
+  contactWhatsapp  String?                               @map("contact_whatsapp") @db.VarChar(20)
+  isFound          Boolean                               @default(false) @map("is_found")
+  createdAt        DateTime                              @default(now()) @map("created_at") @db.Timestamptz
+
+  report  Report         @relation(fields: [reportId], references: [id])
+  owner   User           @relation("LostPetOwner", fields: [ownerId], references: [id])
+  matches LostPetMatch[]
+
+  @@map("lost_pets")
+}
+
+model LostPetMatch {
+  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lostPetId       String      @map("lost_pet_id") @db.Uuid
+  matchedReportId String      @map("matched_report_id") @db.Uuid
+  score           Decimal?    @db.Decimal(5, 2)
+  status          MatchStatus @default(suggested)
+  createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz
+
+  lostPet       LostPet @relation(fields: [lostPetId], references: [id])
+  matchedReport Report  @relation(fields: [matchedReportId], references: [id])
+
+  @@map("lost_pet_matches")
+}
+
+model ReportFlag {
+  id         String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reportId   String     @map("report_id") @db.Uuid
+  flaggedBy  String     @map("flagged_by") @db.Uuid
+  reason     FlagReason
+  notes      String?
+  status     FlagStatus @default(open)
+  reviewedBy String?    @map("reviewed_by") @db.Uuid
+  createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz
+
+  report   Report @relation(fields: [reportId], references: [id])
+  flagger  User   @relation("FlaggedByUser", fields: [flaggedBy], references: [id])
+  reviewer User?  @relation("FlagReviewer", fields: [reviewedBy], references: [id])
+
+  @@map("report_flags")
+}
+
+model ForumPost {
+  id         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String        @map("user_id") @db.Uuid
+  title      String        @db.VarChar(200)
+  content    String
+  category   ForumCategory
+  isPinned   Boolean       @default(false) @map("is_pinned")
+  isResolved Boolean       @default(false) @map("is_resolved")
+  upvotes    Int           @default(0)
+  createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime      @default(now()) @map("updated_at") @db.Timestamptz
+
+  user    User         @relation(fields: [userId], references: [id])
+  replies ForumReply[]
+  votes   ForumVote[]
+
+  @@map("forum_posts")
+}
+
+model ForumReply {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  postId           String   @map("post_id") @db.Uuid
+  userId           String   @map("user_id") @db.Uuid
+  content          String
+  isVerifiedAnswer Boolean  @default(false) @map("is_verified_answer")
+  isBestAnswer     Boolean  @default(false) @map("is_best_answer")
+  upvotes          Int      @default(0)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  post  ForumPost   @relation(fields: [postId], references: [id])
+  user  User        @relation(fields: [userId], references: [id])
+  votes ForumVote[]
+
+  @@map("forum_replies")
+}
+
+model ForumVote {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  postId    String?  @map("post_id") @db.Uuid
+  replyId   String?  @map("reply_id") @db.Uuid
+  value     Int      @db.SmallInt
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user  User        @relation(fields: [userId], references: [id])
+  post  ForumPost?  @relation(fields: [postId], references: [id])
+  reply ForumReply? @relation(fields: [replyId], references: [id])
+
+  @@unique([userId, postId])
+  @@unique([userId, replyId])
+  @@map("forum_votes")
+}
+
+model PushSubscription {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  endpoint   String   @unique
+  p256dh     String
+  auth       String
+  device     String?  @db.VarChar(80)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  lastUsedAt DateTime @default(now()) @map("last_used_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("push_subscriptions")
+}
+
+model Notification {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  title         String    @db.VarChar(200)
+  body          String
+  type          NotifType
+  referenceId   String?   @map("reference_id") @db.Uuid
+  referenceType String?   @map("reference_type") @db.VarChar(50)
+  isRead        Boolean   @default(false) @map("is_read")
+  sentAt        DateTime  @default(now()) @map("sent_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
+
+model Colony {
+  id                 String                                  @id @db.VarChar(50)
+  name               String                                  @db.VarChar(200)
+  city               String                                  @default("Puebla") @db.VarChar(100)
+  municipality       String                                  @default("Puebla") @db.VarChar(100)
+  postalCode         String?                                 @map("postal_code") @db.VarChar(10)
+  geometry           Unsupported("geography(Polygon, 4326)")
+  activeReportsCount Int                                     @default(0) @map("active_reports_count")
+  createdAt          DateTime                                @default(now()) @map("created_at") @db.Timestamptz
+
+  reports Report[]
+
+  @@map("colonies")
+}
+
+model DiscountCode {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId             String    @map("user_id") @db.Uuid
+  organizationId     String    @map("organization_id") @db.Uuid
+  discountPercentage Decimal   @map("discount_percentage") @db.Decimal(5, 2)
+  code               String    @unique @db.VarChar(100)
+  isActive           Boolean   @default(true) @map("is_active")
+  validUntil         DateTime? @map("valid_until") @db.Timestamptz
+  usedCount          Int       @default(0) @map("used_count")
+  maxUses            Int       @default(1) @map("max_uses")
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  user         User         @relation(fields: [userId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@map("discount_codes")
+}
+
+model ImpactSnapshot {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  snapshotDate      DateTime @map("snapshot_date") @db.Date
+  totalReports      Int      @default(0) @map("total_reports")
+  totalRescues      Int      @default(0) @map("total_rescues")
+  totalAdoptions    Int      @default(0) @map("total_adoptions")
+  totalDonationsMxn Decimal  @default(0) @map("total_donations_mxn") @db.Decimal(12, 2)
+  activeVolunteers  Int      @default(0) @map("active_volunteers")
+  avgRescueMinutes  Int?     @map("avg_rescue_minutes")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("impact_snapshots")
+}
+
+model AuditLog {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  adminId    String   @map("admin_id") @db.Uuid
+  action     String   @db.VarChar(100)
+  targetType String?  @map("target_type") @db.VarChar(50)
+  targetId   String?  @map("target_id") @db.Uuid
+  metadata   Json?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  admin User @relation(fields: [adminId], references: [id])
+
+  @@map("audit_log")
+}

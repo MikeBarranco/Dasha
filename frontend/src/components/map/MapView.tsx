@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import maplibregl, { type StyleSpecification } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { mockReports, type Report, type Severity } from '../../data/mockReports';
@@ -40,25 +40,37 @@ function extendBounds(bounds: maplibregl.LngLatBounds, coords: unknown): void {
 
 type MapViewProps = {
   onSelectReport: (report: Report) => void;
+  onReportsLoaded?: (count: number) => void;
 };
 
-export function MapView({ onSelectReport }: MapViewProps) {
+export function MapView({ onSelectReport, onReportsLoaded }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const markersRef = useRef<maplibregl.Marker[]>([]);
   const onSelectRef = useRef(onSelectReport);
+  const [realReports, setRealReports] = useState<Report[]>([]);
+  const [mapLoaded, setMapLoaded] = useState(false);
 
   useEffect(() => {
     onSelectRef.current = onSelectReport;
   }, [onSelectReport]);
 
   useEffect(() => {
+    // Cargar reportes reales del backend y combinarlos con los mocks de prueba
+    import('../../lib/api').then(({ getNearbyReports }) => {
+      getNearbyReports(19.04, -98.2, 50).then(data => {
+        // Asegurarnos que los mocks tengan el formato necesario para renderizarse y no se superpongan exactamente
+        const combined = [...mockReports, ...data];
+        setRealReports(combined);
+        onReportsLoaded?.(combined.length);
+      });
+    });
+  }, [onReportsLoaded]);
+
+  // 1. Inicializar el mapa una sola vez
+  useEffect(() => {
     const container = containerRef.current;
     if (!container || mapRef.current) return;
-
-    const counts = new Map<string, number>();
-    for (const report of mockReports) {
-      counts.set(report.colonia, (counts.get(report.colonia) ?? 0) + 1);
-    }
 
     const map = new maplibregl.Map({
       container,
@@ -71,10 +83,6 @@ export function MapView({ onSelectReport }: MapViewProps) {
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
     map.addControl(new maplibregl.AttributionControl({ compact: true }));
-
-    const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 8 });
-    const markers: maplibregl.Marker[] = [];
-    let statesApplied = false;
 
     map.on('load', () => {
       map.addSource('colonias', {
@@ -125,78 +133,105 @@ export function MapView({ onSelectReport }: MapViewProps) {
         filter: ['==', ['get', 'name'], ''],
       });
 
-      map.on('mousemove', 'colonias-fill', (e) => {
-        if (!e.features || e.features.length === 0) return;
-        const name = String(e.features[0].properties?.name ?? '');
-        const count = counts.get(name) ?? 0;
-        map.getCanvas().style.cursor = 'pointer';
-        map.setFilter('colonias-hover', ['==', ['get', 'name'], name]);
-        const text = count > 0 ? `${name} · ${count} reporte${count === 1 ? '' : 's'}` : name;
-        popup.setLngLat(e.lngLat).setText(text).addTo(map);
-      });
-
-      map.on('mouseleave', 'colonias-fill', () => {
-        map.getCanvas().style.cursor = '';
-        map.setFilter('colonias-hover', ['==', ['get', 'name'], '']);
-        popup.remove();
-      });
-
-      map.on('click', 'colonias-fill', (e) => {
-        if (!e.features || e.features.length === 0) return;
-        const geometry = e.features[0].geometry;
-        if (geometry.type !== 'Polygon' && geometry.type !== 'MultiPolygon') return;
-        const bounds = new maplibregl.LngLatBounds();
-        extendBounds(bounds, geometry.coordinates);
-        map.fitBounds(bounds, { padding: 60, maxZoom: 16, duration: 800 });
-      });
-
-      for (const report of mockReports) {
-        const element = document.createElement('div');
-        element.style.width = '44px';
-        element.style.height = '44px';
-        element.style.borderRadius = '9999px';
-        element.style.border = `3px solid ${severityColor(report.severity)}`;
-        element.style.backgroundImage = `url(${report.photo})`;
-        element.style.backgroundSize = 'cover';
-        element.style.backgroundPosition = 'center';
-        element.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.3)';
-        element.style.cursor = 'pointer';
-        element.style.display = 'none';
-
-        element.addEventListener('click', (event) => {
-          event.stopPropagation();
-          onSelectRef.current(report);
-        });
-        const marker = new maplibregl.Marker({ element })
-          .setLngLat([report.lng, report.lat])
-          .addTo(map);
-        markers.push(marker);
-      }
-
-      const updatePinVisibility = () => {
-        const show = map.getZoom() >= PIN_MIN_ZOOM;
-        for (const marker of markers) {
-          marker.getElement().style.display = show ? 'block' : 'none';
-        }
-      };
-      map.on('zoom', updatePinVisibility);
-      updatePinVisibility();
-    });
-
-    map.on('sourcedata', () => {
-      if (statesApplied || !map.getSource('colonias') || !map.isSourceLoaded('colonias')) return;
-      counts.forEach((count, name) => {
-        map.setFeatureState({ source: 'colonias', id: name }, { count });
-      });
-      statesApplied = true;
+      setMapLoaded(true);
     });
 
     return () => {
-      for (const marker of markers) marker.remove();
       map.remove();
       mapRef.current = null;
     };
   }, []);
+
+  // 2. Sincronizar pines y estados de polígonos cuando realReports o mapLoaded cambien
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+
+    // Limpiar pines anteriores
+    for (const marker of markersRef.current) marker.remove();
+    markersRef.current = [];
+
+    const counts = new Map<string, number>();
+    for (const report of realReports) {
+      counts.set(report.colonia, (counts.get(report.colonia) ?? 0) + 1);
+      
+      const element = document.createElement('div');
+      element.style.width = '44px';
+      element.style.height = '44px';
+      element.style.borderRadius = '9999px';
+      element.style.border = `3px solid ${severityColor(report.severity)}`;
+      element.style.backgroundImage = `url(${report.photo})`;
+      element.style.backgroundSize = 'cover';
+      element.style.backgroundPosition = 'center';
+      element.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.3)';
+      element.style.cursor = 'pointer';
+      element.style.display = map.getZoom() >= PIN_MIN_ZOOM ? 'block' : 'none';
+
+      element.addEventListener('click', (event) => {
+        event.stopPropagation();
+        onSelectRef.current(report);
+      });
+      const marker = new maplibregl.Marker({ element })
+        .setLngLat([report.lng, report.lat])
+        .addTo(map);
+      markersRef.current.push(marker);
+    }
+
+    // Actualizar estados de polígonos
+    const source = map.getSource('colonias') as maplibregl.GeoJSONSource;
+    if (source) {
+      counts.forEach((count, name) => {
+        map.setFeatureState({ source: 'colonias', id: name }, { count });
+      });
+    }
+
+    const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 8 });
+
+    const mouseMoveHandler = (e: any) => {
+      if (!e.features || e.features.length === 0) return;
+      const name = String(e.features[0].properties?.name ?? '');
+      const count = counts.get(name) ?? 0;
+      map.getCanvas().style.cursor = 'pointer';
+      map.setFilter('colonias-hover', ['==', ['get', 'name'], name]);
+      const text = count > 0 ? `${name} · ${count} reporte${count === 1 ? '' : 's'}` : name;
+      popup.setLngLat(e.lngLat).setText(text).addTo(map);
+    };
+
+    const mouseLeaveHandler = () => {
+      map.getCanvas().style.cursor = '';
+      map.setFilter('colonias-hover', ['==', ['get', 'name'], '']);
+      popup.remove();
+    };
+
+    const clickHandler = (e: any) => {
+      if (!e.features || e.features.length === 0) return;
+      const geometry = e.features[0].geometry;
+      if (geometry.type !== 'Polygon' && geometry.type !== 'MultiPolygon') return;
+      const bounds = new maplibregl.LngLatBounds();
+      extendBounds(bounds, geometry.coordinates);
+      map.fitBounds(bounds, { padding: 60, maxZoom: 16, duration: 800 });
+    };
+
+    map.on('mousemove', 'colonias-fill', mouseMoveHandler);
+    map.on('mouseleave', 'colonias-fill', mouseLeaveHandler);
+    map.on('click', 'colonias-fill', clickHandler);
+
+    const updatePinVisibility = () => {
+      const show = map.getZoom() >= PIN_MIN_ZOOM;
+      for (const marker of markersRef.current) {
+        marker.getElement().style.display = show ? 'block' : 'none';
+      }
+    };
+    map.on('zoom', updatePinVisibility);
+
+    return () => {
+      map.off('mousemove', 'colonias-fill', mouseMoveHandler);
+      map.off('mouseleave', 'colonias-fill', mouseLeaveHandler);
+      map.off('click', 'colonias-fill', clickHandler);
+      map.off('zoom', updatePinVisibility);
+      popup.remove();
+    };
+  }, [realReports, mapLoaded]);
 
   return <div ref={containerRef} className="h-full w-full" />;
 }

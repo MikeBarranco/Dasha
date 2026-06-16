@@ -8,14 +8,15 @@ const MapView = lazy(() =>
   import('../components/map/MapView').then((module) => ({ default: module.MapView })),
 );
 
-const stats = [
-  { label: 'Reportes activos', value: '128' },
-  { label: 'Rescates logrados', value: '342' },
-  { label: 'Voluntarios', value: '57' },
-];
-
 export function MapaPage() {
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [activeReports, setActiveReports] = useState<number>(0);
+
+  const stats = [
+    { label: 'Reportes activos', value: activeReports.toString() },
+    { label: 'Rescates logrados', value: '342' },
+    { label: 'Voluntarios', value: '57' },
+  ];
 
   return (
     <div>
@@ -41,7 +42,7 @@ export function MapaPage() {
 
       <div className="mt-6 h-[60vh] min-h-[420px] overflow-hidden rounded-3xl border border-neutral-200">
         <Suspense fallback={<div className="h-full w-full animate-pulse bg-neutral-100" />}>
-          <MapView onSelectReport={setSelectedReport} />
+          <MapView onSelectReport={setSelectedReport} onReportsLoaded={setActiveReports} />
         </Suspense>
       </div>
 
