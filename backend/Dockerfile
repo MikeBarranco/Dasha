@@ -35,5 +35,8 @@ COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 # Copiamos la carpeta compilada
 COPY --from=builder /app/dist ./dist
 
+# Copiamos la carpeta de datos estáticos (GeoJSON)
+COPY --from=builder /app/data ./data
+
 # Comando para iniciar la aplicación
 CMD ["node", "dist/index.js"]
