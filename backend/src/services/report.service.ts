@@ -8,7 +8,7 @@ export class ReportService {
   static async createReport(data: any) {
     // 1. Insertamos el reporte (sin las coordenadas inicialmente, porque Prisma no soporta inyectarlas directo en el create)
     // Usamos una transacción para que si falla el update de coordenadas o la foto, se cancele todo
-    return await prisma.$transaction(async (tx) => {
+    return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const report = await tx.report.create({
         data: {
           userId: data.userId,
