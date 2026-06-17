@@ -3,6 +3,7 @@ import { Bell } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { Avatar } from '../ui/Avatar';
 import { mockUser } from '../../data/mockUser';
+import { useAvatar } from '../../lib/useAvatar';
 
 const navItems = [
   { to: '/', label: 'Mapa', end: true },
@@ -12,6 +13,8 @@ const navItems = [
 ];
 
 export function TopBar() {
+  const { avatar } = useAvatar();
+
   return (
     <header className="sticky top-0 z-40 border-b border-neutral-200/70 bg-lino/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 md:px-8">
@@ -53,7 +56,7 @@ export function TopBar() {
             <Bell className="h-5 w-5" />
           </button>
           <Link to="/perfil" aria-label="Mi perfil">
-            <Avatar name={mockUser.name} className="h-9 w-9 text-sm" />
+            <Avatar name={mockUser.name} src={avatar} className="h-9 w-9 text-sm" />
           </Link>
         </div>
       </div>
