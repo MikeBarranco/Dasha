@@ -1,64 +1,163 @@
 import type { Report, Severity } from '../data/mockReports';
 
-const API_URL = 'http://localhost:3000/api/v1';
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
+const TOKEN_KEY = 'dasha-token';
+const USER_KEY = 'dasha-user';
 
-export async function getNearbyReports(lat: number, lng: number, radiusKm: number): Promise<Report[]> {
-  try {
-    const response = await fetch(`${API_URL}/reports/nearby?lat=${lat}&lng=${lng}&radius_km=${radiusKm}`);
-    const result = await response.json();
-    
-    if (result.status === 'success') {
-      return result.data.map((r: any) => ({
-        id: r.id,
-        lat: r.lat,
-        lng: r.lng,
-        species: r.species === 'cat' ? 'gato' : 'perro',
-        condition: r.condition === 'injured' ? 'Herido' : r.condition === 'sick' ? 'Enfermo' : 'Perdido',
-        severity: (r.urgency === 'critical' ? 'critica' : r.urgency === 'high' ? 'critica' : r.urgency === 'medium' ? 'media' : 'baja') as Severity,
-        photo: r.photo || 'https://res.cloudinary.com/demo/image/upload/dog.jpg',
-        colonia: r.colonia || 'Sin colonia',
-        reportedAgo: getTimeAgo(r.created_at),
-        distance: formatDistance(r.distance_meters),
-        status: r.status === 'active' ? 'Activo' : r.status,
-        description: r.description || 'Sin descripción',
-      }));
-    }
-    return [];
-  } catch (error) {
-    console.error('Error fetching reports:', error);
-    return [];
-  }
+export type AuthUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+};
+
+export function getToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY);
 }
 
-export async function createReport(data: any) {
-  const response = await fetch(`${API_URL}/reports`, {
+export function getStoredUser(): AuthUser | null {
+  const raw = localStorage.getItem(USER_KEY);
+  return raw ? (JSON.parse(raw) as AuthUser) : null;
+}
+
+export function setSession(user: AuthUser, token: string): void {
+  localStorage.setItem(TOKEN_KEY, token);
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+}
+
+export function clearSession(): void {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+}
+
+type Envelope<T> = {
+  status: string;
+  message?: string;
+  data?: T;
+};
+
+async function request<T>(path: string, options: RequestInit = {}, auth = false): Promise<T> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...((options.headers as Record<string, string>) ?? {}),
+  };
+
+  if (auth) {
+    const token = getToken();
+    if (!token) throw new Error('Inicia sesión para continuar');
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_URL}${path}`, { ...options, headers });
+  const body = (await response.json().catch(() => ({}))) as Envelope<T>;
+
+  if (!response.ok || body.status === 'error') {
+    throw new Error(body.message ?? 'Ocurrió un error con el servidor');
+  }
+
+  return body.data as T;
+}
+
+export async function register(name: string, email: string, password: string) {
+  return request<{ user: AuthUser; token: string }>('/auth/register', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(data)
+    body: JSON.stringify({ name, email, password }),
   });
-  
-  const result = await response.json();
-  if (result.status === 'error' || !response.ok) {
-    const details = result.errors ? JSON.stringify(result.errors) : '';
-    throw new Error((result.message || 'Error al crear reporte') + (details ? ' ' + details : ''));
-  }
-  return result;
 }
 
-function getTimeAgo(dateString: string): string {
-  if (!dateString) return 'hace un momento';
-  const date = new Date(dateString);
-  const diffInMinutes = Math.floor((new Date().getTime() - date.getTime()) / 60000);
-  
-  if (diffInMinutes < 60) return `hace ${diffInMinutes}m`;
-  const diffInHours = Math.floor(diffInMinutes / 60);
-  if (diffInHours < 24) return `hace ${diffInHours}h`;
-  return `hace ${Math.floor(diffInHours / 24)}d`;
+export async function login(email: string, password: string) {
+  return request<{ user: AuthUser; token: string }>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  });
 }
 
-function formatDistance(meters: number): string {
-  if (meters < 1000) return `${Math.floor(meters)}m de ti`;
-  return `${(meters / 1000).toFixed(1)}km de ti`;
+export type CreateReportInput = {
+  species: 'dog' | 'cat';
+  primaryColor: string;
+  secondaryColor?: string;
+  size: 'small' | 'medium' | 'large';
+  condition: 'injured' | 'malnourished' | 'sick' | 'stable' | 'lost' | 'aggressive';
+  urgency: 'low' | 'medium' | 'high' | 'critical';
+  description?: string;
+  lat: number;
+  lng: number;
+  photoBase64: string;
+};
+
+export async function createReport(input: CreateReportInput) {
+  return request('/reports', { method: 'POST', body: JSON.stringify(input) }, true);
+}
+
+type RawReport = {
+  id: string;
+  species: string;
+  condition: string;
+  urgency: string;
+  status: string;
+  description: string | null;
+  created_at: string;
+  lat: number;
+  lng: number;
+  colonia: string | null;
+  photo: string | null;
+};
+
+const conditionLabels: Record<string, string> = {
+  injured: 'Herido',
+  malnourished: 'Desnutrido',
+  sick: 'Enfermo',
+  stable: 'Estable',
+  lost: 'Perdido',
+  aggressive: 'Agresivo',
+};
+
+const urgencyToSeverity: Record<string, Severity> = {
+  critical: 'critica',
+  high: 'critica',
+  medium: 'media',
+  low: 'baja',
+};
+
+const statusLabels: Record<string, string> = {
+  active: 'Activo',
+  in_progress: 'Voluntario en camino',
+  rescued: 'Rescatado',
+};
+
+function timeAgo(iso: string): string {
+  if (!iso) return 'hace un momento';
+  const minutes = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (minutes < 1) return 'hace un momento';
+  if (minutes < 60) return `hace ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `hace ${hours} h`;
+  return `hace ${Math.floor(hours / 24)} d`;
+}
+
+function mapReport(raw: RawReport): Report {
+  return {
+    id: String(raw.id),
+    lat: Number(raw.lat),
+    lng: Number(raw.lng),
+    colonia: raw.colonia ?? 'Sin colonia',
+    species: raw.species === 'cat' ? 'gato' : 'perro',
+    condition: conditionLabels[raw.condition] ?? raw.condition,
+    severity: urgencyToSeverity[raw.urgency] ?? 'media',
+    photo: raw.photo ?? '/seed/perrito1.jpg',
+    description: raw.description ?? '',
+    reportedAgo: timeAgo(raw.created_at),
+    status: statusLabels[raw.status] ?? raw.status,
+  };
+}
+
+export async function getNearbyReports(
+  lat: number,
+  lng: number,
+  radiusKm: number,
+): Promise<Report[]> {
+  const data = await request<RawReport[]>(
+    `/reports/nearby?lat=${lat}&lng=${lng}&radius_km=${radiusKm}`,
+  );
+  return (data ?? []).map(mapReport);
 }

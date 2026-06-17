@@ -1,9 +1,10 @@
-import { lazy, Suspense, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Camera, Dog, Cat, ArrowLeft, Check } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { cn } from '../lib/cn';
+import { createReport, type CreateReportInput } from '../lib/api';
 
 const LocationPicker = lazy(() =>
   import('../components/map/LocationPicker').then((module) => ({ default: module.LocationPicker })),
@@ -118,6 +119,10 @@ export function ReportarPage() {
 
   const urgency = computeUrgency(conditions);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [step]);
+
   const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -169,23 +174,26 @@ export function ReportarPage() {
   };
 
   const handleSubmit = async () => {
+    if (!photoBase64) {
+      alert('Espera un momento a que la foto termine de procesarse.');
+      return;
+    }
     setIsSubmitting(true);
     try {
-      const { createReport } = await import('../lib/api');
-      
-      const payload = {
-        userId: 'f557ba42-799e-4454-b676-5125a354d425', // Mock userId since there's no auth yet
+      const payload: CreateReportInput = {
         species: species === 'perro' ? 'dog' : 'cat',
         primaryColor: color || 'No especificado',
         size: size === 'Pequeño' ? 'small' : size === 'Grande' ? 'large' : 'medium',
-        condition: conditions.includes('Herido') ? 'injured' : conditions.includes('Enfermo') ? 'sick' : 'lost',
-        urgency: urgency === 'critica' ? 'high' : urgency === 'media' ? 'medium' : 'low',
+        condition: conditions.includes('Herido')
+          ? 'injured'
+          : conditions.includes('Enfermo')
+            ? 'sick'
+            : 'lost',
+        urgency: urgency === 'critica' ? 'critical' : urgency === 'media' ? 'medium' : 'low',
         description,
-        isAggressive,
-        hasCollar,
         lat,
         lng,
-        photoBase64 // Se envía la imagen real en Base64 en lugar de URLs simuladas
+        photoBase64,
       };
 
       await createReport(payload);

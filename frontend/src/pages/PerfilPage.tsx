@@ -1,11 +1,13 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AnimatePresence } from 'motion/react';
-import { Lock, ChevronRight, Settings, LogOut, Camera, type LucideIcon } from 'lucide-react';
+import { Lock, ChevronRight, Settings, LogOut, LogIn, Camera, type LucideIcon } from 'lucide-react';
 import { Avatar } from '../components/ui/Avatar';
 import { AvatarPicker } from '../components/perfil/AvatarPicker';
 import { cn } from '../lib/cn';
 import { mockUser } from '../data/mockUser';
 import { useAvatar } from '../lib/useAvatar';
+import { useAuth } from '../lib/useAuth';
 
 function StatCard({ value, label }: { value: number; label: string }) {
   return (
@@ -16,10 +18,21 @@ function StatCard({ value, label }: { value: number; label: string }) {
   );
 }
 
-function RowButton({ icon: Icon, label, danger }: { icon: LucideIcon; label: string; danger?: boolean }) {
+function RowButton({
+  icon: Icon,
+  label,
+  danger,
+  onClick,
+}: {
+  icon: LucideIcon;
+  label: string;
+  danger?: boolean;
+  onClick?: () => void;
+}) {
   return (
     <button
       type="button"
+      onClick={onClick}
       className={cn(
         'flex w-full items-center gap-3 px-4 py-3 text-left text-sm transition-colors hover:bg-neutral-50',
         danger ? 'text-alerta' : 'text-neutral-700',
@@ -33,14 +46,31 @@ function RowButton({ icon: Icon, label, danger }: { icon: LucideIcon; label: str
 }
 
 export function PerfilPage() {
+  const navigate = useNavigate();
   const user = mockUser;
   const { avatar, setAvatar } = useAvatar();
+  const { user: account, logout } = useAuth();
   const [pickerOpen, setPickerOpen] = useState(false);
   const xpPercent = Math.min(100, Math.round((user.xp / user.xpToNext) * 100));
   const unlockedCount = user.medals.filter((medal) => medal.unlocked).length;
 
   return (
     <div className="space-y-6">
+      {!account && (
+        <div className="flex items-center justify-between gap-3 rounded-2xl bg-cobalto/5 p-4">
+          <p className="text-sm text-neutral-600">
+            Inicia sesión para reportar y guardar tu progreso.
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate('/login')}
+            className="flex-shrink-0 rounded-xl bg-cobalto px-3 py-2 text-sm font-semibold text-white"
+          >
+            Entrar
+          </button>
+        </div>
+      )}
+
       <div className="flex items-center gap-4">
         <button
           type="button"
@@ -54,7 +84,9 @@ export function PerfilPage() {
           </span>
         </button>
         <div className="min-w-0">
-          <h1 className="font-display text-2xl font-bold text-cobalto">{user.name}</h1>
+          <h1 className="font-display text-2xl font-bold text-cobalto">
+            {account?.name ?? user.name}
+          </h1>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-cobalto/10 px-2.5 py-0.5 text-xs font-medium text-cobalto">
               {user.role}
@@ -133,7 +165,19 @@ export function PerfilPage() {
 
       <div className="divide-y divide-neutral-100 overflow-hidden rounded-2xl border border-neutral-200 bg-white">
         <RowButton icon={Settings} label="Ajustes de la cuenta" />
-        <RowButton icon={LogOut} label="Cerrar sesión" danger />
+        {account ? (
+          <RowButton
+            icon={LogOut}
+            label="Cerrar sesión"
+            danger
+            onClick={() => {
+              logout();
+              navigate('/login');
+            }}
+          />
+        ) : (
+          <RowButton icon={LogIn} label="Iniciar sesión" onClick={() => navigate('/login')} />
+        )}
       </div>
 
       <AnimatePresence>
