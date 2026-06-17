@@ -88,7 +88,7 @@ export function RehabilitacionPage() {
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Buscar por nombre..."
-            className="w-full bg-transparent text-sm text-neutral-700 outline-none placeholder:text-neutral-400"
+            className="w-full bg-transparent text-base text-neutral-700 outline-none placeholder:text-neutral-400"
           />
         </div>
 

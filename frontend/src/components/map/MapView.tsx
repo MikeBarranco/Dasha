@@ -15,6 +15,25 @@ function normalizeText(value: string): string {
     .replace(/\p{Diacritic}/gu, '');
 }
 
+function colorForCount(count: number): string {
+  if (count >= 4) return '#EF4444';
+  if (count === 3) return '#FB923C';
+  if (count === 2) return '#FDE047';
+  if (count === 1) return '#86EFAC';
+  return '#CBD5E1';
+}
+
+function popupHTML(name: string, count: number): string {
+  const label = count > 0 ? `${count} reporte${count === 1 ? '' : 's'}` : 'Sin reportes';
+  return (
+    '<div class="dasha-popup-row">' +
+    `<span class="dasha-popup-dot" style="background:${colorForCount(count)}"></span>` +
+    `<span class="dasha-popup-name">${name}</span>` +
+    '</div>' +
+    `<div class="dasha-popup-count">${label}</div>`
+  );
+}
+
 const baseStyle: StyleSpecification = {
   version: 8,
   sources: {
@@ -58,6 +77,7 @@ export function MapView({ onSelectReport }: MapViewProps) {
   const userMarkerRef = useRef<maplibregl.Marker | null>(null);
   const coloniaIndexRef = useRef<Map<string, maplibregl.LngLatBounds>>(new Map());
   const geoErrorTimer = useRef<number | null>(null);
+  const selectColoniaRef = useRef<((name: string, at: maplibregl.LngLat) => void) | null>(null);
   const [coloniaNames, setColoniaNames] = useState<string[]>([]);
   const [query, setQuery] = useState('');
   const [locating, setLocating] = useState(false);
@@ -116,7 +136,12 @@ export function MapView({ onSelectReport }: MapViewProps) {
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
     map.addControl(new maplibregl.AttributionControl({ compact: true }));
 
-    const popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 8 });
+    const popup = new maplibregl.Popup({
+      closeButton: false,
+      closeOnClick: false,
+      offset: 12,
+      className: 'dasha-popup',
+    });
     const markers: maplibregl.Marker[] = [];
     let statesApplied = false;
 
@@ -174,22 +199,25 @@ export function MapView({ onSelectReport }: MapViewProps) {
 
       let hoveredName: string | null = null;
 
-      map.on('mousemove', 'colonias-fill', (e) => {
-        if (!e.features || e.features.length === 0) return;
-        const name = String(e.features[0].properties?.name ?? '');
-        map.getCanvas().style.cursor = 'pointer';
-
+      const selectColonia = (name: string, at: maplibregl.LngLat) => {
         if (name !== hoveredName) {
           if (hoveredName !== null) {
             map.setFeatureState({ source: 'colonias', id: hoveredName }, { hover: false });
           }
           hoveredName = name;
           map.setFeatureState({ source: 'colonias', id: name }, { hover: true });
-          const count = counts.get(name) ?? 0;
-          popup.setText(count > 0 ? `${name} · ${count} reporte${count === 1 ? '' : 's'}` : name);
+          popup.setHTML(popupHTML(name, counts.get(name) ?? 0));
           popup.addTo(map);
         }
-        popup.setLngLat(e.lngLat);
+        popup.setLngLat(at);
+      };
+      selectColoniaRef.current = selectColonia;
+
+      map.on('mousemove', 'colonias-fill', (e) => {
+        if (!e.features || e.features.length === 0) return;
+        const name = String(e.features[0].properties?.name ?? '');
+        map.getCanvas().style.cursor = 'pointer';
+        selectColonia(name, e.lngLat);
       });
 
       map.on('mouseleave', 'colonias-fill', () => {
@@ -205,9 +233,11 @@ export function MapView({ onSelectReport }: MapViewProps) {
         if (!e.features || e.features.length === 0) return;
         const geometry = e.features[0].geometry;
         if (geometry.type !== 'Polygon' && geometry.type !== 'MultiPolygon') return;
+        const name = String(e.features[0].properties?.name ?? '');
         const bounds = new maplibregl.LngLatBounds();
         extendBounds(bounds, geometry.coordinates);
         map.fitBounds(bounds, { padding: 60, maxZoom: 16, duration: 800 });
+        if (name) selectColonia(name, bounds.getCenter());
       });
 
       for (const report of mockReports) {
@@ -305,6 +335,7 @@ export function MapView({ onSelectReport }: MapViewProps) {
     const bounds = coloniaIndexRef.current.get(name);
     if (!map || !bounds) return;
     map.fitBounds(bounds, { padding: 60, maxZoom: 16, duration: 800 });
+    selectColoniaRef.current?.(name, bounds.getCenter());
     setQuery('');
   };
 
@@ -327,7 +358,7 @@ export function MapView({ onSelectReport }: MapViewProps) {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Buscar colonia..."
-              className="w-full bg-transparent text-sm text-neutral-700 outline-none placeholder:text-neutral-400"
+              className="w-full bg-transparent text-base text-neutral-700 outline-none placeholder:text-neutral-400"
             />
             {query && (
               <button type="button" onClick={() => setQuery('')} aria-label="Limpiar búsqueda">
