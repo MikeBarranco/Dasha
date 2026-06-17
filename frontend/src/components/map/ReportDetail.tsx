@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { X, Navigation, Clock, MapPin, Maximize2 } from 'lucide-react';
 import { ShareButton } from '../ui/ShareButton';
+import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 import type { Report, Severity } from '../../data/mockReports';
 
 const severityLabel: Record<Severity, string> = {
@@ -22,6 +23,7 @@ type ReportDetailProps = {
 };
 
 export function ReportDetail({ report, onClose }: ReportDetailProps) {
+  useLockBodyScroll();
   const [showPhoto, setShowPhoto] = useState(false);
 
   return (

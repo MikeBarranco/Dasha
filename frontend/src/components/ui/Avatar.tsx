@@ -12,7 +12,7 @@ export function Avatar({ name, src, className }: AvatarProps) {
       <img
         src={src}
         alt={name}
-        className={cn('flex-shrink-0 rounded-full object-cover', className)}
+        className={cn('flex-shrink-0 rounded-full bg-neutral-100 object-cover', className)}
       />
     );
   }

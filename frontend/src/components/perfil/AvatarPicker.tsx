@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import { X } from 'lucide-react';
 import { avatarOptions } from '../../lib/avatars';
+import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 import { cn } from '../../lib/cn';
 
 type AvatarPickerProps = {
@@ -10,6 +11,8 @@ type AvatarPickerProps = {
 };
 
 export function AvatarPicker({ current, onSelect, onClose }: AvatarPickerProps) {
+  useLockBodyScroll();
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
       <motion.div
@@ -46,11 +49,11 @@ export function AvatarPicker({ current, onSelect, onClose }: AvatarPickerProps) 
               type="button"
               onClick={() => onSelect(url)}
               className={cn(
-                'overflow-hidden rounded-full border-2 transition-colors',
+                'overflow-hidden rounded-full border-2 bg-neutral-100 transition-colors',
                 url === current ? 'border-cobalto' : 'border-transparent hover:border-neutral-200',
               )}
             >
-              <img src={url} alt="" className="h-full w-full object-cover" />
+              <img src={url} alt="" loading="lazy" className="h-full w-full object-cover" />
             </button>
           ))}
         </div>
