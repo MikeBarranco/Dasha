@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { X, Navigation, Share2, Clock, MapPin, Maximize2 } from 'lucide-react';
+import { X, Navigation, Clock, MapPin, Maximize2 } from 'lucide-react';
+import { ShareButton } from '../ui/ShareButton';
 import type { Report, Severity } from '../../data/mockReports';
 
 const severityLabel: Record<Severity, string> = {
@@ -54,6 +55,11 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
           >
             {severityLabel[report.severity]}
           </span>
+          <ShareButton
+            title={`Reporte de rescate en ${report.colonia}`}
+            text={`${report.species === 'perro' ? 'Perro' : 'Gato'} · ${report.condition}. Ayúdalo en Dasha.`}
+            className="absolute right-14 top-3 z-10"
+          />
           <button
             type="button"
             onClick={onClose}
@@ -87,19 +93,12 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
             Estado: {report.status}
           </div>
 
-          <div className="mt-5 flex gap-3">
+          <div className="mt-5">
             <button
               type="button"
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-naranja py-3 font-semibold text-white transition-opacity hover:opacity-90"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-naranja py-3 font-semibold text-white transition-opacity hover:opacity-90"
             >
               <Navigation className="h-5 w-5" /> Voy en camino
-            </button>
-            <button
-              type="button"
-              aria-label="Compartir"
-              className="flex items-center justify-center rounded-xl border border-neutral-200 px-4 text-neutral-600 transition-colors hover:bg-neutral-50"
-            >
-              <Share2 className="h-5 w-5" />
             </button>
           </div>
         </div>
