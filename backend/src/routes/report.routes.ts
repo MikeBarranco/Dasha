@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { ReportController } from '../controllers/report.controller';
 import { validate } from '../middlewares/validate';
 import { requireAuth } from '../middlewares/auth.middleware';
-import { createReportSchema, getNearbyReportsSchema } from '../schemas/report.schema';
+import { createReportSchema, getNearbyReportsSchema, updateReportStatusSchema } from '../schemas/report.schema';
 
 const router = Router();
 
@@ -17,5 +17,8 @@ router.get('/:id', ReportController.getReportById);
 
 // POST /api/v1/reports (Protegida, requiere sesión)
 router.post('/', requireAuth, validate(createReportSchema), ReportController.createReport);
+
+// PATCH /api/v1/reports/:id/status (Protegida, cambiar estado de reporte)
+router.patch('/:id/status', requireAuth, validate(updateReportStatusSchema), ReportController.updateStatus);
 
 export default router;

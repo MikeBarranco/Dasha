@@ -171,4 +171,42 @@ export class ReportService {
 
     return this.formatReportForFrontend(reports[0]);
   }
+
+  /**
+   * Actualiza el estado de un reporte y registra el cambio en el historial
+   */
+  static async updateReportStatus(reportId: string, newStatus: any, userId: string) {
+    return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      // Obtener el reporte actual para saber el estado previo
+      const currentReport = await tx.report.findUnique({
+        where: { id: reportId },
+        select: { status: true }
+      });
+
+      if (!currentReport) {
+        throw new Error('Reporte no encontrado');
+      }
+
+      // Actualizar el reporte
+      const updatedReport = await tx.report.update({
+        where: { id: reportId },
+        data: {
+          status: newStatus,
+          updatedAt: new Date()
+        }
+      });
+
+      // Registrar el cambio en el historial
+      await tx.reportStatusHistory.create({
+        data: {
+          reportId,
+          fromStatus: currentReport.status,
+          toStatus: newStatus,
+          changedBy: userId
+        }
+      });
+
+      return updatedReport;
+    });
+  }
 }
