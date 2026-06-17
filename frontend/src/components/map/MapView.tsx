@@ -1,11 +1,19 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import maplibregl, { type StyleSpecification } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { Search, LocateFixed, Loader2, X } from 'lucide-react';
 import { mockReports, type Report, type Severity } from '../../data/mockReports';
 import { MapLegend } from './MapLegend';
 
 const PUEBLA_CENTER: [number, number] = [-98.2, 19.04];
 const PIN_MIN_ZOOM = 13.5;
+
+function normalizeText(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '');
+}
 
 const baseStyle: StyleSpecification = {
   version: 8,
@@ -47,10 +55,45 @@ export function MapView({ onSelectReport }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const onSelectRef = useRef(onSelectReport);
+  const userMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const coloniaIndexRef = useRef<Map<string, maplibregl.LngLatBounds>>(new Map());
+  const geoErrorTimer = useRef<number | null>(null);
+  const [coloniaNames, setColoniaNames] = useState<string[]>([]);
+  const [query, setQuery] = useState('');
+  const [locating, setLocating] = useState(false);
+  const [geoError, setGeoError] = useState<string | null>(null);
 
   useEffect(() => {
     onSelectRef.current = onSelectReport;
   }, [onSelectReport]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/data/colonias-puebla.geojson')
+      .then((response) => response.json())
+      .then(
+        (geojson: {
+          features?: Array<{ properties?: { name?: string }; geometry?: { coordinates?: unknown } }>;
+        }) => {
+          if (cancelled) return;
+          const index = new Map<string, maplibregl.LngLatBounds>();
+          for (const feature of geojson.features ?? []) {
+            const name = String(feature.properties?.name ?? '');
+            if (!name || index.has(name)) continue;
+            const bounds = new maplibregl.LngLatBounds();
+            extendBounds(bounds, feature.geometry?.coordinates);
+            if (bounds.isEmpty()) continue;
+            index.set(name, bounds);
+          }
+          coloniaIndexRef.current = index;
+          setColoniaNames([...index.keys()].sort((a, b) => a.localeCompare(b, 'es')));
+        },
+      )
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -210,14 +253,126 @@ export function MapView({ onSelectReport }: MapViewProps) {
 
     return () => {
       for (const marker of markers) marker.remove();
+      userMarkerRef.current?.remove();
+      userMarkerRef.current = null;
+      if (geoErrorTimer.current) window.clearTimeout(geoErrorTimer.current);
       map.remove();
       mapRef.current = null;
     };
   }, []);
 
+  const showGeoError = (message: string) => {
+    setGeoError(message);
+    if (geoErrorTimer.current) window.clearTimeout(geoErrorTimer.current);
+    geoErrorTimer.current = window.setTimeout(() => setGeoError(null), 4000);
+  };
+
+  const handleLocate = () => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (!('geolocation' in navigator)) {
+      showGeoError('Tu navegador no permite acceder a la ubicación.');
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocating(false);
+        const { longitude, latitude } = position.coords;
+        map.flyTo({ center: [longitude, latitude], zoom: 15, duration: 1000 });
+        userMarkerRef.current?.remove();
+        const element = document.createElement('div');
+        element.style.width = '16px';
+        element.style.height = '16px';
+        element.style.borderRadius = '9999px';
+        element.style.backgroundColor = '#2563EB';
+        element.style.border = '3px solid #ffffff';
+        element.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.35)';
+        userMarkerRef.current = new maplibregl.Marker({ element })
+          .setLngLat([longitude, latitude])
+          .addTo(map);
+      },
+      () => {
+        setLocating(false);
+        showGeoError('No pudimos obtener tu ubicación. Revisa los permisos.');
+      },
+      { enableHighAccuracy: true, timeout: 8000 },
+    );
+  };
+
+  const handleSelectColonia = (name: string) => {
+    const map = mapRef.current;
+    const bounds = coloniaIndexRef.current.get(name);
+    if (!map || !bounds) return;
+    map.fitBounds(bounds, { padding: 60, maxZoom: 16, duration: 800 });
+    setQuery('');
+  };
+
+  const suggestions =
+    query.trim().length >= 2
+      ? coloniaNames
+          .filter((name) => normalizeText(name).includes(normalizeText(query)))
+          .slice(0, 6)
+      : [];
+
   return (
     <div className="relative h-full w-full">
       <div ref={containerRef} className="h-full w-full" />
+
+      <div className="absolute left-3 right-3 top-3 z-10 flex items-start gap-2">
+        <div className="relative flex-1">
+          <div className="flex items-center gap-2 rounded-xl bg-white/95 px-3 py-2 shadow-lg backdrop-blur focus-within:ring-2 focus-within:ring-cobalto/30">
+            <Search className="h-4 w-4 flex-shrink-0 text-neutral-400" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Buscar colonia..."
+              className="w-full bg-transparent text-sm text-neutral-700 outline-none placeholder:text-neutral-400"
+            />
+            {query && (
+              <button type="button" onClick={() => setQuery('')} aria-label="Limpiar búsqueda">
+                <X className="h-4 w-4 text-neutral-400" />
+              </button>
+            )}
+          </div>
+
+          {suggestions.length > 0 && (
+            <ul className="absolute mt-1 max-h-60 w-full overflow-y-auto rounded-xl bg-white py-1 shadow-lg">
+              {suggestions.map((name) => (
+                <li key={name}>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectColonia(name)}
+                    className="block w-full px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50"
+                  >
+                    {name}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={handleLocate}
+          aria-label="Mi ubicación"
+          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white/95 text-cobalto shadow-lg backdrop-blur transition-colors hover:bg-white"
+        >
+          {locating ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <LocateFixed className="h-5 w-5" />
+          )}
+        </button>
+      </div>
+
+      {geoError && (
+        <div className="absolute left-3 right-3 top-16 z-10 rounded-lg bg-white/95 px-3 py-2 text-center text-xs text-red-600 shadow">
+          {geoError}
+        </div>
+      )}
+
       <MapLegend />
     </div>
   );
