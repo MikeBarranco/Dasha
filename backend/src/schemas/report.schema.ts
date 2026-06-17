@@ -40,3 +40,13 @@ export const getNearbyReportsSchema = z.object({
     status: z.nativeEnum(ReportStatus).optional().default('active')
   })
 });
+
+// Schema para actualizar el status de un reporte
+export const updateReportStatusSchema = z.object({
+  body: z.object({
+    status: z.nativeEnum(ReportStatus)
+  }),
+  params: z.object({
+    id: z.string().uuid()
+  })
+});

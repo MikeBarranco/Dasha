@@ -11,7 +11,7 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  const geojsonPath = path.resolve(__dirname, '../../../frontend/public/data/colonias-puebla.geojson');
+  const geojsonPath = path.resolve(__dirname, '../../data/colonias-puebla.geojson');
   console.log(`Leeyendo archivo desde: ${geojsonPath}`);
   
   const rawData = fs.readFileSync(geojsonPath, 'utf8');

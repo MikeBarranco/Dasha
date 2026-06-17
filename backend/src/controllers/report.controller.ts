@@ -86,12 +86,39 @@ export class ReportController {
       const report = await ReportService.getReportById(id);
       
       if (!report) {
-        return res.status(404).json({ error: 'Reporte no encontrado' });
+        res.status(404).json({ error: 'Reporte no encontrado' });
+        return;
       }
-
+      
       res.status(200).json(report);
     } catch (error) {
       next(error);
+    }
+  }
+
+  static async updateStatus(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      const { status } = req.body;
+      const userId = (req as any).user?.id;
+
+      if (!userId) {
+        res.status(401).json({ error: 'No autorizado' });
+        return;
+      }
+
+      await ReportService.updateReportStatus(id, status, userId);
+      
+      // Devolver el reporte actualizado en formato frontend
+      const updatedReport = await ReportService.getReportById(id);
+      
+      res.status(200).json(updatedReport);
+    } catch (error: any) {
+      if (error.message === 'Reporte no encontrado') {
+        res.status(404).json({ error: error.message });
+      } else {
+        next(error);
+      }
     }
   }
 }
