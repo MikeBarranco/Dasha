@@ -161,3 +161,53 @@ export async function getNearbyReports(
   );
   return (data ?? []).map(mapReport);
 }
+
+// GET /reports y GET /stats devuelven el dato directo (sin envoltura {status,data}).
+async function requestRaw<T>(path: string): Promise<T> {
+  const response = await fetch(`${API_URL}${path}`);
+  if (!response.ok) throw new Error('No se pudo consultar el servidor');
+  return (await response.json()) as T;
+}
+
+type ListedReport = {
+  id: string;
+  lat: number;
+  lng: number;
+  colonia: string | null;
+  species: string;
+  condition: string;
+  severity: string;
+  photoUrl: string | null;
+  description: string | null;
+  status: string | null;
+  createdAt: string;
+};
+
+export async function getReports(): Promise<Report[]> {
+  const data = await requestRaw<ListedReport[]>('/reports');
+  return (data ?? []).map((raw) => ({
+    id: String(raw.id),
+    lat: Number(raw.lat),
+    lng: Number(raw.lng),
+    colonia: raw.colonia ?? 'Sin colonia',
+    species: raw.species === 'gato' || raw.species === 'cat' ? 'gato' : 'perro',
+    condition: conditionLabels[raw.condition] ?? raw.condition,
+    severity: (['baja', 'media', 'critica'].includes(raw.severity)
+      ? raw.severity
+      : 'media') as Severity,
+    photo: raw.photoUrl ?? '/seed/perrito1.jpg',
+    description: raw.description ?? '',
+    reportedAgo: timeAgo(raw.createdAt),
+    status: raw.status ?? 'Activo',
+  }));
+}
+
+export type Stats = {
+  reportesActivos: number;
+  rescatesLogrados: number;
+  voluntarios: number;
+};
+
+export async function getStats(): Promise<Stats> {
+  return requestRaw<Stats>('/stats');
+}
