@@ -4,6 +4,7 @@ import { X, Heart, Gift, Stethoscope, MapPin, ChevronLeft, ChevronRight, Home } 
 import { ProgressBar } from '../ui/ProgressBar';
 import { ShareButton } from '../ui/ShareButton';
 import { cn } from '../../lib/cn';
+import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 import type { Animal } from '../../data/mockAnimals';
 
 type AnimalDetailProps = {
@@ -12,6 +13,7 @@ type AnimalDetailProps = {
 };
 
 export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
+  useLockBodyScroll();
   const total = animal.photos.length;
   const [activePhoto, setActivePhoto] = useState(total - 1);
   const [showFull, setShowFull] = useState(false);
