@@ -79,7 +79,7 @@ export class ReportController {
 
   static async getReportById(req: Request, res: Response, next: NextFunction) {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
       const report = await ReportService.getReportById(id);
       
       if (!report) {
