@@ -16,7 +16,7 @@ export class ReportController {
       const { photoBase64, photos, ...restData } = req.body;
       const userId = (req as any).user?.id; // Inyectado por el auth.middleware
       
-      let finalPhotos = photos || [];
+      const finalPhotos = photos || [];
 
       // Si aún mandan photoBase64 (flujo antiguo), lo subimos desde el backend
       if (photoBase64) {
