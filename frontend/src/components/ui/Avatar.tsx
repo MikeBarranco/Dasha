@@ -2,10 +2,21 @@ import { cn } from '../../lib/cn';
 
 type AvatarProps = {
   name: string;
+  src?: string;
   className?: string;
 };
 
-export function Avatar({ name, className }: AvatarProps) {
+export function Avatar({ name, src, className }: AvatarProps) {
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt={name}
+        className={cn('flex-shrink-0 rounded-full object-cover', className)}
+      />
+    );
+  }
+
   const initial = name.trim().charAt(0).toUpperCase();
 
   return (

@@ -1,7 +1,11 @@
-import { Lock, ChevronRight, Settings, LogOut, type LucideIcon } from 'lucide-react';
+import { useState } from 'react';
+import { AnimatePresence } from 'motion/react';
+import { Lock, ChevronRight, Settings, LogOut, Camera, type LucideIcon } from 'lucide-react';
 import { Avatar } from '../components/ui/Avatar';
+import { AvatarPicker } from '../components/perfil/AvatarPicker';
 import { cn } from '../lib/cn';
 import { mockUser } from '../data/mockUser';
+import { useAvatar } from '../lib/useAvatar';
 
 function StatCard({ value, label }: { value: number; label: string }) {
   return (
@@ -30,13 +34,25 @@ function RowButton({ icon: Icon, label, danger }: { icon: LucideIcon; label: str
 
 export function PerfilPage() {
   const user = mockUser;
+  const { avatar, setAvatar } = useAvatar();
+  const [pickerOpen, setPickerOpen] = useState(false);
   const xpPercent = Math.min(100, Math.round((user.xp / user.xpToNext) * 100));
   const unlockedCount = user.medals.filter((medal) => medal.unlocked).length;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Avatar name={user.name} className="h-20 w-20 text-2xl" />
+        <button
+          type="button"
+          onClick={() => setPickerOpen(true)}
+          className="relative flex-shrink-0"
+          aria-label="Cambiar avatar"
+        >
+          <Avatar name={user.name} src={avatar} className="h-20 w-20 text-2xl" />
+          <span className="absolute -bottom-0.5 -right-0.5 flex h-7 w-7 items-center justify-center rounded-full border-2 border-lino bg-cobalto text-white">
+            <Camera className="h-3.5 w-3.5" />
+          </span>
+        </button>
         <div className="min-w-0">
           <h1 className="font-display text-2xl font-bold text-cobalto">{user.name}</h1>
           <div className="mt-1 flex flex-wrap items-center gap-2">
@@ -119,6 +135,19 @@ export function PerfilPage() {
         <RowButton icon={Settings} label="Ajustes de la cuenta" />
         <RowButton icon={LogOut} label="Cerrar sesión" danger />
       </div>
+
+      <AnimatePresence>
+        {pickerOpen && (
+          <AvatarPicker
+            current={avatar}
+            onSelect={(url) => {
+              setAvatar(url);
+              setPickerOpen(false);
+            }}
+            onClose={() => setPickerOpen(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
