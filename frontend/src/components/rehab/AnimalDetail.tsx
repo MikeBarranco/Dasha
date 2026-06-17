@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { X, Heart, Gift, Stethoscope, MapPin, ChevronLeft, ChevronRight, Home } from 'lucide-react';
 import { ProgressBar } from '../ui/ProgressBar';
+import { ShareButton } from '../ui/ShareButton';
 import { cn } from '../../lib/cn';
 import type { Animal } from '../../data/mockAnimals';
 
@@ -49,6 +50,11 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
           <span className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-cobalto">
             {animal.status}
           </span>
+          <ShareButton
+            title={`${animal.name} en Dasha`}
+            text={`Conoce a ${animal.name}, ${animal.status.toLowerCase()}. Apóyalo en Dasha.`}
+            className="absolute right-14 top-3 z-10"
+          />
           <button
             type="button"
             onClick={onClose}
