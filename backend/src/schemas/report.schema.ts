@@ -16,8 +16,17 @@ export const createReportSchema = z.object({
     lat: z.number().min(-90).max(90),
     lng: z.number().min(-180).max(180),
     
-    // Foto subida desde el Frontend en formato Base64
-    photoBase64: z.string().min(1, { message: 'Se requiere al menos una foto del animal' })
+    // Foto subida desde el Frontend (flujo legacy)
+    photoBase64: z.string().optional(),
+    
+    // Fotos ya subidas por el frontend con la firma (nuevo flujo)
+    photos: z.array(z.object({
+      url: z.string().url(),
+      publicId: z.string()
+    })).optional()
+  }).refine(data => data.photoBase64 || (data.photos && data.photos.length > 0), {
+    message: 'Se requiere al menos una foto del animal',
+    path: ['photos']
   })
 });
 

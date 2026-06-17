@@ -13,24 +13,27 @@ export class ReportController {
   
   static async createReport(req: Request, res: Response, next: NextFunction) {
     try {
-      const { photoBase64, ...restData } = req.body;
+      const { photoBase64, photos, ...restData } = req.body;
       const userId = (req as any).user?.id; // Inyectado por el auth.middleware
       
-      // Subir la imagen a Cloudinary (Base64)
-      const uploadResult = await cloudinary.uploader.upload(photoBase64, {
-        folder: 'dasha_reports',
-      });
+      const finalPhotos = photos || [];
+
+      // Si aún mandan photoBase64 (flujo antiguo), lo subimos desde el backend
+      if (photoBase64) {
+        const uploadResult = await cloudinary.uploader.upload(photoBase64, {
+          folder: 'dasha_reports',
+        });
+        finalPhotos.push({
+          url: uploadResult.secure_url,
+          publicId: uploadResult.public_id,
+        });
+      }
 
       // Asegurar regla estricta de BD.txt (guardar url y public_id obligatoriamente)
       const data = {
         ...restData,
         userId: userId || restData.userId, // Prioriza el del JWT
-        photos: [
-          {
-            url: uploadResult.secure_url,
-            publicId: uploadResult.public_id,
-          }
-        ]
+        photos: finalPhotos
       };
 
       const report = await ReportService.createReport(data);
