@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { X, Heart, Gift, Stethoscope, MapPin, ChevronLeft, ChevronRight, Home } from 'lucide-react';
 import { ProgressBar } from '../ui/ProgressBar';
+import { ShareButton } from '../ui/ShareButton';
 import { cn } from '../../lib/cn';
 import type { Animal } from '../../data/mockAnimals';
 
@@ -14,6 +15,7 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
   const total = animal.photos.length;
   const [activePhoto, setActivePhoto] = useState(total - 1);
   const [showFull, setShowFull] = useState(false);
+  const touchStartX = useRef(0);
   const photo = animal.photos[activePhoto];
 
   const goNext = () => setActivePhoto((index) => (index + 1) % total);
@@ -48,6 +50,11 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
           <span className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-cobalto">
             {animal.status}
           </span>
+          <ShareButton
+            title={`${animal.name} en Dasha`}
+            text={`Conoce a ${animal.name}, ${animal.status.toLowerCase()}. Apóyalo en Dasha.`}
+            className="absolute right-14 top-3 z-10"
+          />
           <button
             type="button"
             onClick={onClose}
@@ -160,6 +167,15 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
               src={photo}
               alt={animal.name}
               onClick={(event) => event.stopPropagation()}
+              onTouchStart={(event) => {
+                touchStartX.current = event.changedTouches[0].clientX;
+              }}
+              onTouchEnd={(event) => {
+                if (total <= 1) return;
+                const deltaX = event.changedTouches[0].clientX - touchStartX.current;
+                if (deltaX > 50) goPrev();
+                else if (deltaX < -50) goNext();
+              }}
               className="max-h-full max-w-full rounded-xl object-contain"
             />
 
