@@ -1,6 +1,6 @@
 import { useMemo, useState, type ChangeEvent, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Search } from 'lucide-react';
+import { Search, SlidersHorizontal } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { ProgressBar } from '../components/ui/ProgressBar';
 import { AnimalDetail } from '../components/rehab/AnimalDetail';
@@ -41,6 +41,7 @@ export function RehabilitacionPage() {
   const [size, setSize] = useState('todos');
   const [status, setStatus] = useState('todos');
   const [zone, setZone] = useState('todas');
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const zones = useMemo(
     () =>
@@ -58,6 +59,12 @@ export function RehabilitacionPage() {
       .filter((animal) => normalize(animal.name).includes(query))
       .sort((a, b) => a.totalRaised / a.totalNeeded - b.totalRaised / b.totalNeeded);
   }, [search, species, size, status, zone]);
+
+  const activeCount =
+    (species !== 'todos' ? 1 : 0) +
+    (size !== 'todos' ? 1 : 0) +
+    (status !== 'todos' ? 1 : 0) +
+    (zone !== 'todas' ? 1 : 0);
 
   const hasFilters =
     search !== '' ||
@@ -82,60 +89,88 @@ export function RehabilitacionPage() {
       />
 
       <div className="space-y-3">
-        <div className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-2 focus-within:ring-2 focus-within:ring-cobalto/30">
-          <Search className="h-4 w-4 flex-shrink-0 text-neutral-400" />
-          <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Buscar por nombre..."
-            className="w-full bg-transparent text-base text-neutral-700 outline-none placeholder:text-neutral-400"
-          />
+        <div className="flex gap-2">
+          <div className="flex flex-1 items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-2 focus-within:ring-2 focus-within:ring-cobalto/30">
+            <Search className="h-4 w-4 flex-shrink-0 text-neutral-400" />
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Buscar por nombre..."
+              className="w-full bg-transparent text-base text-neutral-700 outline-none placeholder:text-neutral-400"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((open) => !open)}
+            className="flex flex-shrink-0 items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
+          >
+            <SlidersHorizontal className="h-4 w-4 text-neutral-500" />
+            Filtros
+            {activeCount > 0 && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-cobalto px-1.5 text-[11px] font-semibold text-white">
+                {activeCount}
+              </span>
+            )}
+          </button>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <FilterSelect value={species} onChange={(event) => setSpecies(event.target.value)}>
-            <option value="todos">Especie: todas</option>
-            <option value="perro">Perro</option>
-            <option value="gato">Gato</option>
-          </FilterSelect>
-
-          <FilterSelect value={size} onChange={(event) => setSize(event.target.value)}>
-            <option value="todos">Tamaño: todos</option>
-            {sizeOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </FilterSelect>
-
-          <FilterSelect value={status} onChange={(event) => setStatus(event.target.value)}>
-            <option value="todos">Estado: todos</option>
-            {statusOptions.map((option) => (
-              <option key={option} value={option}>
-                {option === 'Buscando hogar' ? 'Listos para adoptar' : option}
-              </option>
-            ))}
-          </FilterSelect>
-
-          <FilterSelect value={zone} onChange={(event) => setZone(event.target.value)}>
-            <option value="todas">Zona: todas</option>
-            {zones.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </FilterSelect>
-
-          {hasFilters && (
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="rounded-xl px-3 py-2 text-sm font-medium text-cobalto hover:bg-neutral-100"
+        <AnimatePresence initial={false}>
+          {filtersOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+              className="rounded-2xl border border-neutral-200 bg-white p-4"
             >
-              Limpiar
-            </button>
+              <div className="flex flex-wrap gap-2">
+                <FilterSelect value={species} onChange={(event) => setSpecies(event.target.value)}>
+                  <option value="todos">Especie: todas</option>
+                  <option value="perro">Perro</option>
+                  <option value="gato">Gato</option>
+                </FilterSelect>
+
+                <FilterSelect value={size} onChange={(event) => setSize(event.target.value)}>
+                  <option value="todos">Tamaño: todos</option>
+                  {sizeOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </FilterSelect>
+
+                <FilterSelect value={status} onChange={(event) => setStatus(event.target.value)}>
+                  <option value="todos">Estado: todos</option>
+                  {statusOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option === 'Buscando hogar' ? 'Listos para adoptar' : option}
+                    </option>
+                  ))}
+                </FilterSelect>
+
+                <FilterSelect value={zone} onChange={(event) => setZone(event.target.value)}>
+                  <option value="todas">Zona: todas</option>
+                  {zones.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </FilterSelect>
+              </div>
+
+              {hasFilters && (
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="mt-3 text-sm font-medium text-cobalto hover:underline"
+                >
+                  Limpiar filtros
+                </button>
+              )}
+            </motion.div>
           )}
-        </div>
+        </AnimatePresence>
 
         <p className="text-xs text-neutral-400">
           {filtered.length} {filtered.length === 1 ? 'animalito' : 'animalitos'}
