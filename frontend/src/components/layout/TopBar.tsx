@@ -1,6 +1,8 @@
 import { Link, NavLink } from 'react-router-dom';
 import { Bell } from 'lucide-react';
 import { cn } from '../../lib/cn';
+import { Avatar } from '../ui/Avatar';
+import { mockUser } from '../../data/mockUser';
 
 const navItems = [
   { to: '/', label: 'Mapa', end: true },
@@ -50,10 +52,9 @@ export function TopBar() {
           >
             <Bell className="h-5 w-5" />
           </button>
-          <div
-            className="h-9 w-9 rounded-full bg-gradient-to-br from-cobalto to-purpura"
-            aria-hidden="true"
-          />
+          <Link to="/perfil" aria-label="Mi perfil">
+            <Avatar name={mockUser.name} className="h-9 w-9 text-sm" />
+          </Link>
         </div>
       </div>
     </header>
