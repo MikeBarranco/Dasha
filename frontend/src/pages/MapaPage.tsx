@@ -1,25 +1,42 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { ReportDetail } from '../components/map/ReportDetail';
 import { mockReports, type Report } from '../data/mockReports';
+import { getReports, getStats, type Stats } from '../lib/api';
 
 const MapView = lazy(() =>
   import('../components/map/MapView').then((module) => ({ default: module.MapView })),
 );
 
-const stats = [
-  { label: 'Reportes activos', value: '128' },
-  { label: 'Rescates logrados', value: '342' },
-  { label: 'Voluntarios', value: '57' },
-];
-
 export function MapaPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const [reports, setReports] = useState<Report[] | null>(null);
+  const [stats, setStats] = useState<Stats | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    getReports()
+      .then((data) => {
+        if (active) setReports(data);
+      })
+      .catch(() => {
+        if (active) setReports(mockReports);
+      });
+    getStats()
+      .then((data) => {
+        if (active) setStats(data);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const reportId = searchParams.get('reporte');
   const selectedReport = reportId
-    ? (mockReports.find((report) => report.id === reportId) ?? null)
+    ? ((reports ?? []).find((report) => report.id === reportId) ?? null)
     : null;
 
   const openReport = (report: Report) => {
@@ -30,6 +47,12 @@ export function MapaPage() {
     setSearchParams({});
   };
 
+  const statCards = [
+    { label: 'Reportes activos', value: stats ? stats.reportesActivos : '—' },
+    { label: 'Rescates logrados', value: stats ? stats.rescatesLogrados : '—' },
+    { label: 'Voluntarios', value: stats ? stats.voluntarios : '—' },
+  ];
+
   return (
     <div>
       <PageHeader
@@ -38,7 +61,7 @@ export function MapaPage() {
       />
 
       <div className="grid grid-cols-3 gap-3 sm:max-w-xl">
-        {stats.map((stat, index) => (
+        {statCards.map((stat, index) => (
           <motion.div
             key={stat.label}
             initial={{ opacity: 0, y: 10 }}
@@ -53,9 +76,13 @@ export function MapaPage() {
       </div>
 
       <div className="mt-6 h-[60vh] min-h-[420px] overflow-hidden rounded-3xl border border-neutral-200">
-        <Suspense fallback={<div className="h-full w-full animate-pulse bg-neutral-100" />}>
-          <MapView onSelectReport={openReport} />
-        </Suspense>
+        {reports === null ? (
+          <div className="h-full w-full animate-pulse bg-neutral-100" />
+        ) : (
+          <Suspense fallback={<div className="h-full w-full animate-pulse bg-neutral-100" />}>
+            <MapView reports={reports} onSelectReport={openReport} />
+          </Suspense>
+        )}
       </div>
 
       <AnimatePresence>

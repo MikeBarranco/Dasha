@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import maplibregl, { type StyleSpecification } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Search, LocateFixed, Loader2, X } from 'lucide-react';
-import { mockReports, type Report, type Severity } from '../../data/mockReports';
+import { type Report, type Severity } from '../../data/mockReports';
 import { MapLegend } from './MapLegend';
 
 const PUEBLA_CENTER: [number, number] = [-98.2, 19.04];
@@ -67,12 +67,14 @@ function extendBounds(bounds: maplibregl.LngLatBounds, coords: unknown): void {
 }
 
 type MapViewProps = {
+  reports: Report[];
   onSelectReport: (report: Report) => void;
 };
 
-export function MapView({ onSelectReport }: MapViewProps) {
+export function MapView({ reports, onSelectReport }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const reportsRef = useRef(reports);
   const onSelectRef = useRef(onSelectReport);
   const userMarkerRef = useRef<maplibregl.Marker | null>(null);
   const coloniaIndexRef = useRef<Map<string, maplibregl.LngLatBounds>>(new Map());
@@ -119,8 +121,9 @@ export function MapView({ onSelectReport }: MapViewProps) {
     const container = containerRef.current;
     if (!container || mapRef.current) return;
 
+    const reports = reportsRef.current;
     const counts = new Map<string, number>();
-    for (const report of mockReports) {
+    for (const report of reports) {
       counts.set(report.colonia, (counts.get(report.colonia) ?? 0) + 1);
     }
 
@@ -240,7 +243,7 @@ export function MapView({ onSelectReport }: MapViewProps) {
         if (name) selectColonia(name, bounds.getCenter());
       });
 
-      for (const report of mockReports) {
+      for (const report of reports) {
         const element = document.createElement('div');
         element.style.width = '44px';
         element.style.height = '44px';
