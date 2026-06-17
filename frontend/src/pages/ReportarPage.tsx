@@ -1,4 +1,4 @@
-import { lazy, Suspense, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Camera, Dog, Cat, ArrowLeft, Check } from 'lucide-react';
@@ -118,6 +118,10 @@ export function ReportarPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const urgency = computeUrgency(conditions);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [step]);
 
   const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
