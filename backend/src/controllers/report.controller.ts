@@ -66,4 +66,29 @@ export class ReportController {
       next(error);
     }
   }
+
+  static async getReports(req: Request, res: Response, next: NextFunction) {
+    try {
+      const reports = await ReportService.getAllActiveReports();
+      // El contrato de Miguel pide regresar el arreglo directamente, sin envolverlo en "data"
+      res.status(200).json(reports);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getReportById(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      const report = await ReportService.getReportById(id);
+      
+      if (!report) {
+        return res.status(404).json({ error: 'Reporte no encontrado' });
+      }
+
+      res.status(200).json(report);
+    } catch (error) {
+      next(error);
+    }
+  }
 }

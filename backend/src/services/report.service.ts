@@ -8,7 +8,7 @@ export class ReportService {
   static async createReport(data: any) {
     // 1. Insertamos el reporte (sin las coordenadas inicialmente, porque Prisma no soporta inyectarlas directo en el create)
     // Usamos una transacción para que si falla el update de coordenadas o la foto, se cancele todo
-    return await prisma.$transaction(async (tx) => {
+    return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const report = await tx.report.create({
         data: {
           userId: data.userId,
@@ -98,5 +98,77 @@ export class ReportService {
     }
 
     return reports;
+  }
+
+  /**
+   * Helper para traducir la urgencia a severidad y formatear el objeto
+   */
+  private static formatReportForFrontend(row: any) {
+    let severity = 'media';
+    if (row.urgency === 'critical' || row.urgency === 'high') severity = 'critica';
+    if (row.urgency === 'low') severity = 'baja';
+
+    let statusStr = 'Activo';
+    if (row.status !== 'active') statusStr = row.status;
+
+    return {
+      id: row.id,
+      lat: row.lat,
+      lng: row.lng,
+      colonia: row.colonia || 'Desconocida',
+      species: row.species === 'dog' ? 'perro' : (row.species === 'cat' ? 'gato' : row.species),
+      condition: row.condition,
+      severity: severity,
+      photoUrl: row.photo || null,
+      description: row.description,
+      status: statusStr,
+      createdAt: row.created_at
+    };
+  }
+
+  /**
+   * Obtiene TODOS los reportes activos (para la vista principal del mapa)
+   */
+  static async getAllActiveReports() {
+    const reports: any[] = await prisma.$queryRaw`
+      SELECT 
+        r.id, r.species, r.condition, r.urgency, r.status, r.description, r.created_at,
+        ST_X(r.location::geometry) as lng,
+        ST_Y(r.location::geometry) as lat,
+        c.name as colonia,
+        (SELECT url FROM report_photos rp WHERE rp.report_id = r.id ORDER BY rp.created_at ASC LIMIT 1) as photo
+      FROM reports r
+      LEFT JOIN colonies c ON r.colony_id = c.id
+      WHERE r.status = 'active'::"ReportStatus"
+        AND r.location IS NOT NULL
+      ORDER BY r.created_at DESC
+      LIMIT 100;
+    `;
+
+    return reports.map(this.formatReportForFrontend);
+  }
+
+  /**
+   * Obtiene un reporte específico por su ID
+   */
+  static async getReportById(id: string) {
+    const reports: any[] = await prisma.$queryRaw`
+      SELECT 
+        r.id, r.species, r.condition, r.urgency, r.status, r.description, r.created_at,
+        ST_X(r.location::geometry) as lng,
+        ST_Y(r.location::geometry) as lat,
+        c.name as colonia,
+        (SELECT url FROM report_photos rp WHERE rp.report_id = r.id ORDER BY rp.created_at ASC LIMIT 1) as photo
+      FROM reports r
+      LEFT JOIN colonies c ON r.colony_id = c.id
+      WHERE r.id = ${id}::uuid
+      LIMIT 1;
+    `;
+
+    if (!reports || reports.length === 0) {
+      return null;
+    }
+
+    return this.formatReportForFrontend(reports[0]);
   }
 }
