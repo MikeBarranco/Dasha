@@ -1,5 +1,6 @@
 import { useMemo, useState, type ChangeEvent, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
+import { useSearchParams } from 'react-router-dom';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { ProgressBar } from '../components/ui/ProgressBar';
@@ -11,6 +12,16 @@ function normalize(value: string): string {
     .toLowerCase()
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '');
+}
+
+function slugify(value: string): string {
+  return normalize(value)
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function animalSlug(animal: Animal): string {
+  return `${slugify(animal.name)}-${animal.id}`;
 }
 
 const sizeOptions: AnimalSize[] = ['Chico', 'Mediano', 'Grande'];
@@ -35,7 +46,14 @@ function FilterSelect({ value, onChange, children }: FilterSelectProps) {
 }
 
 export function RehabilitacionPage() {
-  const [selected, setSelected] = useState<Animal | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const animalParam = searchParams.get('animal');
+  const selected = animalParam
+    ? (mockAnimals.find((animal) => animalSlug(animal) === animalParam) ?? null)
+    : null;
+
+  const openAnimal = (animal: Animal) => setSearchParams({ animal: animalSlug(animal) });
+  const closeAnimal = () => setSearchParams({});
   const [search, setSearch] = useState('');
   const [species, setSpecies] = useState('todos');
   const [size, setSize] = useState('todos');
@@ -194,7 +212,7 @@ export function RehabilitacionPage() {
             <motion.button
               key={animal.id}
               type="button"
-              onClick={() => setSelected(animal)}
+              onClick={() => openAnimal(animal)}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: index * 0.05, ease: 'easeOut' }}
@@ -230,7 +248,7 @@ export function RehabilitacionPage() {
       )}
 
       <AnimatePresence>
-        {selected && <AnimalDetail animal={selected} onClose={() => setSelected(null)} />}
+        {selected && <AnimalDetail animal={selected} onClose={closeAnimal} />}
       </AnimatePresence>
     </div>
   );

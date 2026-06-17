@@ -1,8 +1,9 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { ReportDetail } from '../components/map/ReportDetail';
-import type { Report } from '../data/mockReports';
+import { mockReports, type Report } from '../data/mockReports';
 
 const MapView = lazy(() =>
   import('../components/map/MapView').then((module) => ({ default: module.MapView })),
@@ -15,7 +16,19 @@ const stats = [
 ];
 
 export function MapaPage() {
-  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const reportId = searchParams.get('reporte');
+  const selectedReport = reportId
+    ? (mockReports.find((report) => report.id === reportId) ?? null)
+    : null;
+
+  const openReport = (report: Report) => {
+    setSearchParams({ reporte: report.id });
+  };
+
+  const closeReport = () => {
+    setSearchParams({});
+  };
 
   return (
     <div>
@@ -41,14 +54,12 @@ export function MapaPage() {
 
       <div className="mt-6 h-[60vh] min-h-[420px] overflow-hidden rounded-3xl border border-neutral-200">
         <Suspense fallback={<div className="h-full w-full animate-pulse bg-neutral-100" />}>
-          <MapView onSelectReport={setSelectedReport} />
+          <MapView onSelectReport={openReport} />
         </Suspense>
       </div>
 
       <AnimatePresence>
-        {selectedReport && (
-          <ReportDetail report={selectedReport} onClose={() => setSelectedReport(null)} />
-        )}
+        {selectedReport && <ReportDetail report={selectedReport} onClose={closeReport} />}
       </AnimatePresence>
     </div>
   );
