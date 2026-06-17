@@ -103,6 +103,7 @@ export function ReportarPage() {
   const [done, setDone] = useState(false);
 
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoBase64, setPhotoBase64] = useState<string | null>(null);
   const [species, setSpecies] = useState<'perro' | 'gato' | null>(null);
   const [conditions, setConditions] = useState<string[]>([]);
   const [size, setSize] = useState<string | null>(null);
@@ -111,11 +112,41 @@ export function ReportarPage() {
   const [isAggressive, setIsAggressive] = useState(false);
   const [hasCollar, setHasCollar] = useState(false);
 
+  const [lat, setLat] = useState(19.04);
+  const [lng, setLng] = useState(-98.2);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const urgency = computeUrgency(conditions);
 
   const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) setPhotoUrl(URL.createObjectURL(file));
+    if (!file) return;
+    
+    // Preview original instantáneo
+    setPhotoUrl(URL.createObjectURL(file));
+
+    // Comprimir en canvas y convertir a Base64 (Optimización de UI)
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 800;
+        const scaleSize = MAX_WIDTH / img.width;
+        canvas.width = MAX_WIDTH;
+        canvas.height = img.height * scaleSize;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
+        // Convertir a base64 con calidad JPEG baja (0.6) para conexiones lentas
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
+        setPhotoBase64(compressedBase64);
+      };
+      if (e.target?.result) {
+        img.src = e.target.result as string;
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const toggleCondition = (value: string) => {
@@ -135,6 +166,36 @@ export function ReportarPage() {
     setDescription('');
     setIsAggressive(false);
     setHasCollar(false);
+  };
+
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    try {
+      const { createReport } = await import('../lib/api');
+      
+      const payload = {
+        userId: 'f557ba42-799e-4454-b676-5125a354d425', // Mock userId since there's no auth yet
+        species: species === 'perro' ? 'dog' : 'cat',
+        primaryColor: color || 'No especificado',
+        size: size === 'Pequeño' ? 'small' : size === 'Grande' ? 'large' : 'medium',
+        condition: conditions.includes('Herido') ? 'injured' : conditions.includes('Enfermo') ? 'sick' : 'lost',
+        urgency: urgency === 'critica' ? 'high' : urgency === 'media' ? 'medium' : 'low',
+        description,
+        isAggressive,
+        hasCollar,
+        lat,
+        lng,
+        photoBase64 // Se envía la imagen real en Base64 en lugar de URLs simuladas
+      };
+
+      await createReport(payload);
+      setDone(true);
+    } catch (error: any) {
+      console.error('Failed to create report', error);
+      alert('Error al publicar: ' + (error.message || error));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const canContinue =
@@ -359,7 +420,7 @@ export function ReportarPage() {
           <Suspense
             fallback={<div className="h-72 w-full animate-pulse rounded-2xl bg-neutral-100" />}
           >
-            <LocationPicker />
+            <LocationPicker onChange={(newLat, newLng) => { setLat(newLat); setLng(newLng); }} />
           </Suspense>
         </div>
       )}
@@ -389,10 +450,14 @@ export function ReportarPage() {
         ) : (
           <button
             type="button"
-            onClick={() => setDone(true)}
-            className="flex-1 rounded-xl bg-naranja py-3 font-semibold text-white transition-opacity hover:opacity-90"
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className={cn(
+              "flex-1 rounded-xl py-3 font-semibold text-white transition-opacity hover:opacity-90",
+              isSubmitting ? 'bg-neutral-400 cursor-not-allowed' : 'bg-naranja'
+            )}
           >
-            Publicar reporte
+            {isSubmitting ? 'Publicando...' : 'Publicar reporte'}
           </button>
         )}
       </div>
