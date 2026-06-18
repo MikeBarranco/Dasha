@@ -37,7 +37,7 @@ export class AnimalController {
 
   static async addRecord(req: Request, res: Response, next: NextFunction) {
     try {
-      const animalId = req.params.id;
+      const animalId = req.params.id as string;
       const veterinarianId = (req as any).user?.id;
       const { photosBase64, ...data } = req.body;
 
