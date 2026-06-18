@@ -1,10 +1,16 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { CountUp } from '../components/ui/CountUp';
 import { ReportDetail } from '../components/map/ReportDetail';
 import { MapListPanel } from '../components/map/MapListPanel';
+import { MapFilters } from '../components/map/MapFilters';
+import {
+  applyReportFilters,
+  emptyFilters,
+  type ReportFilters,
+} from '../lib/reportFilters';
 import { mockReports, type Report } from '../data/mockReports';
 import { getReports, getStats, type Stats } from '../lib/api';
 
@@ -20,6 +26,12 @@ export function MapaPage() {
   const [visibleReports, setVisibleReports] = useState<Report[]>([]);
   const [focusReport, setFocusReport] = useState<Report | null>(null);
   const [resetSignal, setResetSignal] = useState(0);
+  const [filters, setFilters] = useState<ReportFilters>(emptyFilters);
+
+  const filteredReports = useMemo(
+    () => (reports ? applyReportFilters(reports, filters) : null),
+    [reports, filters],
+  );
 
   useEffect(() => {
     let active = true;
@@ -93,14 +105,23 @@ export function MapaPage() {
         ))}
       </div>
 
-      <div className="relative isolate mt-6 flex h-[60vh] min-h-[420px] overflow-hidden rounded-3xl border border-neutral-200">
+      {reports !== null && (
+        <MapFilters
+          filters={filters}
+          onChange={setFilters}
+          total={reports.length}
+          shown={filteredReports?.length ?? 0}
+        />
+      )}
+
+      <div className="relative isolate mt-4 flex h-[60vh] min-h-[420px] overflow-hidden rounded-3xl border border-neutral-200">
         <div className="relative h-full flex-1">
-          {reports === null ? (
+          {filteredReports === null ? (
             <div className="h-full w-full animate-pulse bg-neutral-100" />
           ) : (
             <Suspense fallback={<div className="h-full w-full animate-pulse bg-neutral-100" />}>
               <MapView
-                reports={reports}
+                reports={filteredReports}
                 onSelectReport={openReport}
                 onOpenList={() => setPanelOpen(true)}
                 onVisibleReportsChange={setVisibleReports}
