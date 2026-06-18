@@ -59,50 +59,57 @@ type MapFiltersProps = {
 export function MapFilters({ filters, onChange, total, shown }: MapFiltersProps) {
   const [open, setOpen] = useState(false);
   const active = filtersActive(filters);
+  const activeCount =
+    (filters.species ? 1 : 0) +
+    (filters.severity ? 1 : 0) +
+    (filters.condition ? 1 : 0) +
+    (filters.hideAggressive ? 1 : 0);
 
   const toggle = <K extends keyof ReportFilters>(key: K, value: ReportFilters[K]) => {
     onChange({ ...filters, [key]: filters[key] === value ? null : value });
   };
 
   return (
-    <div className="mt-4 rounded-2xl border border-neutral-200 bg-white">
-      <div className="flex items-center justify-between gap-3 px-4 py-3">
+    <div className="mt-4">
+      <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={() => setOpen((value) => !value)}
-          className="flex items-center gap-2 text-sm font-medium text-neutral-700"
+          className="flex flex-shrink-0 items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
         >
-          <SlidersHorizontal className="h-4 w-4 text-cobalto" />
+          <SlidersHorizontal className="h-4 w-4 text-neutral-500" />
           Filtros
-          {active && <span className="h-2 w-2 rounded-full bg-naranja" />}
-        </button>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-neutral-400">
-            {shown} de {total}
-          </span>
-          {active && (
-            <button
-              type="button"
-              onClick={() => onChange(emptyFilters)}
-              className="flex items-center gap-1 text-xs font-medium text-cobalto transition-colors hover:text-cobalto/80"
-            >
-              <X className="h-3.5 w-3.5" />
-              Limpiar
-            </button>
+          {activeCount > 0 && (
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-cobalto px-1.5 text-[11px] font-semibold text-white">
+              {activeCount}
+            </span>
           )}
-        </div>
+        </button>
+        <span className="text-xs text-neutral-400">
+          {shown} de {total}
+        </span>
+        {active && (
+          <button
+            type="button"
+            onClick={() => onChange(emptyFilters)}
+            className="ml-auto flex items-center gap-1 text-xs font-medium text-cobalto transition-colors hover:text-cobalto/80"
+          >
+            <X className="h-3.5 w-3.5" />
+            Limpiar
+          </button>
+        )}
       </div>
 
       <AnimatePresence initial={false}>
         {open && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="overflow-hidden"
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="mt-2 rounded-2xl border border-neutral-200 bg-white"
           >
-            <div className="space-y-4 border-t border-neutral-100 px-4 py-4">
+            <div className="space-y-4 p-4">
               <Group label="Especie">
                 <Chip active={filters.species === 'perro'} onClick={() => toggle('species', 'perro')}>
                   Perros

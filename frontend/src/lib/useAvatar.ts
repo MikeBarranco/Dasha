@@ -1,16 +1,20 @@
 import { useEffect, useState } from 'react';
 import { defaultAvatar } from './avatars';
+import { getStoredUser } from './api';
 
-const STORAGE_KEY = 'dasha-avatar';
+const KEY_PREFIX = 'dasha-avatar:';
 const CHANGE_EVENT = 'dasha-avatar-change';
+const AUTH_EVENT = 'dasha-auth-change';
 
-function readAvatar(): string {
-  return window.localStorage.getItem(STORAGE_KEY) ?? defaultAvatar;
+function storageKey(): string | null {
+  const user = getStoredUser();
+  return user ? `${KEY_PREFIX}${user.id}` : null;
 }
 
-export function clearAvatar() {
-  window.localStorage.removeItem(STORAGE_KEY);
-  window.dispatchEvent(new Event(CHANGE_EVENT));
+function readAvatar(): string {
+  const key = storageKey();
+  if (!key) return defaultAvatar;
+  return window.localStorage.getItem(key) ?? defaultAvatar;
 }
 
 export function useAvatar() {
@@ -19,11 +23,17 @@ export function useAvatar() {
   useEffect(() => {
     const handler = () => setAvatarState(readAvatar());
     window.addEventListener(CHANGE_EVENT, handler);
-    return () => window.removeEventListener(CHANGE_EVENT, handler);
+    window.addEventListener(AUTH_EVENT, handler);
+    return () => {
+      window.removeEventListener(CHANGE_EVENT, handler);
+      window.removeEventListener(AUTH_EVENT, handler);
+    };
   }, []);
 
   const setAvatar = (url: string) => {
-    window.localStorage.setItem(STORAGE_KEY, url);
+    const key = storageKey();
+    if (!key) return;
+    window.localStorage.setItem(key, url);
     window.dispatchEvent(new Event(CHANGE_EVENT));
   };
 
