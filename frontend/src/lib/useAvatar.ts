@@ -8,6 +8,11 @@ function readAvatar(): string {
   return window.localStorage.getItem(STORAGE_KEY) ?? defaultAvatar;
 }
 
+export function clearAvatar() {
+  window.localStorage.removeItem(STORAGE_KEY);
+  window.dispatchEvent(new Event(CHANGE_EVENT));
+}
+
 export function useAvatar() {
   const [avatar, setAvatarState] = useState<string>(readAvatar);
 

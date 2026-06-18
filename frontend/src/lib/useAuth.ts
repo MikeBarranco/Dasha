@@ -7,6 +7,7 @@ import {
   getStoredUser,
   type AuthUser,
 } from './api';
+import { clearAvatar } from './useAvatar';
 
 const CHANGE_EVENT = 'dasha-auth-change';
 
@@ -33,6 +34,7 @@ export function useAuth() {
 
   const logout = () => {
     clearSession();
+    clearAvatar();
     window.dispatchEvent(new Event(CHANGE_EVENT));
   };
 
