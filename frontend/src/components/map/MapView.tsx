@@ -66,6 +66,17 @@ function extendBounds(bounds: maplibregl.LngLatBounds, coords: unknown): void {
   for (const part of coords) extendBounds(bounds, part);
 }
 
+function createUserDot(): HTMLDivElement {
+  const element = document.createElement('div');
+  element.style.width = '16px';
+  element.style.height = '16px';
+  element.style.borderRadius = '9999px';
+  element.style.backgroundColor = '#2563EB';
+  element.style.border = '3px solid #ffffff';
+  element.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.35)';
+  return element;
+}
+
 type MapViewProps = {
   reports: Report[];
   onSelectReport: (report: Report) => void;
@@ -84,6 +95,8 @@ export function MapView({ reports, onSelectReport }: MapViewProps) {
   const [query, setQuery] = useState('');
   const [locating, setLocating] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const userLocationRef = useRef<[number, number] | null>(null);
 
   useEffect(() => {
     onSelectRef.current = onSelectReport;
@@ -274,6 +287,21 @@ export function MapView({ reports, onSelectReport }: MapViewProps) {
       };
       map.on('zoom', updatePinVisibility);
       updatePinVisibility();
+
+      if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const { longitude, latitude } = position.coords;
+            userLocationRef.current = [longitude, latitude];
+            userMarkerRef.current?.remove();
+            userMarkerRef.current = new maplibregl.Marker({ element: createUserDot() })
+              .setLngLat([longitude, latitude])
+              .addTo(map);
+          },
+          () => {},
+          { enableHighAccuracy: true, timeout: 8000 },
+        );
+      }
     });
 
     map.on('sourcedata', () => {
@@ -303,6 +331,10 @@ export function MapView({ reports, onSelectReport }: MapViewProps) {
   const handleLocate = () => {
     const map = mapRef.current;
     if (!map) return;
+    if (userLocationRef.current) {
+      map.flyTo({ center: userLocationRef.current, zoom: 15, duration: 1000 });
+      return;
+    }
     if (!('geolocation' in navigator)) {
       showGeoError('Tu navegador no permite acceder a la ubicación.');
       return;
@@ -312,16 +344,10 @@ export function MapView({ reports, onSelectReport }: MapViewProps) {
       (position) => {
         setLocating(false);
         const { longitude, latitude } = position.coords;
+        userLocationRef.current = [longitude, latitude];
         map.flyTo({ center: [longitude, latitude], zoom: 15, duration: 1000 });
         userMarkerRef.current?.remove();
-        const element = document.createElement('div');
-        element.style.width = '16px';
-        element.style.height = '16px';
-        element.style.borderRadius = '9999px';
-        element.style.backgroundColor = '#2563EB';
-        element.style.border = '3px solid #ffffff';
-        element.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.35)';
-        userMarkerRef.current = new maplibregl.Marker({ element })
+        userMarkerRef.current = new maplibregl.Marker({ element: createUserDot() })
           .setLngLat([longitude, latitude])
           .addTo(map);
       },
@@ -353,39 +379,59 @@ export function MapView({ reports, onSelectReport }: MapViewProps) {
     <div className="relative h-full w-full">
       <div ref={containerRef} className="h-full w-full" />
 
-      <div className="absolute left-3 right-3 top-3 z-10 flex items-start gap-2">
-        <div className="relative flex-1">
-          <div className="flex items-center gap-2 rounded-xl bg-white/95 px-3 py-2 shadow-lg backdrop-blur focus-within:ring-2 focus-within:ring-cobalto/30">
-            <Search className="h-4 w-4 flex-shrink-0 text-neutral-400" />
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Buscar colonia..."
-              className="w-full bg-transparent text-base text-neutral-700 outline-none placeholder:text-neutral-400"
-            />
-            {query && (
-              <button type="button" onClick={() => setQuery('')} aria-label="Limpiar búsqueda">
+      <div className="absolute left-3 right-3 top-3 z-10 flex items-start justify-end gap-2">
+        {searchOpen ? (
+          <div className="relative flex-1">
+            <div className="flex items-center gap-2 rounded-xl bg-white/95 px-3 py-2 shadow-lg backdrop-blur focus-within:ring-2 focus-within:ring-cobalto/30">
+              <Search className="h-4 w-4 flex-shrink-0 text-neutral-400" />
+              <input
+                autoFocus
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Buscar colonia..."
+                className="w-full bg-transparent text-base text-neutral-700 outline-none placeholder:text-neutral-400"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setQuery('');
+                  setSearchOpen(false);
+                }}
+                aria-label="Cerrar búsqueda"
+              >
                 <X className="h-4 w-4 text-neutral-400" />
               </button>
+            </div>
+
+            {suggestions.length > 0 && (
+              <ul className="absolute mt-1 max-h-60 w-full overflow-y-auto rounded-xl bg-white py-1 shadow-lg">
+                {suggestions.map((name) => (
+                  <li key={name}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleSelectColonia(name);
+                        setSearchOpen(false);
+                      }}
+                      className="block w-full px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50"
+                    >
+                      {name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
-
-          {suggestions.length > 0 && (
-            <ul className="absolute mt-1 max-h-60 w-full overflow-y-auto rounded-xl bg-white py-1 shadow-lg">
-              {suggestions.map((name) => (
-                <li key={name}>
-                  <button
-                    type="button"
-                    onClick={() => handleSelectColonia(name)}
-                    className="block w-full px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50"
-                  >
-                    {name}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setSearchOpen(true)}
+            aria-label="Buscar colonia"
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white/95 text-neutral-500 shadow-lg backdrop-blur transition-colors hover:bg-white"
+          >
+            <Search className="h-5 w-5" />
+          </button>
+        )}
 
         <button
           type="button"
