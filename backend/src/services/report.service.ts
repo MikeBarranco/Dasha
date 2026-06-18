@@ -283,4 +283,26 @@ export class ReportService {
       };
     });
   }
+
+  /**
+   * Verifica si existe un reporte activo de la misma especie en un radio de 500m.
+   * Utilizado para prevención de duplicados (A.4).
+   */
+  static async checkNearbyDuplicate(lat: number, lng: number, species: string): Promise<boolean> {
+    const nearbyReports: any[] = await prisma.$queryRaw`
+      SELECT id 
+      FROM reports 
+      WHERE species = ${species}::"Species"
+        AND status = 'active'::"ReportStatus"
+        AND location IS NOT NULL
+        AND ST_DWithin(
+          location, 
+          ST_MakePoint(${lng}, ${lat})::geography, 
+          500
+        )
+      LIMIT 1;
+    `;
+    
+    return nearbyReports.length > 0;
+  }
 }

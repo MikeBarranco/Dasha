@@ -12,6 +12,9 @@ router.get('/nearby', validate(getNearbyReportsSchema), ReportController.getNear
 // GET /api/v1/reports (Lista de reportes activos para el mapa)
 router.get('/', ReportController.getReports);
 
+// GET /api/v1/reports/check (Prevención de duplicados A.4)
+router.get('/check', ReportController.checkDuplicate);
+
 // GET /api/v1/reports/:id (Un solo reporte específico)
 router.get('/:id', ReportController.getReportById);
 

@@ -1,0 +1,21 @@
+import { Router } from 'express';
+import { AnimalController } from '../controllers/animal.controller';
+import { requireAuth } from '../middlewares/auth.middleware';
+import { validate } from '../middlewares/validate';
+import { createAnimalSchema, addMedicalRecordSchema } from '../schemas/animal.schema';
+
+const router = Router();
+
+// GET /api/v1/animals (Pública, mapa/directorio de adopción)
+router.get('/', AnimalController.getPublicAnimals);
+
+// GET /api/v1/animals/:id (Pública, detalle de un animal)
+router.get('/:id', AnimalController.getAnimalById);
+
+// POST /api/v1/animals (Protegida, crear perfil de animal rescatado)
+router.post('/', requireAuth, validate(createAnimalSchema), AnimalController.createProfile);
+
+// POST /api/v1/animals/:id/records (Protegida, añadir récord médico con fotos)
+router.post('/:id/records', requireAuth, validate(addMedicalRecordSchema), AnimalController.addRecord);
+
+export default router;
