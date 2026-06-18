@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { CountUp } from '../components/ui/CountUp';
 import { ReportDetail } from '../components/map/ReportDetail';
+import { MapListPanel } from '../components/map/MapListPanel';
 import { mockReports, type Report } from '../data/mockReports';
 import { getReports, getStats, type Stats } from '../lib/api';
 
@@ -15,6 +16,10 @@ export function MapaPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [reports, setReports] = useState<Report[] | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [visibleReports, setVisibleReports] = useState<Report[]>([]);
+  const [focusReport, setFocusReport] = useState<Report | null>(null);
+  const [resetSignal, setResetSignal] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -48,6 +53,16 @@ export function MapaPage() {
     setSearchParams({});
   };
 
+  const selectFromList = (report: Report) => {
+    openReport(report);
+    setFocusReport(report);
+  };
+
+  const closePanel = () => {
+    setPanelOpen(false);
+    setResetSignal((value) => value + 1);
+  };
+
   const statCards = [
     { label: 'Reportes activos', value: stats?.reportesActivos ?? null },
     { label: 'Rescates logrados', value: stats?.rescatesLogrados ?? null },
@@ -78,14 +93,53 @@ export function MapaPage() {
         ))}
       </div>
 
-      <div className="mt-6 h-[60vh] min-h-[420px] overflow-hidden rounded-3xl border border-neutral-200">
-        {reports === null ? (
-          <div className="h-full w-full animate-pulse bg-neutral-100" />
-        ) : (
-          <Suspense fallback={<div className="h-full w-full animate-pulse bg-neutral-100" />}>
-            <MapView reports={reports} onSelectReport={openReport} />
-          </Suspense>
-        )}
+      <div className="relative mt-6 flex h-[60vh] min-h-[420px] overflow-hidden rounded-3xl border border-neutral-200">
+        <div className="relative h-full flex-1">
+          {reports === null ? (
+            <div className="h-full w-full animate-pulse bg-neutral-100" />
+          ) : (
+            <Suspense fallback={<div className="h-full w-full animate-pulse bg-neutral-100" />}>
+              <MapView
+                reports={reports}
+                onSelectReport={openReport}
+                onOpenList={() => setPanelOpen(true)}
+                onVisibleReportsChange={setVisibleReports}
+                focusReport={focusReport}
+                resetSignal={resetSignal}
+              />
+            </Suspense>
+          )}
+        </div>
+
+        <AnimatePresence>
+          {panelOpen && (
+            <motion.div
+              key="map-list-desktop"
+              initial={{ x: 40, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: 40, opacity: 0 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="hidden h-full w-80 flex-shrink-0 border-l border-neutral-200 bg-white md:block"
+            >
+              <MapListPanel reports={visibleReports} onSelect={selectFromList} onClose={closePanel} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {panelOpen && (
+            <motion.div
+              key="map-list-mobile"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              className="absolute inset-x-0 bottom-0 z-10 max-h-[65%] rounded-t-2xl border-t border-neutral-200 bg-white shadow-2xl md:hidden"
+            >
+              <MapListPanel reports={visibleReports} onSelect={selectFromList} onClose={closePanel} />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       <AnimatePresence>
