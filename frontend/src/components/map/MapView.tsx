@@ -101,9 +101,13 @@ export function MapView({
   const onOpenListRef = useRef(onOpenList);
   const onVisibleRef = useRef(onVisibleReportsChange);
   const userMarkerRef = useRef<maplibregl.Marker | null>(null);
-  const coloniaIndexRef = useRef<Map<string, maplibregl.LngLatBounds>>(new Map());
+  const coloniaIndexRef = useRef<Map<string, { id: number; coords: unknown }>>(new Map());
+  const coloniaFeaturesRef = useRef<Array<{ id: number; name: string }>>([]);
+  const applyCountsRef = useRef<(() => void) | null>(null);
   const geoErrorTimer = useRef<number | null>(null);
-  const selectColoniaRef = useRef<((name: string, at: maplibregl.LngLat) => void) | null>(null);
+  const selectColoniaRef = useRef<
+    ((id: number, name: string, at: maplibregl.LngLat) => void) | null
+  >(null);
   const [coloniaNames, setColoniaNames] = useState<string[]>([]);
   const [query, setQuery] = useState('');
   const [locating, setLocating] = useState(false);
@@ -141,20 +145,26 @@ export function MapView({
       .then((response) => response.json())
       .then(
         (geojson: {
-          features?: Array<{ properties?: { name?: string }; geometry?: { coordinates?: unknown } }>;
+          features?: Array<{
+            id?: number;
+            properties?: { name?: string };
+            geometry?: { coordinates?: unknown };
+          }>;
         }) => {
           if (cancelled) return;
-          const index = new Map<string, maplibregl.LngLatBounds>();
+          const index = new Map<string, { id: number; coords: unknown }>();
+          const features: Array<{ id: number; name: string }> = [];
           for (const feature of geojson.features ?? []) {
             const name = String(feature.properties?.name ?? '');
-            if (!name || index.has(name)) continue;
-            const bounds = new maplibregl.LngLatBounds();
-            extendBounds(bounds, feature.geometry?.coordinates);
-            if (bounds.isEmpty()) continue;
-            index.set(name, bounds);
+            if (!name) continue;
+            const id = feature.id ?? 0;
+            features.push({ id, name });
+            if (!index.has(name)) index.set(name, { id, coords: feature.geometry?.coordinates });
           }
           coloniaIndexRef.current = index;
+          coloniaFeaturesRef.current = features;
           setColoniaNames([...index.keys()].sort((a, b) => a.localeCompare(b, 'es')));
+          applyCountsRef.current?.();
         },
       )
       .catch(() => {});
@@ -203,11 +213,29 @@ export function MapView({
     const markers: maplibregl.Marker[] = [];
     let statesApplied = false;
 
+    const applyCounts = () => {
+      if (
+        statesApplied ||
+        !map.getSource('colonias') ||
+        !map.isSourceLoaded('colonias') ||
+        coloniaFeaturesRef.current.length === 0
+      ) {
+        return;
+      }
+      for (const feature of coloniaFeaturesRef.current) {
+        const count = counts.get(feature.name) ?? 0;
+        if (count > 0) {
+          map.setFeatureState({ source: 'colonias', id: feature.id }, { count });
+        }
+      }
+      statesApplied = true;
+    };
+    applyCountsRef.current = applyCounts;
+
     map.on('load', () => {
       map.addSource('colonias', {
         type: 'geojson',
         data: '/data/colonias-puebla.geojson',
-        promoteId: 'name',
       });
 
       map.addLayer({
@@ -255,15 +283,15 @@ export function MapView({
         },
       });
 
-      let hoveredName: string | null = null;
+      let hoveredId: number | null = null;
 
-      const selectColonia = (name: string, at: maplibregl.LngLat) => {
-        if (name !== hoveredName) {
-          if (hoveredName !== null) {
-            map.setFeatureState({ source: 'colonias', id: hoveredName }, { hover: false });
+      const selectColonia = (id: number, name: string, at: maplibregl.LngLat) => {
+        if (id !== hoveredId) {
+          if (hoveredId !== null) {
+            map.setFeatureState({ source: 'colonias', id: hoveredId }, { hover: false });
           }
-          hoveredName = name;
-          map.setFeatureState({ source: 'colonias', id: name }, { hover: true });
+          hoveredId = id;
+          map.setFeatureState({ source: 'colonias', id }, { hover: true });
           popup.setHTML(popupHTML(name, counts.get(name) ?? 0));
           popup.addTo(map);
         }
@@ -273,29 +301,32 @@ export function MapView({
 
       map.on('mousemove', 'colonias-fill', (e) => {
         if (!e.features || e.features.length === 0) return;
-        const name = String(e.features[0].properties?.name ?? '');
+        const feature = e.features[0];
+        if (feature.id === undefined) return;
+        const name = String(feature.properties?.name ?? '');
         map.getCanvas().style.cursor = 'pointer';
-        selectColonia(name, e.lngLat);
+        selectColonia(Number(feature.id), name, e.lngLat);
       });
 
       map.on('mouseleave', 'colonias-fill', () => {
         map.getCanvas().style.cursor = '';
-        if (hoveredName !== null) {
-          map.setFeatureState({ source: 'colonias', id: hoveredName }, { hover: false });
-          hoveredName = null;
+        if (hoveredId !== null) {
+          map.setFeatureState({ source: 'colonias', id: hoveredId }, { hover: false });
+          hoveredId = null;
         }
         popup.remove();
       });
 
       map.on('click', 'colonias-fill', (e) => {
         if (!e.features || e.features.length === 0) return;
-        const geometry = e.features[0].geometry;
+        const feature = e.features[0];
+        const geometry = feature.geometry;
         if (geometry.type !== 'Polygon' && geometry.type !== 'MultiPolygon') return;
-        const name = String(e.features[0].properties?.name ?? '');
+        const name = String(feature.properties?.name ?? '');
         const bounds = new maplibregl.LngLatBounds();
         extendBounds(bounds, geometry.coordinates);
         map.fitBounds(bounds, { padding: 60, maxZoom: 16, duration: 800 });
-        if (name) selectColonia(name, bounds.getCenter());
+        if (feature.id !== undefined) selectColonia(Number(feature.id), name, bounds.getCenter());
         onOpenListRef.current?.();
       });
 
@@ -356,13 +387,7 @@ export function MapView({
       emitVisible();
     });
 
-    map.on('sourcedata', () => {
-      if (statesApplied || !map.getSource('colonias') || !map.isSourceLoaded('colonias')) return;
-      counts.forEach((count, name) => {
-        map.setFeatureState({ source: 'colonias', id: name }, { count });
-      });
-      statesApplied = true;
-    });
+    map.on('sourcedata', applyCounts);
 
     return () => {
       resizeObserver.disconnect();
@@ -414,10 +439,13 @@ export function MapView({
 
   const handleSelectColonia = (name: string) => {
     const map = mapRef.current;
-    const bounds = coloniaIndexRef.current.get(name);
-    if (!map || !bounds) return;
+    const entry = coloniaIndexRef.current.get(name);
+    if (!map || !entry) return;
+    const bounds = new maplibregl.LngLatBounds();
+    extendBounds(bounds, entry.coords);
+    if (bounds.isEmpty()) return;
     map.fitBounds(bounds, { padding: 60, maxZoom: 16, duration: 800 });
-    selectColoniaRef.current?.(name, bounds.getCenter());
+    selectColoniaRef.current?.(entry.id, name, bounds.getCenter());
     onOpenListRef.current?.();
     setQuery('');
   };
