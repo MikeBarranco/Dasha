@@ -209,4 +209,78 @@ export class ReportService {
       return updatedReport;
     });
   }
+
+  /**
+   * Asigna un reporte a un voluntario (Aceptar caso)
+   */
+  static async acceptRescueCase(reportId: string, volunteerId: string) {
+    return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      // 1. Validar reporte
+      const report = await tx.report.findUnique({
+        where: { id: reportId },
+        select: { status: true }
+      });
+
+      if (!report) {
+        throw new Error('Reporte no encontrado');
+      }
+
+      if (report.status !== 'active') {
+        throw new Error('El reporte no está activo o ya fue aceptado');
+      }
+
+      // 2. Validar voluntario
+      const volunteer = await tx.user.findUnique({
+        where: { id: volunteerId },
+        select: { volunteerStatus: true }
+      });
+
+      if (!volunteer || volunteer.volunteerStatus !== 'approved') {
+        throw new Error('Solo voluntarios aprobados pueden aceptar casos');
+      }
+
+      // 3. Crear RescueAssignment
+      const assignment = await tx.rescueAssignment.create({
+        data: {
+          reportId,
+          volunteerId,
+          status: 'accepted'
+        }
+      });
+
+      // 4. Actualizar estado del reporte
+      const updatedReport = await tx.report.update({
+        where: { id: reportId },
+        data: {
+          status: 'in_progress',
+          volunteerId,
+          updatedAt: new Date()
+        }
+      });
+
+      // 5. Registrar en ReportStatusHistory y CaseAction
+      await tx.reportStatusHistory.create({
+        data: {
+          reportId,
+          fromStatus: 'active',
+          toStatus: 'in_progress',
+          changedBy: volunteerId
+        }
+      });
+
+      await tx.caseAction.create({
+        data: {
+          reportId,
+          actorId: volunteerId,
+          actionType: 'accepted',
+          description: 'El voluntario ha aceptado el caso de rescate'
+        }
+      });
+
+      return {
+        report: updatedReport,
+        assignment
+      };
+    });
+  }
 }
