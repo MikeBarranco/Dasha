@@ -21,4 +21,7 @@ router.post('/', requireAuth, validate(createReportSchema), ReportController.cre
 // PATCH /api/v1/reports/:id/status (Protegida, cambiar estado de reporte)
 router.patch('/:id/status', requireAuth, validate(updateReportStatusSchema), ReportController.updateStatus);
 
+// POST /api/v1/reports/:id/accept (Protegida, voluntario acepta un caso)
+router.post('/:id/accept', requireAuth, ReportController.acceptCase);
+
 export default router;
