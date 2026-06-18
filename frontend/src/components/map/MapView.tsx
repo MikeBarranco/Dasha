@@ -80,13 +80,26 @@ function createUserDot(): HTMLDivElement {
 type MapViewProps = {
   reports: Report[];
   onSelectReport: (report: Report) => void;
+  onOpenList?: () => void;
+  onVisibleReportsChange?: (reports: Report[]) => void;
+  focusReport?: Report | null;
+  resetSignal?: number;
 };
 
-export function MapView({ reports, onSelectReport }: MapViewProps) {
+export function MapView({
+  reports,
+  onSelectReport,
+  onOpenList,
+  onVisibleReportsChange,
+  focusReport,
+  resetSignal,
+}: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const reportsRef = useRef(reports);
   const onSelectRef = useRef(onSelectReport);
+  const onOpenListRef = useRef(onOpenList);
+  const onVisibleRef = useRef(onVisibleReportsChange);
   const userMarkerRef = useRef<maplibregl.Marker | null>(null);
   const coloniaIndexRef = useRef<Map<string, maplibregl.LngLatBounds>>(new Map());
   const geoErrorTimer = useRef<number | null>(null);
@@ -101,6 +114,26 @@ export function MapView({ reports, onSelectReport }: MapViewProps) {
   useEffect(() => {
     onSelectRef.current = onSelectReport;
   }, [onSelectReport]);
+
+  useEffect(() => {
+    onOpenListRef.current = onOpenList;
+  }, [onOpenList]);
+
+  useEffect(() => {
+    onVisibleRef.current = onVisibleReportsChange;
+  }, [onVisibleReportsChange]);
+
+  useEffect(() => {
+    if (focusReport) {
+      mapRef.current?.flyTo({ center: [focusReport.lng, focusReport.lat], zoom: 15, duration: 800 });
+    }
+  }, [focusReport]);
+
+  useEffect(() => {
+    if (resetSignal && resetSignal > 0) {
+      mapRef.current?.flyTo({ center: PUEBLA_CENTER, zoom: 11, duration: 800 });
+    }
+  }, [resetSignal]);
 
   useEffect(() => {
     let cancelled = false;
@@ -146,8 +179,17 @@ export function MapView({ reports, onSelectReport }: MapViewProps) {
       center: PUEBLA_CENTER,
       zoom: 11,
       attributionControl: false,
+      cooperativeGestures: true,
+      locale: {
+        'CooperativeGesturesHandler.MobileHelpText': 'Usa dos dedos para mover el mapa',
+        'CooperativeGesturesHandler.WindowsHelpText': 'Usa Ctrl + scroll para hacer zoom',
+        'CooperativeGesturesHandler.MacHelpText': 'Usa ⌘ + scroll para hacer zoom',
+      },
     });
     mapRef.current = map;
+
+    const resizeObserver = new ResizeObserver(() => map.resize());
+    resizeObserver.observe(container);
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
     map.addControl(new maplibregl.AttributionControl({ compact: true }));
@@ -254,6 +296,7 @@ export function MapView({ reports, onSelectReport }: MapViewProps) {
         extendBounds(bounds, geometry.coordinates);
         map.fitBounds(bounds, { padding: 60, maxZoom: 16, duration: 800 });
         if (name) selectColonia(name, bounds.getCenter());
+        onOpenListRef.current?.();
       });
 
       for (const report of reports) {
@@ -302,6 +345,15 @@ export function MapView({ reports, onSelectReport }: MapViewProps) {
           { enableHighAccuracy: true, timeout: 8000 },
         );
       }
+
+      const emitVisible = () => {
+        const bounds = map.getBounds();
+        onVisibleRef.current?.(
+          reportsRef.current.filter((report) => bounds.contains([report.lng, report.lat])),
+        );
+      };
+      map.on('moveend', emitVisible);
+      emitVisible();
     });
 
     map.on('sourcedata', () => {
@@ -313,6 +365,7 @@ export function MapView({ reports, onSelectReport }: MapViewProps) {
     });
 
     return () => {
+      resizeObserver.disconnect();
       for (const marker of markers) marker.remove();
       userMarkerRef.current?.remove();
       userMarkerRef.current = null;
@@ -365,6 +418,7 @@ export function MapView({ reports, onSelectReport }: MapViewProps) {
     if (!map || !bounds) return;
     map.fitBounds(bounds, { padding: 60, maxZoom: 16, duration: 800 });
     selectColoniaRef.current?.(name, bounds.getCenter());
+    onOpenListRef.current?.();
     setQuery('');
   };
 
@@ -379,7 +433,7 @@ export function MapView({ reports, onSelectReport }: MapViewProps) {
     <div className="relative h-full w-full">
       <div ref={containerRef} className="h-full w-full" />
 
-      <div className="absolute left-3 right-3 top-3 z-10 flex items-start justify-end gap-2">
+      <div className="absolute left-3 right-3 top-3 z-10 flex items-start justify-between gap-2">
         {searchOpen ? (
           <div className="relative flex-1">
             <div className="flex items-center gap-2 rounded-xl bg-white/95 px-3 py-2 shadow-lg backdrop-blur focus-within:ring-2 focus-within:ring-cobalto/30">
