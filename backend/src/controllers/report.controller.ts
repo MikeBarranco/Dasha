@@ -152,4 +152,25 @@ export class ReportController {
       }
     }
   }
+
+  static async checkDuplicate(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { lat, lng, species } = req.query;
+
+      if (!lat || !lng || !species) {
+        res.status(400).json({ error: 'Faltan parámetros requeridos: lat, lng, species' });
+        return;
+      }
+
+      const hasDuplicate = await ReportService.checkNearbyDuplicate(
+        parseFloat(lat as string),
+        parseFloat(lng as string),
+        species as string
+      );
+
+      res.status(200).json({ hasDuplicate });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
