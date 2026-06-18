@@ -8,7 +8,7 @@ const severityItems = [
 ];
 
 export function MapLegend() {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   return (
     <div className="absolute bottom-4 left-3 z-10 w-44 rounded-xl bg-white/95 shadow-lg backdrop-blur">

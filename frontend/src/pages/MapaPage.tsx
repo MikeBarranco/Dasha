@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { PageHeader } from '../components/ui/PageHeader';
+import { CountUp } from '../components/ui/CountUp';
 import { ReportDetail } from '../components/map/ReportDetail';
 import { mockReports, type Report } from '../data/mockReports';
 import { getReports, getStats, type Stats } from '../lib/api';
@@ -48,9 +49,9 @@ export function MapaPage() {
   };
 
   const statCards = [
-    { label: 'Reportes activos', value: stats ? stats.reportesActivos : '—' },
-    { label: 'Rescates logrados', value: stats ? stats.rescatesLogrados : '—' },
-    { label: 'Voluntarios', value: stats ? stats.voluntarios : '—' },
+    { label: 'Reportes activos', value: stats?.reportesActivos ?? null },
+    { label: 'Rescates logrados', value: stats?.rescatesLogrados ?? null },
+    { label: 'Voluntarios', value: stats?.voluntarios ?? null },
   ];
 
   return (
@@ -69,7 +70,9 @@ export function MapaPage() {
             transition={{ duration: 0.3, delay: index * 0.07, ease: 'easeOut' }}
             className="rounded-2xl border border-neutral-200 bg-white p-4"
           >
-            <p className="font-display text-2xl font-bold text-cobalto">{stat.value}</p>
+            <p className="font-display text-2xl font-bold text-cobalto">
+              {stat.value === null ? '—' : <CountUp value={stat.value} />}
+            </p>
             <p className="mt-1 text-xs text-neutral-500">{stat.label}</p>
           </motion.div>
         ))}
