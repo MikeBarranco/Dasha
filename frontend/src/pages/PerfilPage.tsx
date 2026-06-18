@@ -4,6 +4,7 @@ import { AnimatePresence } from 'motion/react';
 import { Lock, ChevronRight, Settings, LogOut, UserRound, Camera, type LucideIcon } from 'lucide-react';
 import { Avatar } from '../components/ui/Avatar';
 import { AvatarPicker } from '../components/perfil/AvatarPicker';
+import { SocialLinks } from '../components/ui/SocialLinks';
 import { cn } from '../lib/cn';
 import { mockUser } from '../data/mockUser';
 import { useAvatar } from '../lib/useAvatar';
@@ -187,6 +188,11 @@ export function PerfilPage() {
             navigate('/login');
           }}
         />
+      </div>
+
+      <div className="pt-2 text-center">
+        <p className="mb-3 text-xs text-neutral-400">Síguenos en redes</p>
+        <SocialLinks />
       </div>
 
       <AnimatePresence>

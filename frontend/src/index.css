@@ -22,6 +22,11 @@ body {
   overscroll-behavior-y: none;
 }
 
+input[type='password']::-ms-reveal,
+input[type='password']::-ms-clear {
+  display: none;
+}
+
 .dasha-popup .maplibregl-popup-content {
   padding: 8px 12px;
   border-radius: 12px;

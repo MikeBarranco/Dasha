@@ -114,6 +114,13 @@ export function MapView({
   const [geoError, setGeoError] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const userLocationRef = useRef<[number, number] | null>(null);
+  const countsRef = useRef<Map<string, number>>(new Map());
+  const markersRef = useRef<maplibregl.Marker[]>([]);
+  const appliedFeatureIdsRef = useRef<number[]>([]);
+  const countsDirtyRef = useRef(true);
+  const renderMarkersRef = useRef<(() => void) | null>(null);
+  const emitVisibleRef = useRef<(() => void) | null>(null);
+  const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
     onSelectRef.current = onSelectReport;
@@ -164,6 +171,7 @@ export function MapView({
           coloniaIndexRef.current = index;
           coloniaFeaturesRef.current = features;
           setColoniaNames([...index.keys()].sort((a, b) => a.localeCompare(b, 'es')));
+          countsDirtyRef.current = true;
           applyCountsRef.current?.();
         },
       )
@@ -176,12 +184,6 @@ export function MapView({
   useEffect(() => {
     const container = containerRef.current;
     if (!container || mapRef.current) return;
-
-    const reports = reportsRef.current;
-    const counts = new Map<string, number>();
-    for (const report of reports) {
-      counts.set(report.colonia, (counts.get(report.colonia) ?? 0) + 1);
-    }
 
     const map = new maplibregl.Map({
       container,
@@ -210,25 +212,29 @@ export function MapView({
       offset: 12,
       className: 'dasha-popup',
     });
-    const markers: maplibregl.Marker[] = [];
-    let statesApplied = false;
 
     const applyCounts = () => {
       if (
-        statesApplied ||
+        !countsDirtyRef.current ||
         !map.getSource('colonias') ||
         !map.isSourceLoaded('colonias') ||
         coloniaFeaturesRef.current.length === 0
       ) {
         return;
       }
+      for (const id of appliedFeatureIdsRef.current) {
+        map.removeFeatureState({ source: 'colonias', id }, 'count');
+      }
+      const applied: number[] = [];
       for (const feature of coloniaFeaturesRef.current) {
-        const count = counts.get(feature.name) ?? 0;
+        const count = countsRef.current.get(feature.name) ?? 0;
         if (count > 0) {
           map.setFeatureState({ source: 'colonias', id: feature.id }, { count });
+          applied.push(feature.id);
         }
       }
-      statesApplied = true;
+      appliedFeatureIdsRef.current = applied;
+      countsDirtyRef.current = false;
     };
     applyCountsRef.current = applyCounts;
 
@@ -292,7 +298,7 @@ export function MapView({
           }
           hoveredId = id;
           map.setFeatureState({ source: 'colonias', id }, { hover: true });
-          popup.setHTML(popupHTML(name, counts.get(name) ?? 0));
+          popup.setHTML(popupHTML(name, countsRef.current.get(name) ?? 0));
           popup.addTo(map);
         }
         popup.setLngLat(at);
@@ -330,37 +336,44 @@ export function MapView({
         onOpenListRef.current?.();
       });
 
-      for (const report of reports) {
-        const element = document.createElement('div');
-        element.style.width = '44px';
-        element.style.height = '44px';
-        element.style.borderRadius = '9999px';
-        element.style.border = `3px solid ${severityColor(report.severity)}`;
-        element.style.backgroundImage = `url(${report.photo})`;
-        element.style.backgroundSize = 'cover';
-        element.style.backgroundPosition = 'center';
-        element.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.3)';
-        element.style.cursor = 'pointer';
-        element.style.display = 'none';
-
-        element.addEventListener('click', (event) => {
-          event.stopPropagation();
-          onSelectRef.current(report);
-        });
-        const marker = new maplibregl.Marker({ element })
-          .setLngLat([report.lng, report.lat])
-          .addTo(map);
-        markers.push(marker);
-      }
-
       const updatePinVisibility = () => {
         const show = map.getZoom() >= PIN_MIN_ZOOM;
-        for (const marker of markers) {
+        for (const marker of markersRef.current) {
           marker.getElement().style.display = show ? 'block' : 'none';
         }
       };
+
+      const renderMarkers = () => {
+        for (const marker of markersRef.current) marker.remove();
+        markersRef.current = [];
+        for (const report of reportsRef.current) {
+          const element = document.createElement('div');
+          element.style.width = '44px';
+          element.style.height = '44px';
+          element.style.borderRadius = '9999px';
+          element.style.border = `3px solid ${severityColor(report.severity)}`;
+          element.style.backgroundImage = `url(${report.photo})`;
+          element.style.backgroundSize = 'cover';
+          element.style.backgroundPosition = 'center';
+          element.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.3)';
+          element.style.cursor = 'pointer';
+          element.style.display = 'none';
+
+          element.addEventListener('click', (event) => {
+            event.stopPropagation();
+            onSelectRef.current(report);
+          });
+          const marker = new maplibregl.Marker({ element })
+            .setLngLat([report.lng, report.lat])
+            .addTo(map);
+          markersRef.current.push(marker);
+        }
+        updatePinVisibility();
+      };
+      renderMarkersRef.current = renderMarkers;
+
       map.on('zoom', updatePinVisibility);
-      updatePinVisibility();
+      renderMarkers();
 
       if ('geolocation' in navigator) {
         navigator.geolocation.getCurrentPosition(
@@ -383,15 +396,19 @@ export function MapView({
           reportsRef.current.filter((report) => bounds.contains([report.lng, report.lat])),
         );
       };
+      emitVisibleRef.current = emitVisible;
       map.on('moveend', emitVisible);
       emitVisible();
+
+      setMapReady(true);
     });
 
     map.on('sourcedata', applyCounts);
 
     return () => {
       resizeObserver.disconnect();
-      for (const marker of markers) marker.remove();
+      for (const marker of markersRef.current) marker.remove();
+      markersRef.current = [];
       userMarkerRef.current?.remove();
       userMarkerRef.current = null;
       if (geoErrorTimer.current) window.clearTimeout(geoErrorTimer.current);
@@ -399,6 +416,20 @@ export function MapView({
       mapRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    reportsRef.current = reports;
+    const counts = new Map<string, number>();
+    for (const report of reports) {
+      counts.set(report.colonia, (counts.get(report.colonia) ?? 0) + 1);
+    }
+    countsRef.current = counts;
+    countsDirtyRef.current = true;
+    if (!mapReady) return;
+    applyCountsRef.current?.();
+    renderMarkersRef.current?.();
+    emitVisibleRef.current?.();
+  }, [reports, mapReady]);
 
   const showGeoError = (message: string) => {
     setGeoError(message);

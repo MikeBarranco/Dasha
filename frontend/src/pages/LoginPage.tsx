@@ -4,6 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { useAuth } from '../lib/useAuth';
 import { PasswordInput } from '../components/auth/PasswordInput';
 import { OAuthButtons } from '../components/auth/OAuthButtons';
+import { SocialLinks } from '../components/ui/SocialLinks';
 import { isValidEmail } from '../lib/validation';
 
 const inputClass =
@@ -83,6 +84,11 @@ export function LoginPage() {
             Volver al inicio
           </Link>
         </p>
+
+        <div className="mt-8 border-t border-neutral-200 pt-6">
+          <p className="mb-3 text-center text-xs text-neutral-400">Síguenos</p>
+          <SocialLinks />
+        </div>
       </div>
     </div>
   );
