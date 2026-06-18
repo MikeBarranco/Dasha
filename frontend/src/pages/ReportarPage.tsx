@@ -5,6 +5,7 @@ import { Camera, Dog, Cat, ArrowLeft, Check } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { cn } from '../lib/cn';
 import { createReport, type CreateReportInput } from '../lib/api';
+import { useAuth } from '../lib/useAuth';
 
 const LocationPicker = lazy(() =>
   import('../components/map/LocationPicker').then((module) => ({ default: module.LocationPicker })),
@@ -99,6 +100,7 @@ function ToggleRow({ label, value, onChange }: ToggleRowProps) {
 
 export function ReportarPage() {
   const navigate = useNavigate();
+  const { user: account } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState(1);
   const [done, setDone] = useState(false);
@@ -122,6 +124,39 @@ export function ReportarPage() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [step]);
+
+  if (!account) {
+    return (
+      <div className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center text-center">
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-naranja/10">
+          <Camera className="h-9 w-9 text-naranja" />
+        </div>
+        <h2 className="mt-4 font-display text-2xl font-bold text-cobalto">
+          Inicia sesión para reportar
+        </h2>
+        <p className="mt-2 max-w-xs text-sm text-neutral-500">
+          Creamos tu cuenta en segundos para que tu reporte quede a tu nombre y le puedas dar
+          seguimiento.
+        </p>
+        <div className="mt-6 flex w-full max-w-xs flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => navigate('/registro')}
+            className="rounded-xl bg-naranja py-3 font-semibold text-white transition-opacity hover:opacity-90"
+          >
+            Crear cuenta
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/login')}
+            className="rounded-xl border border-neutral-200 py-3 font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
+          >
+            Ya tengo cuenta
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

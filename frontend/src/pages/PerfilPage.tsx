@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence } from 'motion/react';
-import { Lock, ChevronRight, Settings, LogOut, LogIn, Camera, type LucideIcon } from 'lucide-react';
+import { Lock, ChevronRight, Settings, LogOut, UserRound, Camera, type LucideIcon } from 'lucide-react';
 import { Avatar } from '../components/ui/Avatar';
 import { AvatarPicker } from '../components/perfil/AvatarPicker';
 import { cn } from '../lib/cn';
@@ -54,23 +54,38 @@ export function PerfilPage() {
   const xpPercent = Math.min(100, Math.round((user.xp / user.xpToNext) * 100));
   const unlockedCount = user.medals.filter((medal) => medal.unlocked).length;
 
-  return (
-    <div className="space-y-6">
-      {!account && (
-        <div className="flex items-center justify-between gap-3 rounded-2xl bg-cobalto/5 p-4">
-          <p className="text-sm text-neutral-600">
-            Inicia sesión para reportar y guardar tu progreso.
-          </p>
+  if (!account) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center px-6 text-center">
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-cobalto/10">
+          <UserRound className="h-9 w-9 text-cobalto" />
+        </div>
+        <h1 className="mt-4 font-display text-2xl font-bold text-cobalto">Tu perfil te espera</h1>
+        <p className="mt-2 max-w-xs text-sm text-neutral-500">
+          Crea tu cuenta para reportar, ganar medallas y seguir tus rescates.
+        </p>
+        <div className="mt-6 flex w-full max-w-xs flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => navigate('/registro')}
+            className="rounded-xl bg-cobalto py-3 font-semibold text-white transition-opacity hover:opacity-90"
+          >
+            Crear cuenta
+          </button>
           <button
             type="button"
             onClick={() => navigate('/login')}
-            className="flex-shrink-0 rounded-xl bg-cobalto px-3 py-2 text-sm font-semibold text-white"
+            className="rounded-xl border border-neutral-200 py-3 font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
           >
-            Entrar
+            Ya tengo cuenta
           </button>
         </div>
-      )}
+      </div>
+    );
+  }
 
+  return (
+    <div className="space-y-6">
       <div className="flex items-center gap-4">
         <button
           type="button"
@@ -78,15 +93,13 @@ export function PerfilPage() {
           className="relative flex-shrink-0"
           aria-label="Cambiar avatar"
         >
-          <Avatar name={user.name} src={avatar} className="h-20 w-20 text-2xl" />
+          <Avatar name={account.name} src={avatar} className="h-20 w-20 text-2xl" />
           <span className="absolute -bottom-0.5 -right-0.5 flex h-7 w-7 items-center justify-center rounded-full border-2 border-lino bg-cobalto text-white">
             <Camera className="h-3.5 w-3.5" />
           </span>
         </button>
         <div className="min-w-0">
-          <h1 className="font-display text-2xl font-bold text-cobalto">
-            {account?.name ?? user.name}
-          </h1>
+          <h1 className="font-display text-2xl font-bold text-cobalto">{account.name}</h1>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-cobalto/10 px-2.5 py-0.5 text-xs font-medium text-cobalto">
               {user.role}
@@ -165,19 +178,15 @@ export function PerfilPage() {
 
       <div className="divide-y divide-neutral-100 overflow-hidden rounded-2xl border border-neutral-200 bg-white">
         <RowButton icon={Settings} label="Ajustes de la cuenta" />
-        {account ? (
-          <RowButton
-            icon={LogOut}
-            label="Cerrar sesión"
-            danger
-            onClick={() => {
-              logout();
-              navigate('/login');
-            }}
-          />
-        ) : (
-          <RowButton icon={LogIn} label="Iniciar sesión" onClick={() => navigate('/login')} />
-        )}
+        <RowButton
+          icon={LogOut}
+          label="Cerrar sesión"
+          danger
+          onClick={() => {
+            logout();
+            navigate('/login');
+          }}
+        />
       </div>
 
       <AnimatePresence>

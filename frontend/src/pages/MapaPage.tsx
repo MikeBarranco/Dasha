@@ -93,7 +93,7 @@ export function MapaPage() {
         ))}
       </div>
 
-      <div className="relative mt-6 flex h-[60vh] min-h-[420px] overflow-hidden rounded-3xl border border-neutral-200">
+      <div className="relative isolate mt-6 flex h-[60vh] min-h-[420px] overflow-hidden rounded-3xl border border-neutral-200">
         <div className="relative h-full flex-1">
           {reports === null ? (
             <div className="h-full w-full animate-pulse bg-neutral-100" />
@@ -125,22 +125,22 @@ export function MapaPage() {
             </motion.div>
           )}
         </AnimatePresence>
-
-        <AnimatePresence>
-          {panelOpen && (
-            <motion.div
-              key="map-list-mobile"
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="absolute inset-x-0 bottom-0 z-10 max-h-[65%] rounded-t-2xl border-t border-neutral-200 bg-white shadow-2xl md:hidden"
-            >
-              <MapListPanel reports={visibleReports} onSelect={selectFromList} onClose={closePanel} />
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
+
+      <AnimatePresence>
+        {panelOpen && (
+          <motion.div
+            key="map-list-mobile"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="mt-3 h-[55vh] overflow-hidden rounded-2xl border border-neutral-200 bg-white md:hidden"
+          >
+            <MapListPanel reports={visibleReports} onSelect={selectFromList} onClose={closePanel} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {selectedReport && <ReportDetail report={selectedReport} onClose={closeReport} />}
