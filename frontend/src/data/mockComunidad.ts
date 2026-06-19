@@ -27,7 +27,7 @@ export const communityEvents: CommunityEvent[] = [
     type: 'Esterilización',
     date: 'Sáb 21 jun · 9:00 am',
     place: 'Parque Juárez, La Paz',
-    image: '/seed/perrito2.jpg',
+    image: '/seed/esterilizacion.jpg',
     description:
       'Esterilización gratuita para perros y gatos. Cupo limitado, registra a tu mascota con anticipación.',
     interested: 48,
@@ -38,7 +38,7 @@ export const communityEvents: CommunityEvent[] = [
     type: 'Adopción',
     date: 'Dom 22 jun · 11:00 am',
     place: 'Zócalo de Puebla',
-    image: '/seed/charlie-recuperado.jpg',
+    image: '/seed/adopcion.jpg',
     description:
       'Conoce a los animalitos rescatados que buscan hogar. Ven a conocer a Charlie y a muchos más.',
     interested: 132,
@@ -49,7 +49,7 @@ export const communityEvents: CommunityEvent[] = [
     type: 'Vacunación',
     date: 'Sáb 28 jun · 10:00 am',
     place: 'Clínica Huellitas, El Carmen',
-    image: '/seed/gatito9.jpg',
+    image: '/seed/antirrabica.jpg',
     description:
       'Vacuna antirrábica gratuita. Trae a tu mascota con correa o en transportadora.',
     interested: 27,
