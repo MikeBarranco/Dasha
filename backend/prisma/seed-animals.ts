@@ -2,7 +2,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 async function main() {
-  const { prisma } = await import('../src/config/db');
+  const { prisma } = await import('../dist/config/db.js');
   console.log('Sembrando datos de prueba para Miguel...');
 
   // 1. Crear algunas Organizaciones (Allies)
