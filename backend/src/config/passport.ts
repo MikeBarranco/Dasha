@@ -22,7 +22,7 @@ passport.use(
         }
 
         // Buscar si ya existe el AuthProvider
-        let authProvider = await prisma.authProvider.findUnique({
+        const authProvider = await prisma.authProvider.findUnique({
           where: {
             provider_providerId: {
               provider: 'google',
@@ -83,7 +83,7 @@ passport.use(
         const fallbackEmail = email || `${profile.id}@facebook.dummy.com`;
 
         // Buscar si ya existe el AuthProvider
-        let authProvider = await prisma.authProvider.findUnique({
+        const authProvider = await prisma.authProvider.findUnique({
           where: {
             provider_providerId: {
               provider: 'facebook',
