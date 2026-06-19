@@ -80,27 +80,71 @@ function createUserDot(): HTMLDivElement {
 type MapViewProps = {
   reports: Report[];
   onSelectReport: (report: Report) => void;
+  onOpenList?: () => void;
+  onVisibleReportsChange?: (reports: Report[]) => void;
+  focusReport?: Report | null;
+  resetSignal?: number;
 };
 
-export function MapView({ reports, onSelectReport }: MapViewProps) {
+export function MapView({
+  reports,
+  onSelectReport,
+  onOpenList,
+  onVisibleReportsChange,
+  focusReport,
+  resetSignal,
+}: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const reportsRef = useRef(reports);
   const onSelectRef = useRef(onSelectReport);
+  const onOpenListRef = useRef(onOpenList);
+  const onVisibleRef = useRef(onVisibleReportsChange);
   const userMarkerRef = useRef<maplibregl.Marker | null>(null);
-  const coloniaIndexRef = useRef<Map<string, maplibregl.LngLatBounds>>(new Map());
+  const coloniaIndexRef = useRef<Map<string, { id: number; coords: unknown }>>(new Map());
+  const coloniaFeaturesRef = useRef<Array<{ id: number; name: string }>>([]);
+  const applyCountsRef = useRef<(() => void) | null>(null);
   const geoErrorTimer = useRef<number | null>(null);
-  const selectColoniaRef = useRef<((name: string, at: maplibregl.LngLat) => void) | null>(null);
+  const selectColoniaRef = useRef<
+    ((id: number, name: string, at: maplibregl.LngLat) => void) | null
+  >(null);
   const [coloniaNames, setColoniaNames] = useState<string[]>([]);
   const [query, setQuery] = useState('');
   const [locating, setLocating] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const userLocationRef = useRef<[number, number] | null>(null);
+  const countsRef = useRef<Map<string, number>>(new Map());
+  const markersRef = useRef<maplibregl.Marker[]>([]);
+  const appliedFeatureIdsRef = useRef<number[]>([]);
+  const countsDirtyRef = useRef(true);
+  const renderMarkersRef = useRef<(() => void) | null>(null);
+  const emitVisibleRef = useRef<(() => void) | null>(null);
+  const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
     onSelectRef.current = onSelectReport;
   }, [onSelectReport]);
+
+  useEffect(() => {
+    onOpenListRef.current = onOpenList;
+  }, [onOpenList]);
+
+  useEffect(() => {
+    onVisibleRef.current = onVisibleReportsChange;
+  }, [onVisibleReportsChange]);
+
+  useEffect(() => {
+    if (focusReport) {
+      mapRef.current?.flyTo({ center: [focusReport.lng, focusReport.lat], zoom: 15, duration: 800 });
+    }
+  }, [focusReport]);
+
+  useEffect(() => {
+    if (resetSignal && resetSignal > 0) {
+      mapRef.current?.flyTo({ center: PUEBLA_CENTER, zoom: 11, duration: 800 });
+    }
+  }, [resetSignal]);
 
   useEffect(() => {
     let cancelled = false;
@@ -108,20 +152,27 @@ export function MapView({ reports, onSelectReport }: MapViewProps) {
       .then((response) => response.json())
       .then(
         (geojson: {
-          features?: Array<{ properties?: { name?: string }; geometry?: { coordinates?: unknown } }>;
+          features?: Array<{
+            id?: number;
+            properties?: { name?: string };
+            geometry?: { coordinates?: unknown };
+          }>;
         }) => {
           if (cancelled) return;
-          const index = new Map<string, maplibregl.LngLatBounds>();
+          const index = new Map<string, { id: number; coords: unknown }>();
+          const features: Array<{ id: number; name: string }> = [];
           for (const feature of geojson.features ?? []) {
             const name = String(feature.properties?.name ?? '');
-            if (!name || index.has(name)) continue;
-            const bounds = new maplibregl.LngLatBounds();
-            extendBounds(bounds, feature.geometry?.coordinates);
-            if (bounds.isEmpty()) continue;
-            index.set(name, bounds);
+            if (!name) continue;
+            const id = feature.id ?? 0;
+            features.push({ id, name });
+            if (!index.has(name)) index.set(name, { id, coords: feature.geometry?.coordinates });
           }
           coloniaIndexRef.current = index;
+          coloniaFeaturesRef.current = features;
           setColoniaNames([...index.keys()].sort((a, b) => a.localeCompare(b, 'es')));
+          countsDirtyRef.current = true;
+          applyCountsRef.current?.();
         },
       )
       .catch(() => {});
@@ -134,20 +185,23 @@ export function MapView({ reports, onSelectReport }: MapViewProps) {
     const container = containerRef.current;
     if (!container || mapRef.current) return;
 
-    const reports = reportsRef.current;
-    const counts = new Map<string, number>();
-    for (const report of reports) {
-      counts.set(report.colonia, (counts.get(report.colonia) ?? 0) + 1);
-    }
-
     const map = new maplibregl.Map({
       container,
       style: baseStyle,
       center: PUEBLA_CENTER,
       zoom: 11,
       attributionControl: false,
+      cooperativeGestures: true,
+      locale: {
+        'CooperativeGesturesHandler.MobileHelpText': 'Usa dos dedos para mover el mapa',
+        'CooperativeGesturesHandler.WindowsHelpText': 'Usa Ctrl + scroll para hacer zoom',
+        'CooperativeGesturesHandler.MacHelpText': 'Usa ⌘ + scroll para hacer zoom',
+      },
     });
     mapRef.current = map;
+
+    const resizeObserver = new ResizeObserver(() => map.resize());
+    resizeObserver.observe(container);
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
     map.addControl(new maplibregl.AttributionControl({ compact: true }));
@@ -158,14 +212,36 @@ export function MapView({ reports, onSelectReport }: MapViewProps) {
       offset: 12,
       className: 'dasha-popup',
     });
-    const markers: maplibregl.Marker[] = [];
-    let statesApplied = false;
+
+    const applyCounts = () => {
+      if (
+        !countsDirtyRef.current ||
+        !map.getSource('colonias') ||
+        !map.isSourceLoaded('colonias') ||
+        coloniaFeaturesRef.current.length === 0
+      ) {
+        return;
+      }
+      for (const id of appliedFeatureIdsRef.current) {
+        map.removeFeatureState({ source: 'colonias', id }, 'count');
+      }
+      const applied: number[] = [];
+      for (const feature of coloniaFeaturesRef.current) {
+        const count = countsRef.current.get(feature.name) ?? 0;
+        if (count > 0) {
+          map.setFeatureState({ source: 'colonias', id: feature.id }, { count });
+          applied.push(feature.id);
+        }
+      }
+      appliedFeatureIdsRef.current = applied;
+      countsDirtyRef.current = false;
+    };
+    applyCountsRef.current = applyCounts;
 
     map.on('load', () => {
       map.addSource('colonias', {
         type: 'geojson',
         data: '/data/colonias-puebla.geojson',
-        promoteId: 'name',
       });
 
       map.addLayer({
@@ -213,16 +289,16 @@ export function MapView({ reports, onSelectReport }: MapViewProps) {
         },
       });
 
-      let hoveredName: string | null = null;
+      let hoveredId: number | null = null;
 
-      const selectColonia = (name: string, at: maplibregl.LngLat) => {
-        if (name !== hoveredName) {
-          if (hoveredName !== null) {
-            map.setFeatureState({ source: 'colonias', id: hoveredName }, { hover: false });
+      const selectColonia = (id: number, name: string, at: maplibregl.LngLat) => {
+        if (id !== hoveredId) {
+          if (hoveredId !== null) {
+            map.setFeatureState({ source: 'colonias', id: hoveredId }, { hover: false });
           }
-          hoveredName = name;
-          map.setFeatureState({ source: 'colonias', id: name }, { hover: true });
-          popup.setHTML(popupHTML(name, counts.get(name) ?? 0));
+          hoveredId = id;
+          map.setFeatureState({ source: 'colonias', id }, { hover: true });
+          popup.setHTML(popupHTML(name, countsRef.current.get(name) ?? 0));
           popup.addTo(map);
         }
         popup.setLngLat(at);
@@ -231,62 +307,73 @@ export function MapView({ reports, onSelectReport }: MapViewProps) {
 
       map.on('mousemove', 'colonias-fill', (e) => {
         if (!e.features || e.features.length === 0) return;
-        const name = String(e.features[0].properties?.name ?? '');
+        const feature = e.features[0];
+        if (feature.id === undefined) return;
+        const name = String(feature.properties?.name ?? '');
         map.getCanvas().style.cursor = 'pointer';
-        selectColonia(name, e.lngLat);
+        selectColonia(Number(feature.id), name, e.lngLat);
       });
 
       map.on('mouseleave', 'colonias-fill', () => {
         map.getCanvas().style.cursor = '';
-        if (hoveredName !== null) {
-          map.setFeatureState({ source: 'colonias', id: hoveredName }, { hover: false });
-          hoveredName = null;
+        if (hoveredId !== null) {
+          map.setFeatureState({ source: 'colonias', id: hoveredId }, { hover: false });
+          hoveredId = null;
         }
         popup.remove();
       });
 
       map.on('click', 'colonias-fill', (e) => {
         if (!e.features || e.features.length === 0) return;
-        const geometry = e.features[0].geometry;
+        const feature = e.features[0];
+        const geometry = feature.geometry;
         if (geometry.type !== 'Polygon' && geometry.type !== 'MultiPolygon') return;
-        const name = String(e.features[0].properties?.name ?? '');
+        const name = String(feature.properties?.name ?? '');
         const bounds = new maplibregl.LngLatBounds();
         extendBounds(bounds, geometry.coordinates);
         map.fitBounds(bounds, { padding: 60, maxZoom: 16, duration: 800 });
-        if (name) selectColonia(name, bounds.getCenter());
+        if (feature.id !== undefined) selectColonia(Number(feature.id), name, bounds.getCenter());
+        onOpenListRef.current?.();
       });
-
-      for (const report of reports) {
-        const element = document.createElement('div');
-        element.style.width = '44px';
-        element.style.height = '44px';
-        element.style.borderRadius = '9999px';
-        element.style.border = `3px solid ${severityColor(report.severity)}`;
-        element.style.backgroundImage = `url(${report.photo})`;
-        element.style.backgroundSize = 'cover';
-        element.style.backgroundPosition = 'center';
-        element.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.3)';
-        element.style.cursor = 'pointer';
-        element.style.display = 'none';
-
-        element.addEventListener('click', (event) => {
-          event.stopPropagation();
-          onSelectRef.current(report);
-        });
-        const marker = new maplibregl.Marker({ element })
-          .setLngLat([report.lng, report.lat])
-          .addTo(map);
-        markers.push(marker);
-      }
 
       const updatePinVisibility = () => {
         const show = map.getZoom() >= PIN_MIN_ZOOM;
-        for (const marker of markers) {
+        for (const marker of markersRef.current) {
           marker.getElement().style.display = show ? 'block' : 'none';
         }
       };
+
+      const renderMarkers = () => {
+        for (const marker of markersRef.current) marker.remove();
+        markersRef.current = [];
+        for (const report of reportsRef.current) {
+          const element = document.createElement('div');
+          element.style.width = '44px';
+          element.style.height = '44px';
+          element.style.borderRadius = '9999px';
+          element.style.border = `3px solid ${severityColor(report.severity)}`;
+          element.style.backgroundImage = `url(${report.photo})`;
+          element.style.backgroundSize = 'cover';
+          element.style.backgroundPosition = 'center';
+          element.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.3)';
+          element.style.cursor = 'pointer';
+          element.style.display = 'none';
+
+          element.addEventListener('click', (event) => {
+            event.stopPropagation();
+            onSelectRef.current(report);
+          });
+          const marker = new maplibregl.Marker({ element })
+            .setLngLat([report.lng, report.lat])
+            .addTo(map);
+          markersRef.current.push(marker);
+        }
+        updatePinVisibility();
+      };
+      renderMarkersRef.current = renderMarkers;
+
       map.on('zoom', updatePinVisibility);
-      updatePinVisibility();
+      renderMarkers();
 
       if ('geolocation' in navigator) {
         navigator.geolocation.getCurrentPosition(
@@ -302,18 +389,26 @@ export function MapView({ reports, onSelectReport }: MapViewProps) {
           { enableHighAccuracy: true, timeout: 8000 },
         );
       }
+
+      const emitVisible = () => {
+        const bounds = map.getBounds();
+        onVisibleRef.current?.(
+          reportsRef.current.filter((report) => bounds.contains([report.lng, report.lat])),
+        );
+      };
+      emitVisibleRef.current = emitVisible;
+      map.on('moveend', emitVisible);
+      emitVisible();
+
+      setMapReady(true);
     });
 
-    map.on('sourcedata', () => {
-      if (statesApplied || !map.getSource('colonias') || !map.isSourceLoaded('colonias')) return;
-      counts.forEach((count, name) => {
-        map.setFeatureState({ source: 'colonias', id: name }, { count });
-      });
-      statesApplied = true;
-    });
+    map.on('sourcedata', applyCounts);
 
     return () => {
-      for (const marker of markers) marker.remove();
+      resizeObserver.disconnect();
+      for (const marker of markersRef.current) marker.remove();
+      markersRef.current = [];
       userMarkerRef.current?.remove();
       userMarkerRef.current = null;
       if (geoErrorTimer.current) window.clearTimeout(geoErrorTimer.current);
@@ -321,6 +416,20 @@ export function MapView({ reports, onSelectReport }: MapViewProps) {
       mapRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    reportsRef.current = reports;
+    const counts = new Map<string, number>();
+    for (const report of reports) {
+      counts.set(report.colonia, (counts.get(report.colonia) ?? 0) + 1);
+    }
+    countsRef.current = counts;
+    countsDirtyRef.current = true;
+    if (!mapReady) return;
+    applyCountsRef.current?.();
+    renderMarkersRef.current?.();
+    emitVisibleRef.current?.();
+  }, [reports, mapReady]);
 
   const showGeoError = (message: string) => {
     setGeoError(message);
@@ -361,10 +470,14 @@ export function MapView({ reports, onSelectReport }: MapViewProps) {
 
   const handleSelectColonia = (name: string) => {
     const map = mapRef.current;
-    const bounds = coloniaIndexRef.current.get(name);
-    if (!map || !bounds) return;
+    const entry = coloniaIndexRef.current.get(name);
+    if (!map || !entry) return;
+    const bounds = new maplibregl.LngLatBounds();
+    extendBounds(bounds, entry.coords);
+    if (bounds.isEmpty()) return;
     map.fitBounds(bounds, { padding: 60, maxZoom: 16, duration: 800 });
-    selectColoniaRef.current?.(name, bounds.getCenter());
+    selectColoniaRef.current?.(entry.id, name, bounds.getCenter());
+    onOpenListRef.current?.();
     setQuery('');
   };
 
@@ -379,7 +492,7 @@ export function MapView({ reports, onSelectReport }: MapViewProps) {
     <div className="relative h-full w-full">
       <div ref={containerRef} className="h-full w-full" />
 
-      <div className="absolute left-3 right-3 top-3 z-10 flex items-start justify-end gap-2">
+      <div className="absolute left-3 right-3 top-3 z-10 flex items-start justify-between gap-2">
         {searchOpen ? (
           <div className="relative flex-1">
             <div className="flex items-center gap-2 rounded-xl bg-white/95 px-3 py-2 shadow-lg backdrop-blur focus-within:ring-2 focus-within:ring-cobalto/30">

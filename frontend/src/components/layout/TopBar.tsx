@@ -2,8 +2,8 @@ import { Link, NavLink } from 'react-router-dom';
 import { Bell } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { Avatar } from '../ui/Avatar';
-import { mockUser } from '../../data/mockUser';
 import { useAvatar } from '../../lib/useAvatar';
+import { useAuth } from '../../lib/useAuth';
 
 const navItems = [
   { to: '/', label: 'Mapa', end: true },
@@ -14,6 +14,7 @@ const navItems = [
 
 export function TopBar() {
   const { avatar } = useAvatar();
+  const { user: account } = useAuth();
 
   return (
     <header className="sticky top-0 z-40 border-b border-neutral-200/70 bg-lino/80 backdrop-blur-md">
@@ -55,9 +56,18 @@ export function TopBar() {
           >
             <Bell className="h-5 w-5" />
           </button>
-          <Link to="/perfil" aria-label="Mi perfil">
-            <Avatar name={mockUser.name} src={avatar} className="h-9 w-9 text-sm" />
-          </Link>
+          {account ? (
+            <Link to="/perfil" aria-label="Mi perfil">
+              <Avatar name={account.name} src={avatar} className="h-9 w-9 text-sm" />
+            </Link>
+          ) : (
+            <Link
+              to="/login"
+              className="rounded-lg bg-cobalto px-3 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            >
+              Entrar
+            </Link>
+          )}
         </div>
       </div>
     </header>

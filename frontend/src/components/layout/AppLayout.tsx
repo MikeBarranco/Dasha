@@ -8,7 +8,7 @@ export function AppLayout() {
   const outlet = useOutlet();
 
   return (
-    <div className="flex min-h-screen flex-col bg-lino">
+    <div className="flex min-h-screen flex-col overflow-x-hidden bg-lino">
       <TopBar />
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-8 pb-28 md:px-8 md:pb-12">
         <AnimatePresence mode="wait" initial={false}>
