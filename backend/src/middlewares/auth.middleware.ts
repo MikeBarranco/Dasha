@@ -3,12 +3,17 @@ import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dasha_super_secret_key_2026_fepro';
 
-export interface AuthRequest extends Request {
-  user?: {
-    id: string;
-    role: string;
-  };
+declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
+  namespace Express {
+    interface User {
+      id: string;
+      role: string;
+    }
+  }
 }
+
+export type AuthRequest = Request;
 
 export const requireAuth = (req: AuthRequest, res: Response, next: NextFunction): void => {
   const authHeader = req.headers.authorization;

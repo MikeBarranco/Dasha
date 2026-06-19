@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import router from './routes';
 import { errorHandler } from './middlewares/errorHandler';
+import passport from './config/passport';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -35,6 +36,7 @@ app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ limit: '5mb', extended: true }));
 
 // Routes
+app.use(passport.initialize());
 app.use('/api/v1', router);
 
 // Root Endpoint

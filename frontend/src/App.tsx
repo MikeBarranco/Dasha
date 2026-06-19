@@ -8,6 +8,7 @@ import { ComunidadPage } from './pages/ComunidadPage';
 import { PerfilPage } from './pages/PerfilPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegistroPage } from './pages/RegistroPage';
+import { AuthCallbackPage } from './pages/AuthCallbackPage';
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
       <Routes>
         <Route path="login" element={<LoginPage />} />
         <Route path="registro" element={<RegistroPage />} />
+        <Route path="auth/callback" element={<AuthCallbackPage />} />
         <Route element={<AppLayout />}>
           <Route index element={<MapaPage />} />
           <Route path="reportar" element={<ReportarPage />} />

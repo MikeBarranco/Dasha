@@ -61,4 +61,10 @@ export class AuthService {
 
     return { user: userWithoutPassword, token };
   }
+
+  static generateToken(user: { id: string; role: string }) {
+    return jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, {
+      expiresIn: '7d',
+    });
+  }
 }
