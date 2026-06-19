@@ -77,7 +77,7 @@ export class AnimalService {
           orderBy: { orderIndex: 'asc' }
         },
         organization: {
-          select: { name: true, location: true } // Ojo, location es PostGIS, Prisma lo devuelve como binario a veces. Mejor omitirlo aquí y hacer raw si se requiere.
+          select: { name: true, address: true }
         }
       },
       orderBy: { createdAt: 'desc' }
