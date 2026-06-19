@@ -6,6 +6,7 @@ import statsRoutes from './stats.routes';
 import userRoutes from './user.routes';
 import organizationRoutes from './organization.routes';
 import animalRoutes from './animal.routes';
+import colonyRoutes from './colony.routes';
 
 const router = Router();
 
@@ -16,6 +17,7 @@ router.use('/uploads', uploadRoutes);
 router.use('/stats', statsRoutes);
 router.use('/allies', organizationRoutes);
 router.use('/animals', animalRoutes);
+router.use('/colonies', colonyRoutes);
 
 router.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
