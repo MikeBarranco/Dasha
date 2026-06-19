@@ -72,7 +72,10 @@ export class ReportController {
 
   static async getReports(req: Request, res: Response, next: NextFunction) {
     try {
-      const reports = await ReportService.getAllActiveReports();
+      const { species, condition, urgency, size } = req.query as any;
+      const filters = { species, condition, urgency, size };
+
+      const reports = await ReportService.getAllActiveReports(filters);
       // El contrato de Miguel pide regresar el arreglo directamente, sin envolverlo en "data"
       res.status(200).json(reports);
     } catch (error) {

@@ -117,6 +117,7 @@ export class ReportService {
       lng: row.lng,
       colonia: row.colonia || 'Desconocida',
       species: row.species === 'dog' ? 'perro' : (row.species === 'cat' ? 'gato' : row.species),
+      size: row.size,
       condition: row.condition,
       severity: severity,
       photoUrl: row.photo || null,
@@ -127,20 +128,28 @@ export class ReportService {
   }
 
   /**
-   * Obtiene TODOS los reportes activos (para la vista principal del mapa)
+   * Obtiene TODOS los reportes activos (para la vista principal del mapa) con filtros opcionales
    */
-  static async getAllActiveReports() {
+  static async getAllActiveReports(filters?: { species?: string; condition?: string; urgency?: string; size?: string; }) {
+    const conditions = [Prisma.sql`r.status = 'active'::"ReportStatus"`, Prisma.sql`r.location IS NOT NULL`];
+    
+    if (filters?.species) conditions.push(Prisma.sql`r.species = ${filters.species}::"Species"`);
+    if (filters?.condition) conditions.push(Prisma.sql`r.condition = ${filters.condition}::"Condition"`);
+    if (filters?.urgency) conditions.push(Prisma.sql`r.urgency = ${filters.urgency}::"Urgency"`);
+    if (filters?.size) conditions.push(Prisma.sql`r.size = ${filters.size}::"Size"`);
+
+    const whereClause = Prisma.join(conditions, ' AND ');
+
     const reports: any[] = await prisma.$queryRaw`
       SELECT 
-        r.id, r.species, r.condition, r.urgency, r.status, r.description, r.created_at,
+        r.id, r.species, r.size, r.condition, r.urgency, r.status, r.description, r.created_at,
         ST_X(r.location::geometry) as lng,
         ST_Y(r.location::geometry) as lat,
         c.name as colonia,
         (SELECT url FROM report_photos rp WHERE rp.report_id = r.id ORDER BY rp.created_at ASC LIMIT 1) as photo
       FROM reports r
       LEFT JOIN colonies c ON r.colony_id = c.id
-      WHERE r.status = 'active'::"ReportStatus"
-        AND r.location IS NOT NULL
+      WHERE ${whereClause}
       ORDER BY r.created_at DESC
       LIMIT 100;
     `;
@@ -154,7 +163,7 @@ export class ReportService {
   static async getReportById(id: string) {
     const reports: any[] = await prisma.$queryRaw`
       SELECT 
-        r.id, r.species, r.condition, r.urgency, r.status, r.description, r.created_at,
+        r.id, r.species, r.size, r.condition, r.urgency, r.status, r.description, r.created_at,
         ST_X(r.location::geometry) as lng,
         ST_Y(r.location::geometry) as lat,
         c.name as colonia,
