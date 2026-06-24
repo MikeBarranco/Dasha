@@ -252,7 +252,7 @@ export function RehabilitacionPage() {
                   alt={animal.name}
                   onError={(event) => {
                     event.currentTarget.onerror = null;
-                    event.currentTarget.src = '/seed/perrito1.jpg';
+                    event.currentTarget.src = '/placeholder-animal.svg';
                   }}
                   className="h-52 w-full object-cover"
                 />

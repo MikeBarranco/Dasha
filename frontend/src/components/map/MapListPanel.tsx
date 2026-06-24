@@ -62,6 +62,10 @@ export function MapListPanel({ reports, onSelect, onClose }: MapListPanelProps) 
                   <img
                     src={report.photo}
                     alt=""
+                    onError={(event) => {
+                      event.currentTarget.onerror = null;
+                      event.currentTarget.src = '/placeholder-animal.svg';
+                    }}
                     className="h-12 w-12 flex-shrink-0 rounded-lg bg-neutral-100 object-cover"
                   />
                   <div className="min-w-0 flex-1">

@@ -149,7 +149,7 @@ function mapReport(raw: RawReport): Report {
     species: raw.species === 'cat' ? 'gato' : 'perro',
     condition: conditionLabels[raw.condition] ?? raw.condition,
     severity: urgencyToSeverity[raw.urgency] ?? 'media',
-    photo: raw.photo ?? '/seed/perrito1.jpg',
+    photo: raw.photo ?? '/placeholder-animal.svg',
     description: raw.description ?? '',
     reportedAgo: timeAgo(raw.created_at),
     status: statusLabels[raw.status] ?? raw.status,
@@ -200,7 +200,7 @@ export async function getReports(): Promise<Report[]> {
     severity: (['baja', 'media', 'critica'].includes(raw.severity)
       ? raw.severity
       : 'media') as Severity,
-    photo: raw.photoUrl ?? '/seed/perrito1.jpg',
+    photo: raw.photoUrl ?? '/placeholder-animal.svg',
     description: raw.description ?? '',
     reportedAgo: timeAgo(raw.createdAt),
     status: raw.status ?? 'Activo',
@@ -251,7 +251,7 @@ export async function getAnimals(): Promise<Animal[]> {
       species: raw.species === 'cat' || raw.species === 'gato' ? 'gato' : 'perro',
       size: 'Mediano',
       zone: raw.organization?.address ?? raw.organization?.name ?? 'Puebla',
-      photos: photos.length > 0 ? photos : ['/seed/perrito1.jpg'],
+      photos: photos.length > 0 ? photos : ['/placeholder-animal.svg'],
       story: raw.story ?? '',
       diagnosis: raw.diagnosis ?? raw.treatment ?? 'En valoración',
       vet: raw.organization?.name ?? 'Aliado Dasha',

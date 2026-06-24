@@ -50,7 +50,15 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
             className="block w-full"
             aria-label="Ver foto completa"
           >
-            <img src={report.photo} alt={report.condition} className="h-56 w-full object-cover" />
+            <img
+              src={report.photo}
+              alt={report.condition}
+              onError={(event) => {
+                event.currentTarget.onerror = null;
+                event.currentTarget.src = '/placeholder-animal.svg';
+              }}
+              className="h-56 w-full object-cover"
+            />
           </button>
           <span
             className={`absolute left-3 top-3 rounded-full px-3 py-1 text-xs font-semibold ${severityClasses[report.severity]}`}
@@ -118,6 +126,10 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
             <img
               src={report.photo}
               alt={report.condition}
+              onError={(event) => {
+                event.currentTarget.onerror = null;
+                event.currentTarget.src = '/placeholder-animal.svg';
+              }}
               className="max-h-full max-w-full rounded-xl object-contain"
             />
             <button
