@@ -104,6 +104,7 @@ export function ReportarPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState(1);
   const [done, setDone] = useState(false);
+  const [newReportId, setNewReportId] = useState<string | null>(null);
 
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [photoBase64, setPhotoBase64] = useState<string | null>(null);
@@ -198,6 +199,7 @@ export function ReportarPage() {
   const resetForm = () => {
     setStep(1);
     setDone(false);
+    setNewReportId(null);
     setPhotoUrl(null);
     setSpecies(null);
     setConditions([]);
@@ -231,7 +233,8 @@ export function ReportarPage() {
         photoBase64,
       };
 
-      await createReport(payload);
+      const created = await createReport(payload);
+      setNewReportId(created?.id ?? null);
       setDone(true);
     } catch (error: any) {
       console.error('Failed to create report', error);
@@ -263,10 +266,10 @@ export function ReportarPage() {
         <div className="mt-8 flex gap-3">
           <button
             type="button"
-            onClick={() => navigate('/')}
+            onClick={() => navigate(newReportId ? `/?reporte=${newReportId}` : '/')}
             className="rounded-xl bg-cobalto px-5 py-3 font-medium text-white"
           >
-            Ver en el mapa
+            Ver mi reporte
           </button>
           <button
             type="button"

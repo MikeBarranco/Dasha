@@ -86,7 +86,11 @@ export type CreateReportInput = {
 };
 
 export async function createReport(input: CreateReportInput) {
-  return request('/reports', { method: 'POST', body: JSON.stringify(input) }, true);
+  return request<{ id?: string }>(
+    '/reports',
+    { method: 'POST', body: JSON.stringify(input) },
+    true,
+  );
 }
 
 type RawReport = {
