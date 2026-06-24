@@ -67,7 +67,7 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
               alt={animal.name}
               onError={(event) => {
                 event.currentTarget.onerror = null;
-                event.currentTarget.src = '/seed/perrito1.jpg';
+                event.currentTarget.src = '/placeholder-animal.svg';
               }}
               className="h-64 w-full object-cover"
             />
@@ -102,7 +102,15 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
                   index === activePhoto ? 'border-cobalto' : 'border-transparent',
                 )}
               >
-                <img src={item} alt="" className="h-full w-full object-cover" />
+                <img
+                  src={item}
+                  alt=""
+                  onError={(event) => {
+                    event.currentTarget.onerror = null;
+                    event.currentTarget.src = '/placeholder-animal.svg';
+                  }}
+                  className="h-full w-full object-cover"
+                />
               </button>
             ))}
           </div>
@@ -191,6 +199,10 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
             <img
               src={photo}
               alt={animal.name}
+              onError={(event) => {
+                event.currentTarget.onerror = null;
+                event.currentTarget.src = '/placeholder-animal.svg';
+              }}
               onClick={(event) => event.stopPropagation()}
               onTouchStart={(event) => {
                 touchStartX.current = event.changedTouches[0].clientX;
