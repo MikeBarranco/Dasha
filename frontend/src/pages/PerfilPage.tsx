@@ -1,7 +1,16 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence } from 'motion/react';
-import { Lock, ChevronRight, Settings, LogOut, UserRound, Camera, type LucideIcon } from 'lucide-react';
+import {
+  Lock,
+  ChevronRight,
+  Settings,
+  LogOut,
+  UserRound,
+  Camera,
+  Sparkles,
+  type LucideIcon,
+} from 'lucide-react';
 import { Avatar } from '../components/ui/Avatar';
 import { AvatarPicker } from '../components/perfil/AvatarPicker';
 import { SocialLinks } from '../components/ui/SocialLinks';
@@ -179,6 +188,11 @@ export function PerfilPage() {
 
       <div className="divide-y divide-neutral-100 overflow-hidden rounded-2xl border border-neutral-200 bg-white">
         <RowButton icon={Settings} label="Ajustes de la cuenta" />
+        <RowButton
+          icon={Sparkles}
+          label="Novedades"
+          onClick={() => navigate('/novedades')}
+        />
         <RowButton
           icon={LogOut}
           label="Cerrar sesión"
