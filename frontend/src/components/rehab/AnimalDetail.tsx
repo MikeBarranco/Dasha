@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { AnimatePresence, motion } from 'motion/react';
+import { AnimatePresence, motion, useDragControls } from 'motion/react';
 import { X, Heart, Gift, Stethoscope, MapPin, ChevronLeft, ChevronRight, Home } from 'lucide-react';
 import { ProgressBar } from '../ui/ProgressBar';
 import { ShareButton } from '../ui/ShareButton';
@@ -19,6 +19,7 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
   const [showFull, setShowFull] = useState(false);
   const touchStartX = useRef(0);
   const photo = animal.photos[activePhoto];
+  const dragControls = useDragControls();
 
   const goNext = () => setActivePhoto((index) => (index + 1) % total);
   const goPrev = () => setActivePhoto((index) => (index - 1 + total) % total);
@@ -34,12 +35,26 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
       />
 
       <motion.div
-        className="relative max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-white shadow-xl sm:rounded-3xl"
+        className="relative max-h-[88vh] w-full max-w-md overflow-y-auto overscroll-contain rounded-t-3xl bg-white shadow-xl sm:rounded-3xl"
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        drag="y"
+        dragControls={dragControls}
+        dragListener={false}
+        dragConstraints={{ top: 0, bottom: 0 }}
+        dragElastic={{ top: 0, bottom: 0.5 }}
+        onDragEnd={(_, info) => {
+          if (info.offset.y > 120 || info.velocity.y > 500) onClose();
+        }}
       >
+        <div
+          onPointerDown={(event) => dragControls.start(event)}
+          className="absolute left-1/2 top-2.5 z-20 h-1.5 w-10 -translate-x-1/2 cursor-grab rounded-full bg-white/90 shadow-sm sm:hidden"
+          style={{ touchAction: 'none' }}
+          aria-hidden="true"
+        />
         <div className="relative">
           <button
             type="button"
