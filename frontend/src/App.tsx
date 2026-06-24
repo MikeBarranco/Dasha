@@ -6,6 +6,7 @@ import { ReportarPage } from './pages/ReportarPage';
 import { RehabilitacionPage } from './pages/RehabilitacionPage';
 import { ComunidadPage } from './pages/ComunidadPage';
 import { PerfilPage } from './pages/PerfilPage';
+import { NovedadesPage } from './pages/NovedadesPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegistroPage } from './pages/RegistroPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
@@ -24,6 +25,7 @@ function App() {
           <Route path="rehabilitacion" element={<RehabilitacionPage />} />
           <Route path="comunidad" element={<ComunidadPage />} />
           <Route path="perfil" element={<PerfilPage />} />
+          <Route path="novedades" element={<NovedadesPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
