@@ -1,4 +1,5 @@
 import type { Report, Severity } from '../data/mockReports';
+import type { Animal, AnimalStatus } from '../data/mockAnimals';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
 const TOKEN_KEY = 'dasha-token';
@@ -214,4 +215,49 @@ export type Stats = {
 
 export async function getStats(): Promise<Stats> {
   return requestRaw<Stats>('/stats');
+}
+
+type RawAnimal = {
+  id: string;
+  name: string;
+  species: string;
+  story: string | null;
+  status: string;
+  diagnosis: string | null;
+  treatment: string | null;
+  totalCostNeeded: string | null;
+  totalRaised: string | null;
+  photos: { url: string; orderIndex: number }[] | null;
+  organization: { name?: string; address?: string } | null;
+};
+
+const animalStatusLabels: Record<string, AnimalStatus> = {
+  in_treatment: 'En tratamiento',
+  recovering: 'Recuperándose',
+  looking_for_foster: 'Buscando hogar',
+  looking_for_adoption: 'Buscando hogar',
+};
+
+export async function getAnimals(): Promise<Animal[]> {
+  const data = await requestRaw<RawAnimal[]>('/animals');
+  return (data ?? []).map((raw) => {
+    const photos = [...(raw.photos ?? [])]
+      .sort((a, b) => a.orderIndex - b.orderIndex)
+      .map((photo) => photo.url)
+      .filter(Boolean);
+    return {
+      id: String(raw.id),
+      name: raw.name,
+      species: raw.species === 'cat' || raw.species === 'gato' ? 'gato' : 'perro',
+      size: 'Mediano',
+      zone: raw.organization?.address ?? raw.organization?.name ?? 'Puebla',
+      photos: photos.length > 0 ? photos : ['/seed/perrito1.jpg'],
+      story: raw.story ?? '',
+      diagnosis: raw.diagnosis ?? raw.treatment ?? 'En valoración',
+      vet: raw.organization?.name ?? 'Aliado Dasha',
+      totalNeeded: Number(raw.totalCostNeeded ?? 0),
+      totalRaised: Number(raw.totalRaised ?? 0),
+      status: animalStatusLabels[raw.status] ?? 'En tratamiento',
+    };
+  });
 }
