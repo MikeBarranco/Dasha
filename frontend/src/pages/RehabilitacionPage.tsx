@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, SlidersHorizontal } from 'lucide-react';
@@ -6,6 +6,7 @@ import { PageHeader } from '../components/ui/PageHeader';
 import { ProgressBar } from '../components/ui/ProgressBar';
 import { AnimalDetail } from '../components/rehab/AnimalDetail';
 import { mockAnimals, type Animal, type AnimalSize, type AnimalStatus } from '../data/mockAnimals';
+import { getAnimals } from '../lib/api';
 
 function normalize(value: string): string {
   return value
@@ -47,9 +48,26 @@ function FilterSelect({ value, onChange, children }: FilterSelectProps) {
 
 export function RehabilitacionPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const [animals, setAnimals] = useState<Animal[] | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    getAnimals()
+      .then((data) => {
+        if (active) setAnimals(data);
+      })
+      .catch(() => {
+        if (active) setAnimals(mockAnimals);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const list = animals ?? [];
   const animalParam = searchParams.get('animal');
   const selected = animalParam
-    ? (mockAnimals.find((animal) => animalSlug(animal) === animalParam) ?? null)
+    ? (list.find((animal) => animalSlug(animal) === animalParam) ?? null)
     : null;
 
   const openAnimal = (animal: Animal) => setSearchParams({ animal: animalSlug(animal) });
@@ -63,20 +81,22 @@ export function RehabilitacionPage() {
 
   const zones = useMemo(
     () =>
-      [...new Set(mockAnimals.map((animal) => animal.zone))].sort((a, b) => a.localeCompare(b, 'es')),
-    [],
+      [...new Set((animals ?? []).map((animal) => animal.zone))].sort((a, b) =>
+        a.localeCompare(b, 'es'),
+      ),
+    [animals],
   );
 
   const filtered = useMemo(() => {
     const query = normalize(search.trim());
-    return mockAnimals
+    return (animals ?? [])
       .filter((animal) => species === 'todos' || animal.species === species)
       .filter((animal) => size === 'todos' || animal.size === size)
       .filter((animal) => status === 'todos' || animal.status === status)
       .filter((animal) => zone === 'todas' || animal.zone === zone)
       .filter((animal) => normalize(animal.name).includes(query))
       .sort((a, b) => a.totalRaised / a.totalNeeded - b.totalRaised / b.totalNeeded);
-  }, [search, species, size, status, zone]);
+  }, [animals, search, species, size, status, zone]);
 
   const activeCount =
     (species !== 'todos' ? 1 : 0) +
@@ -191,11 +211,19 @@ export function RehabilitacionPage() {
         </AnimatePresence>
 
         <p className="text-xs text-neutral-400">
-          {filtered.length} {filtered.length === 1 ? 'animalito' : 'animalitos'}
+          {animals === null
+            ? 'Cargando...'
+            : `${filtered.length} ${filtered.length === 1 ? 'animalito' : 'animalitos'}`}
         </p>
       </div>
 
-      {filtered.length === 0 ? (
+      {animals === null ? (
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[0, 1, 2].map((index) => (
+            <div key={index} className="h-72 animate-pulse rounded-2xl bg-neutral-100" />
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="mt-8 rounded-2xl border border-dashed border-neutral-300 py-12 text-center">
           <p className="text-sm text-neutral-500">No encontramos animalitos con esos filtros.</p>
           <button
@@ -222,6 +250,10 @@ export function RehabilitacionPage() {
                 <img
                   src={animal.photos[animal.photos.length - 1]}
                   alt={animal.name}
+                  onError={(event) => {
+                    event.currentTarget.onerror = null;
+                    event.currentTarget.src = '/seed/perrito1.jpg';
+                  }}
                   className="h-52 w-full object-cover"
                 />
                 <span className="absolute bottom-2 left-2 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white">

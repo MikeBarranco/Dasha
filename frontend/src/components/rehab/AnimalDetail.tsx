@@ -62,7 +62,15 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
             className="block w-full"
             aria-label="Ver foto completa"
           >
-            <img src={photo} alt={animal.name} className="h-64 w-full object-cover" />
+            <img
+              src={photo}
+              alt={animal.name}
+              onError={(event) => {
+                event.currentTarget.onerror = null;
+                event.currentTarget.src = '/seed/perrito1.jpg';
+              }}
+              className="h-64 w-full object-cover"
+            />
           </button>
           <span className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-cobalto">
             {animal.status}
