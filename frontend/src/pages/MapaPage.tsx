@@ -12,7 +12,8 @@ import {
   type ReportFilters,
 } from '../lib/reportFilters';
 import { mockReports, type Report } from '../data/mockReports';
-import { getReports, getStats, type Stats } from '../lib/api';
+import { mockAllies, type Ally } from '../data/mockAllies';
+import { getReports, getStats, getAllies, type Stats } from '../lib/api';
 
 const MapView = lazy(() =>
   import('../components/map/MapView').then((module) => ({ default: module.MapView })),
@@ -27,6 +28,7 @@ export function MapaPage() {
   const [focusReport, setFocusReport] = useState<Report | null>(null);
   const [resetSignal, setResetSignal] = useState(0);
   const [filters, setFilters] = useState<ReportFilters>(emptyFilters);
+  const [allies, setAllies] = useState<Ally[]>([]);
 
   const filteredReports = useMemo(
     () => (reports ? applyReportFilters(reports, filters) : null),
@@ -47,6 +49,13 @@ export function MapaPage() {
         if (active) setStats(data);
       })
       .catch(() => {});
+    getAllies()
+      .then((data) => {
+        if (active) setAllies(data.length > 0 ? data : mockAllies);
+      })
+      .catch(() => {
+        if (active) setAllies(mockAllies);
+      });
     return () => {
       active = false;
     };
@@ -122,6 +131,7 @@ export function MapaPage() {
             <Suspense fallback={<div className="h-full w-full animate-pulse bg-neutral-100" />}>
               <MapView
                 reports={filteredReports}
+                allies={allies}
                 onSelectReport={openReport}
                 onOpenList={() => setPanelOpen(true)}
                 onVisibleReportsChange={setVisibleReports}
