@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { motion, useDragControls } from 'motion/react';
+import { motion } from 'motion/react';
 import {
   X,
   BadgeCheck,
@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { ShareButton } from '../ui/ShareButton';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
+import { useSheetDismiss } from '../../lib/useSheetDismiss';
 import { allyTypeLabels, type Ally } from '../../data/mockAllies';
 
 type AllyDetailProps = {
@@ -24,7 +25,8 @@ type AllyDetailProps = {
 export function AllyDetail({ ally, onClose }: AllyDetailProps) {
   useLockBodyScroll();
   const navigate = useNavigate();
-  const dragControls = useDragControls();
+  const { dragControls, scrollRef, onPointerDown, onPointerMove, onDragEnd } =
+    useSheetDismiss(onClose);
   const gallery = ally.gallery ?? [];
   const events = ally.events ?? [];
   const badges = ally.badges ?? [];
@@ -40,7 +42,8 @@ export function AllyDetail({ ally, onClose }: AllyDetailProps) {
       />
 
       <motion.div
-        className="relative max-h-[88vh] w-full max-w-md overflow-y-auto overscroll-contain rounded-t-3xl bg-white shadow-xl sm:rounded-3xl"
+        ref={scrollRef}
+        className="relative max-h-[88vh] w-full max-w-md overflow-y-auto overscroll-none rounded-t-3xl bg-white shadow-xl sm:rounded-3xl"
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
@@ -50,14 +53,12 @@ export function AllyDetail({ ally, onClose }: AllyDetailProps) {
         dragListener={false}
         dragConstraints={{ top: 0, bottom: 0 }}
         dragElastic={{ top: 0, bottom: 0.5 }}
-        onDragEnd={(_, info) => {
-          if (info.offset.y > 120 || info.velocity.y > 500) onClose();
-        }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onDragEnd={onDragEnd}
       >
         <div
-          onPointerDown={(event) => dragControls.start(event)}
-          className="absolute left-1/2 top-2.5 z-20 h-1.5 w-10 -translate-x-1/2 cursor-grab rounded-full bg-neutral-300 sm:hidden"
-          style={{ touchAction: 'none' }}
+          className="pointer-events-none absolute left-1/2 top-2.5 z-20 h-1.5 w-10 -translate-x-1/2 rounded-full bg-neutral-300 sm:hidden"
           aria-hidden="true"
         />
 

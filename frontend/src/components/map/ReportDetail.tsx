@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { X, Navigation, Clock, MapPin, Maximize2 } from 'lucide-react';
 import { ShareButton } from '../ui/ShareButton';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
+import { useSheetDismiss } from '../../lib/useSheetDismiss';
 import type { Report, Severity } from '../../data/mockReports';
 
 const severityLabel: Record<Severity, string> = {
@@ -25,6 +26,8 @@ type ReportDetailProps = {
 export function ReportDetail({ report, onClose }: ReportDetailProps) {
   useLockBodyScroll();
   const [showPhoto, setShowPhoto] = useState(false);
+  const { dragControls, scrollRef, onPointerDown, onPointerMove, onDragEnd } =
+    useSheetDismiss(onClose);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
@@ -37,12 +40,25 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
       />
 
       <motion.div
-        className="relative w-full max-w-md overflow-hidden rounded-t-3xl bg-white shadow-xl sm:rounded-3xl"
+        ref={scrollRef}
+        className="relative max-h-[88vh] w-full max-w-md overflow-y-auto overscroll-none rounded-t-3xl bg-white shadow-xl sm:rounded-3xl"
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        drag="y"
+        dragControls={dragControls}
+        dragListener={false}
+        dragConstraints={{ top: 0, bottom: 0 }}
+        dragElastic={{ top: 0, bottom: 0.5 }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onDragEnd={onDragEnd}
       >
+        <div
+          className="pointer-events-none absolute left-1/2 top-2.5 z-20 h-1.5 w-10 -translate-x-1/2 rounded-full bg-white/90 shadow-sm sm:hidden"
+          aria-hidden="true"
+        />
         <div className="relative">
           <button
             type="button"
