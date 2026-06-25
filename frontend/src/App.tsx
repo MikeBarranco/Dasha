@@ -7,6 +7,7 @@ import { RehabilitacionPage } from './pages/RehabilitacionPage';
 import { ComunidadPage } from './pages/ComunidadPage';
 import { PerfilPage } from './pages/PerfilPage';
 import { NovedadesPage } from './pages/NovedadesPage';
+import { SerVoluntarioPage } from './pages/SerVoluntarioPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegistroPage } from './pages/RegistroPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
@@ -26,6 +27,7 @@ function App() {
           <Route path="comunidad" element={<ComunidadPage />} />
           <Route path="perfil" element={<PerfilPage />} />
           <Route path="novedades" element={<NovedadesPage />} />
+          <Route path="ser-voluntario" element={<SerVoluntarioPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
