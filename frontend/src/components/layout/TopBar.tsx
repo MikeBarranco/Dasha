@@ -12,7 +12,11 @@ const navItems = [
   { to: '/aliados', label: 'Aliados', end: false },
 ];
 
-export function TopBar() {
+type TopBarProps = {
+  onReportClick: () => void;
+};
+
+export function TopBar({ onReportClick }: TopBarProps) {
   const { avatar } = useAvatar();
   const { user: account } = useAuth();
 
@@ -43,12 +47,13 @@ export function TopBar() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <Link
-            to="/reportar"
+          <button
+            type="button"
+            onClick={onReportClick}
             className="hidden rounded-lg bg-naranja px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 md:inline-flex"
           >
             Reportar
-          </Link>
+          </button>
           <button
             type="button"
             className="rounded-full p-2 text-neutral-500 transition-colors hover:bg-neutral-100"
