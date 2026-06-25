@@ -1,15 +1,20 @@
+import { useState } from 'react';
 import { useLocation, useOutlet } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { TopBar } from './TopBar';
 import { BottomNav } from './BottomNav';
+import { ReportChooser } from './ReportChooser';
 
 export function AppLayout() {
   const location = useLocation();
   const outlet = useOutlet();
+  const [chooserOpen, setChooserOpen] = useState(false);
+
+  const openChooser = () => setChooserOpen(true);
 
   return (
     <div className="flex min-h-screen flex-col overflow-x-hidden bg-lino">
-      <TopBar />
+      <TopBar onReportClick={openChooser} />
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-8 pb-28 md:px-8 md:pb-12">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
@@ -23,7 +28,8 @@ export function AppLayout() {
           </motion.div>
         </AnimatePresence>
       </main>
-      <BottomNav />
+      <BottomNav onReportClick={openChooser} />
+      <ReportChooser open={chooserOpen} onClose={() => setChooserOpen(false)} />
     </div>
   );
 }

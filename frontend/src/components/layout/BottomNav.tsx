@@ -28,20 +28,25 @@ function NavItem({ to, label, icon: Icon, end }: NavItemProps) {
   );
 }
 
-export function BottomNav() {
+type BottomNavProps = {
+  onReportClick: () => void;
+};
+
+export function BottomNav({ onReportClick }: BottomNavProps) {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-neutral-200 bg-white/85 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
       <div className="mx-auto grid max-w-md grid-cols-5 items-end px-2">
         <NavItem to="/" label="Mapa" icon={MapIcon} end />
         <NavItem to="/rehabilitacion" label="Rescates" icon={Heart} />
         <div className="flex justify-center">
-          <NavLink
-            to="/reportar"
-            className="-mt-5 flex h-14 w-14 items-center justify-center rounded-full bg-naranja text-white shadow-lg shadow-naranja/40 ring-4 ring-lino"
+          <button
+            type="button"
+            onClick={onReportClick}
+            className="-mt-5 flex h-14 w-14 items-center justify-center rounded-full bg-naranja text-white shadow-lg shadow-naranja/40 ring-4 ring-lino transition-transform active:scale-95"
             aria-label="Reportar"
           >
             <Plus className="h-7 w-7" />
-          </NavLink>
+          </button>
         </div>
         <NavItem to="/comunidad" label="Comunidad" icon={Users} />
         <NavItem to="/aliados" label="Aliados" icon={HeartHandshake} />
