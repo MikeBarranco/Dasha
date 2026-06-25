@@ -7,6 +7,12 @@ const severityItems = [
   { label: 'Baja', color: '#2563EB' },
 ];
 
+const allyItems = [
+  { label: 'Veterinaria', color: '#1C4E80' },
+  { label: 'Refugio', color: '#6B2C91' },
+  { label: 'Asociación', color: '#0E7490' },
+];
+
 export function MapLegend() {
   const [open, setOpen] = useState(false);
 
@@ -49,6 +55,21 @@ export function MapLegend() {
                   <span
                     className="h-3 w-3 flex-shrink-0 rounded-full border-2 bg-white"
                     style={{ borderColor: item.color }}
+                  />
+                  {item.label}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <p className="mb-1 text-[11px] font-medium text-neutral-500">Aliados</p>
+            <ul className="space-y-1">
+              {allyItems.map((item) => (
+                <li key={item.label} className="flex items-center gap-2 text-[11px] text-neutral-600">
+                  <span
+                    className="h-3 w-3 flex-shrink-0 rounded-[3px] border-2 border-white"
+                    style={{ backgroundColor: item.color }}
                   />
                   {item.label}
                 </li>

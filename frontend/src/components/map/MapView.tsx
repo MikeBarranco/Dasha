@@ -3,6 +3,7 @@ import maplibregl, { type StyleSpecification } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Search, LocateFixed, Loader2, X } from 'lucide-react';
 import { type Report, type Severity } from '../../data/mockReports';
+import { type Ally, type AllyType, allyTypeLabels } from '../../data/mockAllies';
 import { MapLegend } from './MapLegend';
 
 const PUEBLA_CENTER: [number, number] = [-98.2, 19.04];
@@ -57,6 +58,37 @@ function severityColor(severity: Severity): string {
   return '#2563EB';
 }
 
+const allyColors: Record<AllyType, string> = {
+  veterinary: '#1C4E80',
+  shelter: '#6B2C91',
+  ngo: '#0E7490',
+  educational: '#15803D',
+};
+
+function createAllyElement(type: AllyType): HTMLDivElement {
+  const element = document.createElement('div');
+  element.style.width = '26px';
+  element.style.height = '26px';
+  element.style.borderRadius = '8px';
+  element.style.backgroundColor = allyColors[type] ?? allyColors.ngo;
+  element.style.border = '2px solid #ffffff';
+  element.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.3)';
+  element.style.display = 'flex';
+  element.style.alignItems = 'center';
+  element.style.justifyContent = 'center';
+  element.style.cursor = 'pointer';
+  element.innerHTML =
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
+  return element;
+}
+
+function allyPopupHTML(name: string, type: AllyType): string {
+  return (
+    `<div class="dasha-popup-name">${name}</div>` +
+    `<div class="dasha-popup-count">${allyTypeLabels[type] ?? 'Aliado'}</div>`
+  );
+}
+
 function extendBounds(bounds: maplibregl.LngLatBounds, coords: unknown): void {
   if (!Array.isArray(coords)) return;
   if (typeof coords[0] === 'number') {
@@ -79,6 +111,7 @@ function createUserDot(): HTMLDivElement {
 
 type MapViewProps = {
   reports: Report[];
+  allies?: Ally[];
   onSelectReport: (report: Report) => void;
   onOpenList?: () => void;
   onVisibleReportsChange?: (reports: Report[]) => void;
@@ -88,6 +121,7 @@ type MapViewProps = {
 
 export function MapView({
   reports,
+  allies = [],
   onSelectReport,
   onOpenList,
   onVisibleReportsChange,
@@ -120,6 +154,9 @@ export function MapView({
   const countsDirtyRef = useRef(true);
   const renderMarkersRef = useRef<(() => void) | null>(null);
   const emitVisibleRef = useRef<(() => void) | null>(null);
+  const alliesRef = useRef(allies);
+  const allyMarkersRef = useRef<maplibregl.Marker[]>([]);
+  const renderAllyMarkersRef = useRef<(() => void) | null>(null);
   const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
@@ -375,6 +412,34 @@ export function MapView({
       map.on('zoom', updatePinVisibility);
       renderMarkers();
 
+      const allyPopup = new maplibregl.Popup({
+        closeButton: false,
+        closeOnClick: true,
+        offset: 16,
+        className: 'dasha-popup',
+      });
+
+      const renderAllyMarkers = () => {
+        for (const marker of allyMarkersRef.current) marker.remove();
+        allyMarkersRef.current = [];
+        for (const ally of alliesRef.current) {
+          const element = createAllyElement(ally.orgType);
+          element.addEventListener('click', (event) => {
+            event.stopPropagation();
+            allyPopup
+              .setLngLat([ally.lng, ally.lat])
+              .setHTML(allyPopupHTML(ally.name, ally.orgType))
+              .addTo(map);
+          });
+          const marker = new maplibregl.Marker({ element })
+            .setLngLat([ally.lng, ally.lat])
+            .addTo(map);
+          allyMarkersRef.current.push(marker);
+        }
+      };
+      renderAllyMarkersRef.current = renderAllyMarkers;
+      renderAllyMarkers();
+
       if ('geolocation' in navigator) {
         navigator.geolocation.getCurrentPosition(
           (position) => {
@@ -409,6 +474,8 @@ export function MapView({
       resizeObserver.disconnect();
       for (const marker of markersRef.current) marker.remove();
       markersRef.current = [];
+      for (const marker of allyMarkersRef.current) marker.remove();
+      allyMarkersRef.current = [];
       userMarkerRef.current?.remove();
       userMarkerRef.current = null;
       if (geoErrorTimer.current) window.clearTimeout(geoErrorTimer.current);
@@ -430,6 +497,12 @@ export function MapView({
     renderMarkersRef.current?.();
     emitVisibleRef.current?.();
   }, [reports, mapReady]);
+
+  useEffect(() => {
+    alliesRef.current = allies;
+    if (!mapReady) return;
+    renderAllyMarkersRef.current?.();
+  }, [allies, mapReady]);
 
   const showGeoError = (message: string) => {
     setGeoError(message);
