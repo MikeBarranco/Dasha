@@ -9,7 +9,7 @@ const navItems = [
   { to: '/', label: 'Mapa', end: true },
   { to: '/rehabilitacion', label: 'Rehabilitación', end: false },
   { to: '/comunidad', label: 'Comunidad', end: false },
-  { to: '/perfil', label: 'Perfil', end: false },
+  { to: '/aliados', label: 'Aliados', end: false },
 ];
 
 export function TopBar() {
