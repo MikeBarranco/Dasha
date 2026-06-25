@@ -1,5 +1,6 @@
 import type { Report, Severity } from '../data/mockReports';
 import type { Animal, AnimalStatus } from '../data/mockAnimals';
+import type { Ally, AllyType } from '../data/mockAllies';
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
 const TOKEN_KEY = 'dasha-token';
@@ -260,4 +261,39 @@ export async function getAnimals(): Promise<Animal[]> {
       status: animalStatusLabels[raw.status] ?? 'En tratamiento',
     };
   });
+}
+
+type RawAlly = {
+  id: string;
+  name: string;
+  description: string | null;
+  logoUrl: string | null;
+  address: string | null;
+  phone: string | null;
+  whatsapp: string | null;
+  website: string | null;
+  orgType: string;
+  isVerified: boolean;
+  lat: number;
+  lng: number;
+};
+
+const allyTypes: AllyType[] = ['veterinary', 'shelter', 'ngo', 'educational'];
+
+export async function getAllies(): Promise<Ally[]> {
+  const data = await requestRaw<RawAlly[]>('/allies');
+  return (data ?? []).map((raw) => ({
+    id: String(raw.id),
+    name: raw.name,
+    description: raw.description ?? '',
+    logoUrl: raw.logoUrl ?? null,
+    address: raw.address ?? '',
+    phone: raw.phone ?? null,
+    whatsapp: raw.whatsapp ?? null,
+    website: raw.website ?? null,
+    orgType: allyTypes.includes(raw.orgType as AllyType) ? (raw.orgType as AllyType) : 'ngo',
+    isVerified: Boolean(raw.isVerified),
+    lat: Number(raw.lat),
+    lng: Number(raw.lng),
+  }));
 }

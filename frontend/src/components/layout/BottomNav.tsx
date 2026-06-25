@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Map as MapIcon, Heart, Plus, Users, User } from 'lucide-react';
+import { Map as MapIcon, Heart, Plus, Users, HeartHandshake } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '../../lib/cn';
 
@@ -44,7 +44,7 @@ export function BottomNav() {
           </NavLink>
         </div>
         <NavItem to="/comunidad" label="Comunidad" icon={Users} />
-        <NavItem to="/perfil" label="Perfil" icon={User} />
+        <NavItem to="/aliados" label="Aliados" icon={HeartHandshake} />
       </div>
     </nav>
   );
