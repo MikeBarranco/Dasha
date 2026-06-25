@@ -58,6 +58,18 @@ input[type='password']::-ms-clear {
   color: var(--color-cobalto);
 }
 
+.dasha-popup-more {
+  margin-top: 8px;
+  width: 100%;
+  border-radius: 8px;
+  background: var(--color-cobalto);
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffffff;
+  cursor: pointer;
+}
+
 .dasha-popup-count {
   margin-top: 2px;
   font-size: 11px;

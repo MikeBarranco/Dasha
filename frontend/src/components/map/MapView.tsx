@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import maplibregl, { type StyleSpecification } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Search, LocateFixed, Loader2, X } from 'lucide-react';
+import { Search, LocateFixed, Loader2, X, HeartHandshake, Check } from 'lucide-react';
 import { type Report, type Severity } from '../../data/mockReports';
 import { type Ally, type AllyType, allyTypeLabels } from '../../data/mockAllies';
 import { MapLegend } from './MapLegend';
@@ -65,28 +65,50 @@ const allyColors: Record<AllyType, string> = {
   educational: '#15803D',
 };
 
+const allyFilterTypes: { value: AllyType; label: string }[] = [
+  { value: 'veterinary', label: 'Veterinarias' },
+  { value: 'shelter', label: 'Refugios' },
+  { value: 'ngo', label: 'Asociaciones' },
+  { value: 'educational', label: 'Educativos' },
+];
+
 function createAllyElement(type: AllyType): HTMLDivElement {
   const element = document.createElement('div');
-  element.style.width = '26px';
-  element.style.height = '26px';
-  element.style.borderRadius = '8px';
+  element.style.width = '22px';
+  element.style.height = '22px';
+  element.style.borderRadius = '7px';
   element.style.backgroundColor = allyColors[type] ?? allyColors.ngo;
   element.style.border = '2px solid #ffffff';
-  element.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.3)';
+  element.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.25)';
   element.style.display = 'flex';
   element.style.alignItems = 'center';
   element.style.justifyContent = 'center';
   element.style.cursor = 'pointer';
   element.innerHTML =
-    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
+    '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
   return element;
 }
 
-function allyPopupHTML(name: string, type: AllyType): string {
-  return (
-    `<div class="dasha-popup-name">${name}</div>` +
-    `<div class="dasha-popup-count">${allyTypeLabels[type] ?? 'Aliado'}</div>`
-  );
+function escapeHTML(value: string): string {
+  return value.replace(/[&<>"]/g, (char) => {
+    if (char === '&') return '&amp;';
+    if (char === '<') return '&lt;';
+    if (char === '>') return '&gt;';
+    return '&quot;';
+  });
+}
+
+function buildAllyPopup(ally: Ally, onMore: () => void): HTMLDivElement {
+  const node = document.createElement('div');
+  const meta = ally.phone
+    ? `${allyTypeLabels[ally.orgType] ?? 'Aliado'} · ${escapeHTML(ally.phone)}`
+    : (allyTypeLabels[ally.orgType] ?? 'Aliado');
+  node.innerHTML =
+    `<div class="dasha-popup-name">${escapeHTML(ally.name)}</div>` +
+    `<div class="dasha-popup-count">${meta}</div>` +
+    '<button type="button" class="dasha-popup-more">Ver más</button>';
+  node.querySelector('button')?.addEventListener('click', onMore);
+  return node;
 }
 
 function extendBounds(bounds: maplibregl.LngLatBounds, coords: unknown): void {
@@ -113,9 +135,11 @@ type MapViewProps = {
   reports: Report[];
   allies?: Ally[];
   onSelectReport: (report: Report) => void;
+  onSelectAlly?: (ally: Ally) => void;
   onOpenList?: () => void;
   onVisibleReportsChange?: (reports: Report[]) => void;
   focusReport?: Report | null;
+  focusAlly?: Ally | null;
   resetSignal?: number;
 };
 
@@ -123,9 +147,11 @@ export function MapView({
   reports,
   allies = [],
   onSelectReport,
+  onSelectAlly,
   onOpenList,
   onVisibleReportsChange,
   focusReport,
+  focusAlly,
   resetSignal,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -157,7 +183,17 @@ export function MapView({
   const alliesRef = useRef(allies);
   const allyMarkersRef = useRef<maplibregl.Marker[]>([]);
   const renderAllyMarkersRef = useRef<(() => void) | null>(null);
+  const onSelectAllyRef = useRef(onSelectAlly);
+  const [activeAllyTypes, setActiveAllyTypes] = useState<AllyType[]>([]);
+  const activeAllyTypesRef = useRef<AllyType[]>(activeAllyTypes);
+  const [allyFilterOpen, setAllyFilterOpen] = useState(false);
+  const allyPopupRef = useRef<maplibregl.Popup | null>(null);
+  const focusAllyRef = useRef<Ally | null>(focusAlly ?? null);
   const [mapReady, setMapReady] = useState(false);
+
+  useEffect(() => {
+    onSelectAllyRef.current = onSelectAlly;
+  }, [onSelectAlly]);
 
   useEffect(() => {
     onSelectRef.current = onSelectReport;
@@ -413,22 +449,26 @@ export function MapView({
       renderMarkers();
 
       const allyPopup = new maplibregl.Popup({
-        closeButton: false,
+        closeButton: true,
         closeOnClick: true,
         offset: 16,
         className: 'dasha-popup',
       });
+      allyPopupRef.current = allyPopup;
 
       const renderAllyMarkers = () => {
         for (const marker of allyMarkersRef.current) marker.remove();
         allyMarkersRef.current = [];
+        const active = activeAllyTypesRef.current;
+        const focusId = focusAllyRef.current?.id;
         for (const ally of alliesRef.current) {
+          if (!active.includes(ally.orgType) && ally.id !== focusId) continue;
           const element = createAllyElement(ally.orgType);
           element.addEventListener('click', (event) => {
             event.stopPropagation();
             allyPopup
               .setLngLat([ally.lng, ally.lat])
-              .setHTML(allyPopupHTML(ally.name, ally.orgType))
+              .setDOMContent(buildAllyPopup(ally, () => onSelectAllyRef.current?.(ally)))
               .addTo(map);
           });
           const marker = new maplibregl.Marker({ element })
@@ -436,6 +476,7 @@ export function MapView({
             .addTo(map);
           allyMarkersRef.current.push(marker);
         }
+        updatePinVisibility();
       };
       renderAllyMarkersRef.current = renderAllyMarkers;
       renderAllyMarkers();
@@ -504,6 +545,25 @@ export function MapView({
     renderAllyMarkersRef.current?.();
   }, [allies, mapReady]);
 
+  useEffect(() => {
+    activeAllyTypesRef.current = activeAllyTypes;
+    if (!mapReady) return;
+    renderAllyMarkersRef.current?.();
+  }, [activeAllyTypes, mapReady]);
+
+  useEffect(() => {
+    focusAllyRef.current = focusAlly ?? null;
+    if (!focusAlly || !mapReady) return;
+    renderAllyMarkersRef.current?.();
+    const map = mapRef.current;
+    if (!map) return;
+    map.flyTo({ center: [focusAlly.lng, focusAlly.lat], zoom: 16, duration: 900 });
+    allyPopupRef.current
+      ?.setLngLat([focusAlly.lng, focusAlly.lat])
+      .setDOMContent(buildAllyPopup(focusAlly, () => onSelectAllyRef.current?.(focusAlly)))
+      .addTo(map);
+  }, [focusAlly, mapReady]);
+
   const showGeoError = (message: string) => {
     setGeoError(message);
     if (geoErrorTimer.current) window.clearTimeout(geoErrorTimer.current);
@@ -552,6 +612,12 @@ export function MapView({
     selectColoniaRef.current?.(entry.id, name, bounds.getCenter());
     onOpenListRef.current?.();
     setQuery('');
+  };
+
+  const toggleAllyType = (type: AllyType) => {
+    setActiveAllyTypes((prev) =>
+      prev.includes(type) ? prev.filter((value) => value !== type) : [...prev, type],
+    );
   };
 
   const suggestions =
@@ -633,8 +699,60 @@ export function MapView({
         </button>
       </div>
 
+      <div className="absolute left-3 top-16 z-10">
+        <button
+          type="button"
+          onClick={() => setAllyFilterOpen((value) => !value)}
+          className="flex items-center gap-1.5 rounded-xl bg-white/95 px-3 py-2 text-xs font-semibold text-cobalto shadow-lg backdrop-blur transition-colors hover:bg-white"
+        >
+          <HeartHandshake className="h-4 w-4" />
+          Aliados
+          {activeAllyTypes.length > 0 && (
+            <span className="ml-0.5 rounded-full bg-cobalto px-1.5 text-[10px] font-bold text-white">
+              {activeAllyTypes.length}
+            </span>
+          )}
+        </button>
+
+        {allyFilterOpen && (
+          <div className="mt-1 w-48 rounded-xl bg-white p-2 shadow-lg">
+            <p className="px-2 py-1 text-[11px] text-neutral-400">Mostrar en el mapa</p>
+            <ul className="space-y-0.5">
+              {allyFilterTypes.map((option) => {
+                const on = activeAllyTypes.includes(option.value);
+                return (
+                  <li key={option.value}>
+                    <button
+                      type="button"
+                      onClick={() => toggleAllyType(option.value)}
+                      className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-neutral-700 transition-colors hover:bg-neutral-50"
+                    >
+                      <span
+                        className="h-3 w-3 flex-shrink-0 rounded-[3px]"
+                        style={{ backgroundColor: allyColors[option.value] }}
+                      />
+                      <span className="flex-1">{option.label}</span>
+                      {on && <Check className="h-4 w-4 text-cobalto" />}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+            {activeAllyTypes.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setActiveAllyTypes([])}
+                className="mt-1 w-full rounded-lg px-2 py-1.5 text-left text-xs font-medium text-neutral-400 transition-colors hover:bg-neutral-50"
+              >
+                Ocultar todos
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
       {geoError && (
-        <div className="absolute left-3 right-3 top-16 z-10 rounded-lg bg-white/95 px-3 py-2 text-center text-xs text-red-600 shadow">
+        <div className="absolute left-3 right-3 top-28 z-10 rounded-lg bg-white/95 px-3 py-2 text-center text-xs text-red-600 shadow">
           {geoError}
         </div>
       )}
