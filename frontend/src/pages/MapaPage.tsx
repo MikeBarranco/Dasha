@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { CountUp } from '../components/ui/CountUp';
@@ -20,6 +20,7 @@ const MapView = lazy(() =>
 );
 
 export function MapaPage() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [reports, setReports] = useState<Report[] | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -65,6 +66,16 @@ export function MapaPage() {
   const selectedReport = reportId
     ? ((reports ?? []).find((report) => report.id === reportId) ?? null)
     : null;
+
+  const aliadoId = searchParams.get('aliado');
+  const focusAlly = useMemo(
+    () => (aliadoId ? (allies.find((ally) => ally.id === aliadoId) ?? null) : null),
+    [aliadoId, allies],
+  );
+
+  const handleSelectAlly = (ally: Ally) => {
+    navigate(`/aliados?aliado=${ally.id}`);
+  };
 
   const openReport = (report: Report) => {
     setSearchParams({ reporte: report.id });
@@ -133,9 +144,11 @@ export function MapaPage() {
                 reports={filteredReports}
                 allies={allies}
                 onSelectReport={openReport}
+                onSelectAlly={handleSelectAlly}
                 onOpenList={() => setPanelOpen(true)}
                 onVisibleReportsChange={setVisibleReports}
                 focusReport={focusReport}
+                focusAlly={focusAlly}
                 resetSignal={resetSignal}
               />
             </Suspense>

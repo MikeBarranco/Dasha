@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { motion } from 'motion/react';
-import { Phone, MessageCircle, Globe, MapPin, BadgeCheck } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { AnimatePresence, motion } from 'motion/react';
+import { MapPin, BadgeCheck, ChevronRight } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
+import { AllyDetail } from '../components/aliados/AllyDetail';
 import { cn } from '../lib/cn';
 import { getAllies } from '../lib/api';
 import { mockAllies, allyTypeLabels, type Ally, type AllyType } from '../data/mockAllies';
@@ -13,9 +15,13 @@ const filters: { value: AllyType | 'todos'; label: string }[] = [
   { value: 'ngo', label: 'Asociaciones' },
 ];
 
-function AllyCard({ ally }: { ally: Ally }) {
+function AllyCard({ ally, onOpen }: { ally: Ally; onOpen: () => void }) {
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-white p-4">
+    <button
+      type="button"
+      onClick={onOpen}
+      className="flex h-full w-full flex-col rounded-2xl border border-neutral-200 bg-white p-4 text-left transition-colors hover:border-cobalto/40 hover:bg-neutral-50"
+    >
       <div className="flex items-start gap-3">
         <img
           src={ally.logoUrl ?? '/placeholder-logo.svg'}
@@ -35,56 +41,29 @@ function AllyCard({ ally }: { ally: Ally }) {
             {allyTypeLabels[ally.orgType]}
           </span>
         </div>
+        <ChevronRight className="h-5 w-5 flex-shrink-0 text-neutral-300" />
       </div>
 
       {ally.description && (
-        <p className="mt-3 text-sm text-neutral-600">{ally.description}</p>
+        <p className="mt-3 line-clamp-2 text-sm text-neutral-600">{ally.description}</p>
       )}
 
       {ally.address && (
         <p className="mt-2 flex items-start gap-1.5 text-xs text-neutral-500">
           <MapPin className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-neutral-400" />
-          {ally.address}
+          <span className="line-clamp-1">{ally.address}</span>
         </p>
       )}
 
-      <div className="mt-3 flex flex-wrap gap-2">
-        {ally.phone && (
-          <a
-            href={`tel:${ally.phone}`}
-            className="flex items-center gap-1.5 rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
-          >
-            <Phone className="h-3.5 w-3.5" /> Llamar
-          </a>
-        )}
-        {ally.whatsapp && (
-          <a
-            href={`https://wa.me/52${ally.whatsapp}`}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-1.5 rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
-          >
-            <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
-          </a>
-        )}
-        {ally.website && (
-          <a
-            href={ally.website}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-1.5 rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
-          >
-            <Globe className="h-3.5 w-3.5" /> Sitio
-          </a>
-        )}
-      </div>
-    </div>
+      <span className="mt-3 text-xs font-medium text-cobalto">Ver detalle</span>
+    </button>
   );
 }
 
 export function AliadosPage() {
   const [allies, setAllies] = useState<Ally[] | null>(null);
   const [filter, setFilter] = useState<AllyType | 'todos'>('todos');
+  const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
     let active = true;
@@ -104,6 +83,14 @@ export function AliadosPage() {
     () => (allies ?? []).filter((ally) => filter === 'todos' || ally.orgType === filter),
     [allies, filter],
   );
+
+  const selectedId = searchParams.get('aliado');
+  const selectedAlly = selectedId
+    ? ((allies ?? []).find((ally) => ally.id === selectedId) ?? null)
+    : null;
+
+  const openAlly = (ally: Ally) => setSearchParams({ aliado: ally.id });
+  const closeAlly = () => setSearchParams({});
 
   return (
     <div>
@@ -149,11 +136,15 @@ export function AliadosPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: index * 0.05, ease: 'easeOut' }}
             >
-              <AllyCard ally={ally} />
+              <AllyCard ally={ally} onOpen={() => openAlly(ally)} />
             </motion.div>
           ))}
         </div>
       )}
+
+      <AnimatePresence>
+        {selectedAlly && <AllyDetail ally={selectedAlly} onClose={closeAlly} />}
+      </AnimatePresence>
     </div>
   );
 }

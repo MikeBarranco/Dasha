@@ -1,5 +1,15 @@
 export type AllyType = 'veterinary' | 'shelter' | 'ngo' | 'educational';
 
+export type AllyEvent = {
+  title: string;
+  date: string;
+  place?: string;
+};
+
+export type AllyBadge = {
+  label: string;
+};
+
 export type Ally = {
   id: string;
   name: string;
@@ -13,6 +23,10 @@ export type Ally = {
   isVerified: boolean;
   lat: number;
   lng: number;
+  schedule?: string;
+  gallery?: string[];
+  events?: AllyEvent[];
+  badges?: AllyBadge[];
 };
 
 export const allyTypeLabels: Record<AllyType, string> = {
@@ -36,6 +50,12 @@ export const mockAllies: Ally[] = [
     isVerified: true,
     lat: 19.0414,
     lng: -98.2063,
+    schedule: 'Lun a Sáb 9:00 a 20:00',
+    events: [
+      { title: 'Jornada de esterilización', date: '12 jul 2026', place: 'En clínica' },
+      { title: 'Vacunación antirrábica gratuita', date: '3 ago 2026', place: 'En clínica' },
+    ],
+    badges: [{ label: 'Aliado verificado' }, { label: 'Atiende urgencias' }],
   },
   {
     id: 'al2',
@@ -50,6 +70,9 @@ export const mockAllies: Ally[] = [
     isVerified: true,
     lat: 19.0185,
     lng: -98.2042,
+    schedule: 'Todos los días 10:00 a 18:00',
+    events: [{ title: 'Feria de adopción', date: '20 jul 2026', place: 'Parque Juárez' }],
+    badges: [{ label: 'Aliado verificado' }, { label: 'Adopciones' }],
   },
   {
     id: 'al3',
@@ -64,5 +87,7 @@ export const mockAllies: Ally[] = [
     isVerified: false,
     lat: 19.0445,
     lng: -98.1986,
+    schedule: 'Lun a Vie 9:00 a 15:00',
+    badges: [{ label: 'Jornadas comunitarias' }],
   },
 ];
