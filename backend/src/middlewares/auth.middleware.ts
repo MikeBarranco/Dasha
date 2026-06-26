@@ -33,3 +33,20 @@ export const requireAuth = (req: AuthRequest, res: Response, next: NextFunction)
     res.status(401).json({ status: 'error', message: 'Token inválido o expirado' });
   }
 };
+
+export const requireRole = (role: string) => {
+  return (req: AuthRequest, res: Response, next: NextFunction): void => {
+    // requireRole siempre debe ir después de requireAuth, así req.user ya existe
+    if (!req.user) {
+      res.status(401).json({ status: 'error', message: 'No autorizado' });
+      return;
+    }
+
+    if (req.user.role !== role) {
+      res.status(403).json({ status: 'error', message: `Acceso denegado. Se requiere rol: ${role}` });
+      return;
+    }
+
+    next();
+  };
+};
