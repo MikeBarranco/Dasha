@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
+import { v2 as cloudinary } from 'cloudinary';
 
 export class UserController {
   static async getMe(req: Request, res: Response, next: NextFunction) {
@@ -164,6 +165,53 @@ export class UserController {
       });
 
       res.status(200).json(updatedUser);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async applyForVolunteer(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        res.status(401).json({ error: 'No autorizado' });
+        return;
+      }
+
+      const { ineFrontBase64, ineBackBase64, selfieBase64, isFoster, fosterCapacity } = req.body;
+
+      if (!ineFrontBase64 || !ineBackBase64 || !selfieBase64) {
+        res.status(400).json({ error: 'Debes proporcionar las fotos del INE (frente y reverso) y la selfie' });
+        return;
+      }
+
+      // Subir a Cloudinary
+      const uploadOpts = { folder: 'dasha/volunteers' };
+      const [frontRes, backRes, selfieRes] = await Promise.all([
+        cloudinary.uploader.upload(ineFrontBase64, uploadOpts),
+        cloudinary.uploader.upload(ineBackBase64, uploadOpts),
+        cloudinary.uploader.upload(selfieBase64, uploadOpts)
+      ]);
+
+      const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: {
+          volunteerStatus: 'pending',
+          ineFrontUrl: frontRes.secure_url,
+          ineBackUrl: backRes.secure_url,
+          selfieUrl: selfieRes.secure_url,
+          isFoster: isFoster || false,
+          fosterCapacity: fosterCapacity || 0
+        },
+        select: {
+          id: true,
+          name: true,
+          volunteerStatus: true,
+          isFoster: true
+        }
+      });
+
+      res.status(200).json({ message: 'Solicitud enviada correctamente', user: updatedUser });
     } catch (error) {
       next(error);
     }

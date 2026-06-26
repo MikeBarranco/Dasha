@@ -44,4 +44,10 @@ router.get('/forum/posts', AdminController.getAllForumPosts);
 router.delete('/forum/posts/:id', AdminController.deleteForumPost);
 router.delete('/forum/replies/:id', AdminController.deleteForumReply);
 
+// ==========================================
+// SOLICITUDES DE VOLUNTARIADO
+// ==========================================
+router.get('/volunteers', AdminController.getVolunteerApplications);
+router.patch('/volunteers/:id/status', AdminController.updateVolunteerStatus);
+
 export default router;
