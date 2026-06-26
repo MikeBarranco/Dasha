@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { CountUp } from '../components/ui/CountUp';
@@ -12,13 +12,15 @@ import {
   type ReportFilters,
 } from '../lib/reportFilters';
 import { mockReports, type Report } from '../data/mockReports';
-import { getReports, getStats, type Stats } from '../lib/api';
+import { mockAllies, type Ally } from '../data/mockAllies';
+import { getReports, getStats, getAllies, type Stats } from '../lib/api';
 
 const MapView = lazy(() =>
   import('../components/map/MapView').then((module) => ({ default: module.MapView })),
 );
 
 export function MapaPage() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [reports, setReports] = useState<Report[] | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -27,6 +29,7 @@ export function MapaPage() {
   const [focusReport, setFocusReport] = useState<Report | null>(null);
   const [resetSignal, setResetSignal] = useState(0);
   const [filters, setFilters] = useState<ReportFilters>(emptyFilters);
+  const [allies, setAllies] = useState<Ally[]>([]);
 
   const filteredReports = useMemo(
     () => (reports ? applyReportFilters(reports, filters) : null),
@@ -47,6 +50,13 @@ export function MapaPage() {
         if (active) setStats(data);
       })
       .catch(() => {});
+    getAllies()
+      .then((data) => {
+        if (active) setAllies(data.length > 0 ? data : mockAllies);
+      })
+      .catch(() => {
+        if (active) setAllies(mockAllies);
+      });
     return () => {
       active = false;
     };
@@ -56,6 +66,16 @@ export function MapaPage() {
   const selectedReport = reportId
     ? ((reports ?? []).find((report) => report.id === reportId) ?? null)
     : null;
+
+  const aliadoId = searchParams.get('aliado');
+  const focusAlly = useMemo(
+    () => (aliadoId ? (allies.find((ally) => ally.id === aliadoId) ?? null) : null),
+    [aliadoId, allies],
+  );
+
+  const handleSelectAlly = (ally: Ally) => {
+    navigate(`/aliados?aliado=${ally.id}`);
+  };
 
   const openReport = (report: Report) => {
     setSearchParams({ reporte: report.id });
@@ -122,10 +142,13 @@ export function MapaPage() {
             <Suspense fallback={<div className="h-full w-full animate-pulse bg-neutral-100" />}>
               <MapView
                 reports={filteredReports}
+                allies={allies}
                 onSelectReport={openReport}
+                onSelectAlly={handleSelectAlly}
                 onOpenList={() => setPanelOpen(true)}
                 onVisibleReportsChange={setVisibleReports}
                 focusReport={focusReport}
+                focusAlly={focusAlly}
                 resetSignal={resetSignal}
               />
             </Suspense>

@@ -5,6 +5,7 @@ import { ProgressBar } from '../ui/ProgressBar';
 import { ShareButton } from '../ui/ShareButton';
 import { cn } from '../../lib/cn';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
+import { useSheetDismiss } from '../../lib/useSheetDismiss';
 import type { Animal } from '../../data/mockAnimals';
 
 type AnimalDetailProps = {
@@ -19,6 +20,8 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
   const [showFull, setShowFull] = useState(false);
   const touchStartX = useRef(0);
   const photo = animal.photos[activePhoto];
+  const { dragControls, scrollRef, onPointerDown, onPointerMove, onDragEnd } =
+    useSheetDismiss(onClose);
 
   const goNext = () => setActivePhoto((index) => (index + 1) % total);
   const goPrev = () => setActivePhoto((index) => (index - 1 + total) % total);
@@ -34,12 +37,25 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
       />
 
       <motion.div
-        className="relative max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-white shadow-xl sm:rounded-3xl"
+        ref={scrollRef}
+        className="relative max-h-[88vh] w-full max-w-md overflow-y-auto overscroll-none rounded-t-3xl bg-white shadow-xl sm:rounded-3xl"
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        drag="y"
+        dragControls={dragControls}
+        dragListener={false}
+        dragConstraints={{ top: 0, bottom: 0 }}
+        dragElastic={{ top: 0, bottom: 0.5 }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onDragEnd={onDragEnd}
       >
+        <div
+          className="pointer-events-none absolute left-1/2 top-2.5 z-20 h-1.5 w-10 -translate-x-1/2 rounded-full bg-white/90 shadow-sm sm:hidden"
+          aria-hidden="true"
+        />
         <div className="relative">
           <button
             type="button"
@@ -47,7 +63,15 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
             className="block w-full"
             aria-label="Ver foto completa"
           >
-            <img src={photo} alt={animal.name} className="h-64 w-full object-cover" />
+            <img
+              src={photo}
+              alt={animal.name}
+              onError={(event) => {
+                event.currentTarget.onerror = null;
+                event.currentTarget.src = '/placeholder-animal.svg';
+              }}
+              className="h-64 w-full object-cover"
+            />
           </button>
           <span className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-cobalto">
             {animal.status}
@@ -79,7 +103,15 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
                   index === activePhoto ? 'border-cobalto' : 'border-transparent',
                 )}
               >
-                <img src={item} alt="" className="h-full w-full object-cover" />
+                <img
+                  src={item}
+                  alt=""
+                  onError={(event) => {
+                    event.currentTarget.onerror = null;
+                    event.currentTarget.src = '/placeholder-animal.svg';
+                  }}
+                  className="h-full w-full object-cover"
+                />
               </button>
             ))}
           </div>
@@ -168,6 +200,10 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
             <img
               src={photo}
               alt={animal.name}
+              onError={(event) => {
+                event.currentTarget.onerror = null;
+                event.currentTarget.src = '/placeholder-animal.svg';
+              }}
               onClick={(event) => event.stopPropagation()}
               onTouchStart={(event) => {
                 touchStartX.current = event.changedTouches[0].clientX;

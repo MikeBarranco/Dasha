@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Sin logo">
+  <rect width="200" height="200" fill="#EEF2F6" />
+  <g fill="#CBD5E1">
+    <polygon points="100,48 150,86 50,86" />
+    <rect x="62" y="86" width="76" height="66" rx="4" />
+  </g>
+  <rect x="90" y="116" width="20" height="36" fill="#EEF2F6" />
+  <rect x="72" y="98" width="16" height="14" rx="2" fill="#EEF2F6" />
+  <rect x="112" y="98" width="16" height="14" rx="2" fill="#EEF2F6" />
+</svg>

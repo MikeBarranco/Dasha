@@ -1,7 +1,16 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence } from 'motion/react';
-import { Lock, ChevronRight, Settings, LogOut, UserRound, Camera, type LucideIcon } from 'lucide-react';
+import {
+  Lock,
+  ChevronRight,
+  Settings,
+  LogOut,
+  UserRound,
+  Camera,
+  Sparkles,
+  type LucideIcon,
+} from 'lucide-react';
 import { Avatar } from '../components/ui/Avatar';
 import { AvatarPicker } from '../components/perfil/AvatarPicker';
 import { SocialLinks } from '../components/ui/SocialLinks';
@@ -9,6 +18,7 @@ import { cn } from '../lib/cn';
 import { mockUser } from '../data/mockUser';
 import { useAvatar } from '../lib/useAvatar';
 import { useAuth } from '../lib/useAuth';
+import { useVolunteerStatus } from '../lib/useVolunteerStatus';
 
 function StatCard({ value, label }: { value: number; label: string }) {
   return (
@@ -51,6 +61,7 @@ export function PerfilPage() {
   const user = mockUser;
   const { avatar, setAvatar } = useAvatar();
   const { user: account, logout } = useAuth();
+  const { status: volunteerStatus } = useVolunteerStatus();
   const [pickerOpen, setPickerOpen] = useState(false);
   const xpPercent = Math.min(100, Math.round((user.xp / user.xpToNext) * 100));
   const unlockedCount = user.medals.filter((medal) => medal.unlocked).length;
@@ -130,21 +141,31 @@ export function PerfilPage() {
         <StatCard value={user.stats.seguidos} label="Siguiendo" />
       </div>
 
-      {user.role === 'Ciudadano' && (
-        <div className="rounded-2xl bg-gradient-to-br from-purpura to-cobalto p-5 text-white">
-          <h2 className="font-display text-lg font-bold">Conviértete en voluntario</h2>
-          <p className="mt-1 text-sm text-white/85">
-            Responde reportes cercanos, rescata animalitos y gana medallas. Validamos tu identidad
-            para mantener la comunidad segura.
-          </p>
-          <button
-            type="button"
-            className="mt-4 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-purpura transition-opacity hover:opacity-90"
-          >
-            Quiero ser voluntario
-          </button>
-        </div>
-      )}
+      {user.role === 'Ciudadano' &&
+        (volunteerStatus === 'pending' ? (
+          <div className="rounded-2xl border border-purpura/20 bg-purpura/5 p-5">
+            <h2 className="font-display text-lg font-bold text-purpura">Solicitud en revisión</h2>
+            <p className="mt-1 text-sm text-neutral-600">
+              Recibimos tu solicitud para ser voluntario. Estamos validando tu identidad y te
+              contactaremos pronto.
+            </p>
+          </div>
+        ) : (
+          <div className="rounded-2xl bg-gradient-to-br from-purpura to-cobalto p-5 text-white">
+            <h2 className="font-display text-lg font-bold">Conviértete en voluntario</h2>
+            <p className="mt-1 text-sm text-white/85">
+              Responde reportes cercanos, rescata animalitos y gana medallas. Validamos tu identidad
+              para mantener la comunidad segura.
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate('/ser-voluntario')}
+              className="mt-4 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-purpura transition-opacity hover:opacity-90"
+            >
+              Quiero ser voluntario
+            </button>
+          </div>
+        ))}
 
       <div>
         <div className="mb-3 flex items-center justify-between">
@@ -179,6 +200,11 @@ export function PerfilPage() {
 
       <div className="divide-y divide-neutral-100 overflow-hidden rounded-2xl border border-neutral-200 bg-white">
         <RowButton icon={Settings} label="Ajustes de la cuenta" />
+        <RowButton
+          icon={Sparkles}
+          label="Novedades"
+          onClick={() => navigate('/novedades')}
+        />
         <RowButton
           icon={LogOut}
           label="Cerrar sesión"
