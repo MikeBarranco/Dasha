@@ -96,4 +96,30 @@ export class UserController {
       next(error);
     }
   }
+
+  static async getMyReports(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      
+      if (!userId) {
+        res.status(401).json({ error: 'No autorizado' });
+        return;
+      }
+
+      // Obtener reportes con la foto principal
+      const reports = await prisma.report.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          photos: {
+            take: 1
+          }
+        }
+      });
+
+      res.status(200).json(reports);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
