@@ -75,6 +75,7 @@ export class ReportService {
           AND r.species = ${species}::"Species"
           AND r.location IS NOT NULL
           AND ST_DWithin(r.location, ST_MakePoint(${lng}, ${lat})::geography, ${radiusMeters})
+          AND NOT EXISTS (SELECT 1 FROM lost_pets lp WHERE lp.report_id = r.id)
         ORDER BY distance_meters ASC
         LIMIT 50;
       `;
@@ -92,6 +93,7 @@ export class ReportService {
         WHERE r.status = ${status}::"ReportStatus"
           AND r.location IS NOT NULL
           AND ST_DWithin(r.location, ST_MakePoint(${lng}, ${lat})::geography, ${radiusMeters})
+          AND NOT EXISTS (SELECT 1 FROM lost_pets lp WHERE lp.report_id = r.id)
         ORDER BY distance_meters ASC
         LIMIT 50;
       `;
@@ -131,7 +133,11 @@ export class ReportService {
    * Obtiene TODOS los reportes activos (para la vista principal del mapa) con filtros opcionales
    */
   static async getAllActiveReports(filters?: { species?: string; condition?: string; urgency?: string; size?: string; }) {
-    const conditions = [Prisma.sql`r.status = 'active'::"ReportStatus"`, Prisma.sql`r.location IS NOT NULL`];
+    const conditions = [
+      Prisma.sql`r.status = 'active'::"ReportStatus"`, 
+      Prisma.sql`r.location IS NOT NULL`,
+      Prisma.sql`NOT EXISTS (SELECT 1 FROM lost_pets lp WHERE lp.report_id = r.id)`
+    ];
     
     if (filters?.species) conditions.push(Prisma.sql`r.species = ${filters.species}::"Species"`);
     if (filters?.condition) conditions.push(Prisma.sql`r.condition = ${filters.condition}::"Condition"`);
