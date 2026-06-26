@@ -7,6 +7,7 @@ import userRoutes from './user.routes';
 import organizationRoutes from './organization.routes';
 import animalRoutes from './animal.routes';
 import colonyRoutes from './colony.routes';
+import adminRoutes from './admin.routes';
 
 const router = Router();
 
@@ -18,6 +19,7 @@ router.use('/stats', statsRoutes);
 router.use('/allies', organizationRoutes);
 router.use('/animals', animalRoutes);
 router.use('/colonies', colonyRoutes);
+router.use('/admin', adminRoutes);
 
 router.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
