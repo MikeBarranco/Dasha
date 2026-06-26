@@ -140,7 +140,7 @@ export class AdminController {
       const id = req.params.id as string;
       const { logoBase64, lat, lng, ...data } = req.body;
       
-      let updateData = { ...data };
+      const updateData: any = { ...data };
 
       if (logoBase64 && logoBase64.startsWith('data:image')) {
         const uploadRes = await cloudinary.uploader.upload(logoBase64, {
