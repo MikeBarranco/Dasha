@@ -61,11 +61,11 @@ export function ReportChooser({ open, onClose }: ReportChooserProps) {
             type="button"
             aria-label="Cerrar"
             onClick={onClose}
-            className="absolute inset-0 bg-neutral-900/25 backdrop-blur-md"
+            className="absolute inset-0 bg-neutral-900/35 backdrop-blur-sm"
           />
 
           <motion.div
-            className="relative w-full max-w-md rounded-t-3xl border border-white/60 bg-white/80 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl backdrop-blur-2xl sm:rounded-3xl sm:pb-5"
+            className="relative w-full max-w-md rounded-t-3xl border border-white/60 bg-white/95 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl sm:rounded-3xl sm:pb-5"
             initial={{ y: 40, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 40, opacity: 0 }}
