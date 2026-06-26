@@ -15,6 +15,9 @@ router.get('/', ReportController.getReports);
 // GET /api/v1/reports/check (Prevención de duplicados A.4)
 router.get('/check', ReportController.checkDuplicate);
 
+// POST /api/v1/reports/analyze-photo (Llama a Gemini para pre-llenar reporte)
+router.post('/analyze-photo', requireAuth, ReportController.analyzePhoto);
+
 // GET /api/v1/reports/:id (Un solo reporte específico)
 router.get('/:id', ReportController.getReportById);
 

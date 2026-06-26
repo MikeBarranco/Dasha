@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { v2 as cloudinary } from 'cloudinary';
 import { ReportService } from '../services/report.service';
+import { analyzeAnimalPhoto } from '../services/animalAnalysis.service';
 
 // Configurar Cloudinary (toma las credenciales de process.env automáticamente)
 cloudinary.config({
@@ -172,6 +173,26 @@ export class ReportController {
       );
 
       res.status(200).json({ hasDuplicate });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async analyzePhoto(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { cloudinaryUrl } = req.body;
+
+      if (!cloudinaryUrl) {
+        res.status(400).json({ error: 'Falta la URL de Cloudinary (cloudinaryUrl)' });
+        return;
+      }
+
+      const analysisResult = await analyzeAnimalPhoto(cloudinaryUrl);
+      
+      res.status(200).json({
+        status: 'success',
+        data: analysisResult
+      });
     } catch (error) {
       next(error);
     }

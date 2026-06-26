@@ -3,7 +3,22 @@ dotenv.config();
 
 async function main() {
   const { prisma } = await import('../dist/config/db.js');
-  console.log('Sembrando casos de rehabilitación (Tarea 1)...');
+  console.log('Limpiando base de datos de animales repetidos...');
+
+  // 1. Limpiar todos los perfiles de animales y sus fotos (Cascade delete debería encargarse de las fotos si está configurado, 
+  // pero por si acaso borramos todo lo relacionado a animales dummy).
+  await prisma.animalPhoto.deleteMany({});
+  await prisma.animalProfile.deleteMany({});
+  
+  // Borramos los reportes que no tengan animal profile para limpiar la basura generada
+  // (Como Prisma no tiene un delete fácil de huérfanos, borramos los reportes con status in_treatment, recovering, looking_for_foster que hicimos)
+  await prisma.report.deleteMany({
+    where: {
+      status: { in: ['in_treatment', 'recovering', 'looking_for_foster'] }
+    }
+  });
+
+  console.log('Base de datos limpia. Sembrando 3 casos únicos...');
 
   const user = await prisma.user.findFirst();
   if (!user) throw new Error("No hay usuarios en la base de datos para asignar reportes.");
@@ -20,15 +35,12 @@ async function main() {
         isVerified: true
       }
     });
-    // Set location roughly to Puebla
     await prisma.$executeRaw`UPDATE organizations SET location = ST_SetSRID(ST_MakePoint(-98.20346, 19.04129), 4326) WHERE id = ${org.id}::uuid`;
   }
 
   // 1. Solovino (En tratamiento)
   const report1 = await prisma.report.create({
-    data: {
-      userId: user.id, species: 'dog', primaryColor: 'Café', size: 'medium', condition: 'injured', description: 'Atropellado, no puede mover la pata', status: 'in_treatment'
-    }
+    data: { userId: user.id, species: 'dog', primaryColor: 'Café', size: 'medium', condition: 'injured', description: 'Atropellado', status: 'in_treatment' }
   });
 
   await prisma.animalProfile.create({
@@ -53,11 +65,9 @@ async function main() {
     }
   });
 
-  // 2. Canela (Recuperándose)
+  // 2. Canela (Recuperándose) - Usando nuevas URLs de imágenes comprobadas
   const report2 = await prisma.report.create({
-    data: {
-      userId: user.id, species: 'dog', primaryColor: 'Negro', size: 'medium', condition: 'malnourished', description: 'Desnutrición extrema', status: 'recovering'
-    }
+    data: { userId: user.id, species: 'dog', primaryColor: 'Negro', size: 'medium', condition: 'malnourished', description: 'Desnutrición extrema', status: 'recovering' }
   });
 
   await prisma.animalProfile.create({
@@ -74,9 +84,9 @@ async function main() {
       isPublic: true,
       photos: {
         create: [
-          { url: 'https://images.unsplash.com/photo-1561037404-61cd46aa615b?auto=format&fit=crop&w=800&q=80', publicId: 'can_1', caption: 'Día 1: Muy débil y con frío' },
-          { url: 'https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=800&q=80', publicId: 'can_2', caption: 'Día 15: Comiendo con apetito' },
-          { url: 'https://images.unsplash.com/photo-1537151608804-ea2f1fa3dfc2?auto=format&fit=crop&w=800&q=80', publicId: 'can_3', caption: 'Mes 1: Ya le creció el pelo, ¡lista para adopción!' }
+          { url: 'https://images.unsplash.com/photo-1534361960057-19889db9621e?auto=format&fit=crop&w=800&q=80', publicId: 'can_1', caption: 'Día 1: Muy débil' },
+          { url: 'https://images.unsplash.com/photo-1544568100-847a948585b9?auto=format&fit=crop&w=800&q=80', publicId: 'can_2', caption: 'Día 15: Comiendo mejor' },
+          { url: 'https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=800&q=80', publicId: 'can_3', caption: 'Mes 1: Lista para adopción' }
         ]
       }
     }
@@ -84,9 +94,7 @@ async function main() {
 
   // 3. Benito (Buscando hogar temporal)
   const report3 = await prisma.report.create({
-    data: {
-      userId: user.id, species: 'cat', primaryColor: 'Naranja', size: 'small', condition: 'sick', description: 'Gatito con gripa', status: 'looking_for_foster'
-    }
+    data: { userId: user.id, species: 'cat', primaryColor: 'Naranja', size: 'small', condition: 'sick', description: 'Gatito con gripa', status: 'looking_for_foster' }
   });
 
   await prisma.animalProfile.create({
@@ -103,14 +111,14 @@ async function main() {
       isPublic: true,
       photos: {
         create: [
-          { url: 'https://images.unsplash.com/photo-1513245543132-31f507417b26?auto=format&fit=crop&w=800&q=80', publicId: 'ben_1', caption: 'Día 1: Con los ojitos cerrados por la infección' },
-          { url: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=800&q=80', publicId: 'ben_2', caption: 'Semana 2: Ojos sanos y muy juguetón' }
+          { url: 'https://images.unsplash.com/photo-1513245543132-31f507417b26?auto=format&fit=crop&w=800&q=80', publicId: 'ben_1', caption: 'Día 1: Con infección' },
+          { url: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=800&q=80', publicId: 'ben_2', caption: 'Semana 2: Ojos sanos' }
         ]
       }
     }
   });
 
-  console.log('¡Siembra de perritos terminada exitosamente!');
+  console.log('¡Limpieza y nueva siembra terminada exitosamente!');
   await prisma.$disconnect();
 }
 
