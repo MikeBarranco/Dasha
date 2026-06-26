@@ -1,0 +1,77 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-cobalto: #1c4e80;
+  --color-naranja: #f2780b;
+  --color-purpura: #6b2c91;
+  --color-lino: #fafafa;
+  --color-exito: #16a34a;
+  --color-alerta: #dc2626;
+  --color-info: #2563eb;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Poppins', ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background-color: var(--color-lino);
+  color: #1a1a1a;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+
+input[type='password']::-ms-reveal,
+input[type='password']::-ms-clear {
+  display: none;
+}
+
+.dasha-popup .maplibregl-popup-content {
+  padding: 8px 12px;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  font-family: var(--font-sans);
+}
+
+.dasha-popup .maplibregl-popup-tip {
+  display: none;
+}
+
+.dasha-popup-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dasha-popup-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+
+.dasha-popup-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-cobalto);
+}
+
+.dasha-popup-more {
+  margin-top: 8px;
+  width: 100%;
+  border-radius: 8px;
+  background: var(--color-cobalto);
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.dasha-popup-count {
+  margin-top: 2px;
+  font-size: 11px;
+  color: #9ca3af;
+}

@@ -1,0 +1,55 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: dasha-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: admin_dasha
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dasha_dev}
+      POSTGRES_DB: dasha_staging
+    ports:
+      - '5432:5432'
+    volumes:
+      - dasha_db_data:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    container_name: dasha-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      CORS_ORIGIN: https://staging.dashamx.me,https://app.dashamx.me
+      DATABASE_URL: postgresql://admin_dasha:${DB_PASSWORD:-dasha_dev}@db:5432/dasha_staging?schema=public
+      JWT_SECRET: ${JWT_SECRET:-dasha_super_secret_key_2026_fepro}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      FACEBOOK_APP_ID: ${FACEBOOK_APP_ID}
+      FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET}
+      FRONTEND_URL: https://staging.dashamx.me
+      BACKEND_URL: https://api.staging.dashamx.me
+    depends_on:
+      - db
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: dasha-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - /root/dasha-app/web:/usr/share/caddy
+      - caddy_config:/config
+    depends_on:
+      - backend
+
+volumes:
+  dasha_db_data:
+  caddy_data:
+  caddy_config:
