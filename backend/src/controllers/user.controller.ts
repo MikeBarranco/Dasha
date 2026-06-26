@@ -17,10 +17,23 @@ export class UserController {
           id: true,
           name: true,
           email: true,
+          phone: true,
           role: true,
           level: true,
           experiencePoints: true,
-          reputationScore: true
+          reputationScore: true,
+          avatarUrl: true,
+          _count: {
+            select: {
+              reports: true,
+              rescueAssignments: true
+            }
+          },
+          achievements: {
+            include: {
+              achievement: true
+            }
+          }
         }
       });
 
@@ -118,6 +131,39 @@ export class UserController {
       });
 
       res.status(200).json(reports);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async updateProfile(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      
+      if (!userId) {
+        res.status(401).json({ error: 'No autorizado' });
+        return;
+      }
+
+      const { name, phone, avatarUrl } = req.body;
+
+      const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: { name, phone, avatarUrl },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+          level: true,
+          experiencePoints: true,
+          reputationScore: true,
+          avatarUrl: true
+        }
+      });
+
+      res.status(200).json(updatedUser);
     } catch (error) {
       next(error);
     }

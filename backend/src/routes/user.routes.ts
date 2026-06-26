@@ -9,6 +9,9 @@ const router = Router();
 // GET /api/v1/me (Protegida, requiere sesión)
 router.get('/', requireAuth, UserController.getMe);
 
+// PATCH /api/v1/me (Protegida, actualizar datos del perfil como nombre y teléfono)
+router.patch('/', requireAuth, UserController.updateProfile);
+
 // PATCH /api/v1/me/availability (Protegida, modo activo voluntario)
 router.patch('/availability', requireAuth, validate(updateAvailabilitySchema), UserController.updateAvailability);
 
