@@ -320,4 +320,93 @@ export class AdminController {
       next(error);
     }
   }
+
+  // ==========================================
+  // SOLICITUDES DE VOLUNTARIADO
+  // ==========================================
+  static async getVolunteerApplications(req: Request, res: Response, next: NextFunction) {
+    try {
+      const applications = await prisma.user.findMany({
+        where: {
+          volunteerStatus: { not: null }
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          volunteerStatus: true,
+          ineFrontUrl: true,
+          ineBackUrl: true,
+          selfieUrl: true,
+          isFoster: true,
+          fosterCapacity: true,
+          createdAt: true
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+      res.status(200).json(applications);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async updateVolunteerStatus(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      const { status } = req.body; // 'approved' o 'rejected'
+
+      if (status !== 'approved' && status !== 'rejected') {
+        res.status(400).json({ error: 'El estado debe ser approved o rejected' });
+        return;
+      }
+
+      const user = await prisma.user.findUnique({ where: { id } });
+      if (!user) {
+        res.status(404).json({ error: 'Usuario no encontrado' });
+        return;
+      }
+
+      // Actualizar estado (y rol si es aprobado)
+      const dataToUpdate: any = { volunteerStatus: status };
+      if (status === 'approved') {
+        dataToUpdate.role = 'volunteer';
+      }
+
+      // Si aprueban o rechazan, por privacidad destruimos el INE y selfie (tal como pidió Isabel)
+      // Nota: Si queremos destruir en Cloudinary necesitamos extraer el public_id de la URL.
+      // Como guardamos las URLs directas (y no el publicId para los usuarios), 
+      // extraer el public_id de una URL de Cloudinary estándar:
+      const extractPublicId = (url: string) => {
+        const parts = url.split('/');
+        const fileWithExt = parts[parts.length - 1];
+        const folder = parts[parts.length - 2];
+        const id = fileWithExt.split('.')[0];
+        return `${folder}/${id}`; // dasha/volunteers/xxx
+      };
+
+      if (user.ineFrontUrl) await cloudinary.uploader.destroy(extractPublicId(user.ineFrontUrl)).catch(() => {});
+      if (user.ineBackUrl) await cloudinary.uploader.destroy(extractPublicId(user.ineBackUrl)).catch(() => {});
+      if (user.selfieUrl) await cloudinary.uploader.destroy(extractPublicId(user.selfieUrl)).catch(() => {});
+
+      // Limpiamos las URLs de la BD para ahorrar espacio visual y por seguridad
+      dataToUpdate.ineFrontUrl = null;
+      dataToUpdate.ineBackUrl = null;
+      dataToUpdate.selfieUrl = null;
+
+      const updatedUser = await prisma.user.update({
+        where: { id },
+        data: dataToUpdate,
+        select: {
+          id: true,
+          name: true,
+          volunteerStatus: true,
+          role: true
+        }
+      });
+
+      res.status(200).json({ message: `Solicitud ${status === 'approved' ? 'aprobada' : 'rechazada'} exitosamente`, user: updatedUser });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
