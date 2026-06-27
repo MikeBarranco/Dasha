@@ -13,6 +13,9 @@ import { AliadosPage } from './pages/AliadosPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegistroPage } from './pages/RegistroPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
+import { AdminLayout } from './components/admin/AdminLayout';
+import { AdminHomePage } from './pages/admin/AdminHomePage';
+import { AdminPlaceholderPage } from './pages/admin/AdminPlaceholderPage';
 
 function App() {
   return (
@@ -32,6 +35,15 @@ function App() {
           <Route path="novedades" element={<NovedadesPage />} />
           <Route path="ser-voluntario" element={<SerVoluntarioPage />} />
           <Route path="aliados" element={<AliadosPage />} />
+        </Route>
+        <Route path="admin" element={<AdminLayout />}>
+          <Route index element={<AdminHomePage />} />
+          <Route path="reportes" element={<AdminPlaceholderPage title="Reportes" />} />
+          <Route path="animales" element={<AdminPlaceholderPage title="Animales" />} />
+          <Route path="aliados" element={<AdminPlaceholderPage title="Aliados" />} />
+          <Route path="usuarios" element={<AdminPlaceholderPage title="Usuarios" />} />
+          <Route path="foro" element={<AdminPlaceholderPage title="Foro" />} />
+          <Route path="voluntarios" element={<AdminPlaceholderPage title="Voluntarios" />} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -1,0 +1,64 @@
+import {
+  LayoutDashboard,
+  Flag,
+  PawPrint,
+  Building2,
+  Users,
+  MessagesSquare,
+  BadgeCheck,
+  type LucideIcon,
+} from 'lucide-react';
+
+export type AdminSection = {
+  to: string;
+  label: string;
+  description: string;
+  icon: LucideIcon;
+  end?: boolean;
+};
+
+export const adminSections: AdminSection[] = [
+  {
+    to: '/admin',
+    label: 'Resumen',
+    description: 'Vista general del panel',
+    icon: LayoutDashboard,
+    end: true,
+  },
+  {
+    to: '/admin/reportes',
+    label: 'Reportes',
+    description: 'Revisa y actualiza los reportes de calle',
+    icon: Flag,
+  },
+  {
+    to: '/admin/animales',
+    label: 'Animales',
+    description: 'Gestiona los casos de rehabilitación',
+    icon: PawPrint,
+  },
+  {
+    to: '/admin/aliados',
+    label: 'Aliados',
+    description: 'Veterinarias, refugios y asociaciones',
+    icon: Building2,
+  },
+  {
+    to: '/admin/usuarios',
+    label: 'Usuarios',
+    description: 'Administra las cuentas registradas',
+    icon: Users,
+  },
+  {
+    to: '/admin/foro',
+    label: 'Foro',
+    description: 'Modera las publicaciones de la comunidad',
+    icon: MessagesSquare,
+  },
+  {
+    to: '/admin/voluntarios',
+    label: 'Voluntarios',
+    description: 'Aprueba o rechaza las solicitudes',
+    icon: BadgeCheck,
+  },
+];

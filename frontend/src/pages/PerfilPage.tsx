@@ -9,6 +9,7 @@ import {
   UserRound,
   Camera,
   Sparkles,
+  ShieldCheck,
   type LucideIcon,
 } from 'lucide-react';
 import { Avatar } from '../components/ui/Avatar';
@@ -199,6 +200,13 @@ export function PerfilPage() {
       </div>
 
       <div className="divide-y divide-neutral-100 overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+        {account.role === 'admin' && (
+          <RowButton
+            icon={ShieldCheck}
+            label="Panel de administración"
+            onClick={() => navigate('/admin')}
+          />
+        )}
         <RowButton icon={Settings} label="Ajustes de la cuenta" />
         <RowButton
           icon={Sparkles}
