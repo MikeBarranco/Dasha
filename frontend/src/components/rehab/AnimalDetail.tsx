@@ -19,6 +19,7 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
   const [activePhoto, setActivePhoto] = useState(total - 1);
   const [showFull, setShowFull] = useState(false);
   const touchStartX = useRef(0);
+  const multiTouch = useRef(false);
   const photo = animal.photos[activePhoto];
   const { dragControls, scrollRef, onPointerDown, onPointerMove, onDragEnd } =
     useSheetDismiss(onClose);
@@ -206,9 +207,20 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
               }}
               onClick={(event) => event.stopPropagation()}
               onTouchStart={(event) => {
+                if (event.touches.length > 1) {
+                  multiTouch.current = true;
+                  return;
+                }
+                multiTouch.current = false;
                 touchStartX.current = event.changedTouches[0].clientX;
               }}
               onTouchEnd={(event) => {
+                // Si fue un pellizco (dos dedos para hacer zoom) o todavia hay
+                // un dedo en la pantalla, no cambiamos de foto.
+                if (multiTouch.current || event.touches.length > 0) {
+                  if (event.touches.length === 0) multiTouch.current = false;
+                  return;
+                }
                 if (total <= 1) return;
                 const deltaX = event.changedTouches[0].clientX - touchStartX.current;
                 if (deltaX > 50) goPrev();
