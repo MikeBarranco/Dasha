@@ -218,6 +218,13 @@ export async function getStats(): Promise<Stats> {
   return requestRaw<Stats>('/stats');
 }
 
+// Lista pública de mascotas perdidas. Por ahora solo se usa para contar en el
+// tablero de administración; al conectar el mapa de Perdidos se reusará.
+export async function getLostPets(): Promise<{ species: string }[]> {
+  const data = await requestRaw<Record<string, unknown>[]>('/lost-pets');
+  return (data ?? []).map((raw) => ({ species: String(raw.species ?? '') }));
+}
+
 type RawAnimal = {
   id: string;
   name: string;
