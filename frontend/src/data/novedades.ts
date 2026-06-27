@@ -7,8 +7,20 @@ export type ReleaseNote = {
 
 export const releaseNotes: ReleaseNote[] = [
   {
+    version: 'v0.5',
+    date: '27 de junio de 2026',
+    title: 'Aliados, mascotas perdidas y experiencia móvil',
+    changes: [
+      'Reporta una mascota perdida y mira las zonas de búsqueda en el mapa.',
+      'Aliados en el mapa: veterinarias, refugios y asociaciones con su perfil.',
+      'Cambia el mapa entre Calle, Aliados y Perdidos con un solo toque.',
+      'Experiencia móvil más fluida, con gestos y navegación estilo app.',
+      'El encabezado del mapa y las fotos a pantalla completa se sienten mejor.',
+    ],
+  },
+  {
     version: 'v0.4',
-    date: 'Junio 2026',
+    date: '22 de junio de 2026',
     title: 'Rehabilitación real y fotos más confiables',
     changes: [
       'Rehabilitación ahora muestra animales reales con su avance.',
@@ -19,10 +31,10 @@ export const releaseNotes: ReleaseNote[] = [
   },
   {
     version: 'v0.3',
-    date: 'Junio 2026',
-    title: 'Inicio de sesión con redes y filtros del mapa',
+    date: '16 de junio de 2026',
+    title: 'Inicio de sesión y filtros del mapa',
     changes: [
-      'Inicia sesión con Google o Facebook.',
+      'Inicia sesión con tu cuenta de Google.',
       'Filtra el mapa por especie, urgencia y condición.',
       'Tu avatar se guarda por cuenta y regresa al iniciar sesión.',
       'Enlaces a las redes sociales de Dasha.',
@@ -30,7 +42,7 @@ export const releaseNotes: ReleaseNote[] = [
   },
   {
     version: 'v0.2',
-    date: 'Junio 2026',
+    date: '9 de junio de 2026',
     title: 'Mapa por colonias',
     changes: [
       'Mapa de calor por colonia según la urgencia de los reportes.',
@@ -40,7 +52,7 @@ export const releaseNotes: ReleaseNote[] = [
   },
   {
     version: 'v0.1',
-    date: 'Junio 2026',
+    date: '2 de junio de 2026',
     title: 'Primera versión de Dasha',
     changes: [
       'Reporta animales en situación de calle con foto y ubicación.',
