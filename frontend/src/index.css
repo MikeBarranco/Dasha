@@ -39,6 +39,26 @@ input[type='password']::-ms-clear {
   display: none;
 }
 
+.dasha-popup .maplibregl-popup-content {
+  padding-right: 30px;
+}
+
+.dasha-popup .maplibregl-popup-close-button {
+  width: 28px;
+  height: 28px;
+  top: 4px;
+  right: 4px;
+  border-radius: 9999px;
+  font-size: 18px;
+  line-height: 1;
+  color: #6b7280;
+}
+
+.dasha-popup .maplibregl-popup-close-button:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
 .dasha-popup-row {
   display: flex;
   align-items: center;

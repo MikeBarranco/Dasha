@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { type MapMode } from '../../lib/mapMode';
 
 const severityItems = [
   { label: 'Crítica', color: '#DC2626' },
@@ -11,9 +12,20 @@ const allyItems = [
   { label: 'Veterinaria', color: '#1C4E80' },
   { label: 'Refugio', color: '#6B2C91' },
   { label: 'Asociación', color: '#0E7490' },
+  { label: 'Educativo', color: '#15803D' },
 ];
 
-export function MapLegend() {
+const lostItems = [
+  { label: 'Menos de 3 días', color: '#FDE047' },
+  { label: '3 a 7 días', color: '#FB923C' },
+  { label: 'Más de 7 días', color: '#EF4444' },
+];
+
+type MapLegendProps = {
+  mode: MapMode;
+};
+
+export function MapLegend({ mode }: MapLegendProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -33,49 +45,81 @@ export function MapLegend() {
 
       {open && (
         <div className="space-y-3 px-3 pb-3">
-          <div>
-            <p className="mb-1 text-[11px] font-medium text-neutral-500">Reportes por colonia</p>
-            <div
-              className="h-2 w-full rounded-full"
-              style={{
-                background: 'linear-gradient(to right, #86EFAC, #FDE047, #FB923C, #EF4444)',
-              }}
-            />
-            <div className="mt-1 flex justify-between text-[10px] text-neutral-400">
-              <span>Pocos</span>
-              <span>Muchos</span>
+          {mode === 'calle' && (
+            <>
+              <div>
+                <p className="mb-1 text-[11px] font-medium text-neutral-500">Reportes por colonia</p>
+                <div
+                  className="h-2 w-full rounded-full"
+                  style={{
+                    background: 'linear-gradient(to right, #86EFAC, #FDE047, #FB923C, #EF4444)',
+                  }}
+                />
+                <div className="mt-1 flex justify-between text-[10px] text-neutral-400">
+                  <span>Pocos</span>
+                  <span>Muchos</span>
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-1 text-[11px] font-medium text-neutral-500">Urgencia del reporte</p>
+                <ul className="space-y-1">
+                  {severityItems.map((item) => (
+                    <li
+                      key={item.label}
+                      className="flex items-center gap-2 text-[11px] text-neutral-600"
+                    >
+                      <span
+                        className="h-3 w-3 flex-shrink-0 rounded-full border-2 bg-white"
+                        style={{ borderColor: item.color }}
+                      />
+                      {item.label}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </>
+          )}
+
+          {mode === 'aliados' && (
+            <div>
+              <p className="mb-1 text-[11px] font-medium text-neutral-500">Aliados</p>
+              <ul className="space-y-1">
+                {allyItems.map((item) => (
+                  <li
+                    key={item.label}
+                    className="flex items-center gap-2 text-[11px] text-neutral-600"
+                  >
+                    <span
+                      className="h-3 w-3 flex-shrink-0 rounded-full border-2 bg-white"
+                      style={{ borderColor: item.color }}
+                    />
+                    {item.label}
+                  </li>
+                ))}
+              </ul>
             </div>
-          </div>
+          )}
 
-          <div>
-            <p className="mb-1 text-[11px] font-medium text-neutral-500">Urgencia del reporte</p>
-            <ul className="space-y-1">
-              {severityItems.map((item) => (
-                <li key={item.label} className="flex items-center gap-2 text-[11px] text-neutral-600">
-                  <span
-                    className="h-3 w-3 flex-shrink-0 rounded-full border-2 bg-white"
-                    style={{ borderColor: item.color }}
-                  />
-                  {item.label}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <p className="mb-1 text-[11px] font-medium text-neutral-500">Aliados</p>
-            <ul className="space-y-1">
-              {allyItems.map((item) => (
-                <li key={item.label} className="flex items-center gap-2 text-[11px] text-neutral-600">
-                  <span
-                    className="h-3 w-3 flex-shrink-0 rounded-[3px] border-2 border-white"
-                    style={{ backgroundColor: item.color }}
-                  />
-                  {item.label}
-                </li>
-              ))}
-            </ul>
-          </div>
+          {mode === 'perdidos' && (
+            <div>
+              <p className="mb-1 text-[11px] font-medium text-neutral-500">Tiempo perdido</p>
+              <ul className="space-y-1">
+                {lostItems.map((item) => (
+                  <li
+                    key={item.label}
+                    className="flex items-center gap-2 text-[11px] text-neutral-600"
+                  >
+                    <span
+                      className="h-3 w-3 flex-shrink-0 rounded-full"
+                      style={{ backgroundColor: item.color }}
+                    />
+                    {item.label}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
     </div>
