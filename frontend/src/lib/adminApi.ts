@@ -135,17 +135,6 @@ export async function deleteAdminReport(id: string): Promise<void> {
   await adminFetch(`/admin/reports/${id}`, { method: 'DELETE' });
 }
 
-// Convierte un archivo de imagen a una cadena Base64 (data URL) para mandarla en
-// el body, como espera el backend (el backend la sube a Cloudinary).
-export function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(new Error('No se pudo leer la imagen'));
-    reader.readAsDataURL(file);
-  });
-}
-
 const animalStatusLabels: Record<string, string> = {
   in_treatment: 'En tratamiento',
   recovering: 'Recuperándose',

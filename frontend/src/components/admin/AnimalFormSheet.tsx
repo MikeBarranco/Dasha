@@ -5,11 +5,11 @@ import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 import {
   createAdminAnimal,
   updateAdminAnimal,
-  fileToBase64,
   animalStatusOptions,
   type AdminAnimal,
   type AdminAnimalInput,
 } from '../../lib/adminApi';
+import { compressImage } from '../../lib/image';
 
 type OrgOption = { id: string; name: string };
 
@@ -39,7 +39,7 @@ export function AnimalFormSheet({ animal, organizations, onClose, onSaved }: Ani
   const addPhotos = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     try {
-      const encoded = await Promise.all(Array.from(files).map(fileToBase64));
+      const encoded = await Promise.all(Array.from(files).map((file) => compressImage(file)));
       setNewPhotos((current) => [...current, ...encoded]);
     } catch {
       setError('No se pudo leer alguna imagen.');

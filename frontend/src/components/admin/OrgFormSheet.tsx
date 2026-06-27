@@ -6,11 +6,11 @@ import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 import {
   createAdminOrganization,
   updateAdminOrganization,
-  fileToBase64,
   orgTypeOptions,
   type AdminOrg,
   type AdminOrgInput,
 } from '../../lib/adminApi';
+import { compressImage } from '../../lib/image';
 
 type OrgFormSheetProps = {
   org: AdminOrg | null;
@@ -40,7 +40,7 @@ export function OrgFormSheet({ org, onClose, onSaved }: OrgFormSheetProps) {
   const pickLogo = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     try {
-      setLogo(await fileToBase64(files[0]));
+      setLogo(await compressImage(files[0]));
     } catch {
       setError('No se pudo leer la imagen.');
     }
