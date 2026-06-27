@@ -408,3 +408,61 @@ export async function getAdminForumPosts(): Promise<AdminForumPost[]> {
 export async function deleteAdminForumPost(id: string): Promise<void> {
   await adminFetch(`/admin/forum/posts/${id}`, { method: 'DELETE' });
 }
+
+const volunteerStatusLabels: Record<string, string> = {
+  pending: 'Pendiente',
+  approved: 'Aprobado',
+  rejected: 'Rechazado',
+};
+
+export type AdminVolunteer = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  status: string;
+  statusLabel: string;
+  isFoster: boolean;
+  fosterCapacity: number | null;
+  ineFront: string | null;
+  ineBack: string | null;
+  selfie: string | null;
+  requestedAgo: string;
+};
+
+function mapVolunteer(raw: Raw): AdminVolunteer {
+  const userObj = pick(raw, ['user']);
+  const user = userObj && typeof userObj === 'object' ? (userObj as Raw) : raw;
+  const statusRaw = asString(pick(raw, ['status']), 'pending');
+  const fosterCapacityRaw = pick(raw, ['fosterCapacity', 'foster_capacity']);
+
+  return {
+    id: asString(pick(raw, ['id', '_id'])),
+    name: asString(pick(user, ['name']), 'Sin nombre'),
+    email: asString(pick(user, ['email'])),
+    phone: asString(pick(raw, ['phone']) ?? pick(user, ['phone'])),
+    status: statusRaw,
+    statusLabel: volunteerStatusLabels[statusRaw] ?? statusRaw,
+    isFoster: Boolean(pick(raw, ['isFoster', 'is_foster'])),
+    fosterCapacity: fosterCapacityRaw !== undefined ? Number(fosterCapacityRaw) : null,
+    ineFront: asString(pick(raw, ['ineFrontUrl', 'ine_front_url', 'ineFront'])) || null,
+    ineBack: asString(pick(raw, ['ineBackUrl', 'ine_back_url', 'ineBack'])) || null,
+    selfie: asString(pick(raw, ['selfieUrl', 'selfie_url', 'selfie'])) || null,
+    requestedAgo: timeAgo(asString(pick(raw, ['createdAt', 'created_at']))),
+  };
+}
+
+export async function getAdminVolunteers(): Promise<AdminVolunteer[]> {
+  const data = await adminFetch<Raw[]>('/admin/volunteers');
+  return (data ?? []).map(mapVolunteer);
+}
+
+export async function updateVolunteerStatus(
+  id: string,
+  status: 'approved' | 'rejected',
+): Promise<void> {
+  await adminFetch(`/admin/volunteers/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+}

@@ -20,7 +20,7 @@ import { AdminAnimalsPage } from './pages/admin/AdminAnimalsPage';
 import { AdminOrganizationsPage } from './pages/admin/AdminOrganizationsPage';
 import { AdminUsersPage } from './pages/admin/AdminUsersPage';
 import { AdminForumPage } from './pages/admin/AdminForumPage';
-import { AdminPlaceholderPage } from './pages/admin/AdminPlaceholderPage';
+import { AdminVolunteersPage } from './pages/admin/AdminVolunteersPage';
 
 function App() {
   return (
@@ -48,7 +48,7 @@ function App() {
           <Route path="aliados" element={<AdminOrganizationsPage />} />
           <Route path="usuarios" element={<AdminUsersPage />} />
           <Route path="foro" element={<AdminForumPage />} />
-          <Route path="voluntarios" element={<AdminPlaceholderPage title="Voluntarios" />} />
+          <Route path="voluntarios" element={<AdminVolunteersPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
