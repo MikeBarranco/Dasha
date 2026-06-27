@@ -13,6 +13,11 @@ const LocationPicker = lazy(() =>
 
 const sizes = ['Pequeño', 'Mediano', 'Grande'];
 const colorOptions = ['Negro', 'Café', 'Blanco', 'Gris', 'Beige', 'Manchado'];
+const radiusOptions = [
+  { label: '500 m', value: 0.5 },
+  { label: '1 km', value: 1 },
+  { label: '3 km', value: 3 },
+];
 
 type SelectChipProps = {
   label: string;
@@ -58,6 +63,7 @@ export function ReportarPerdidaPage() {
 
   const [lat, setLat] = useState(19.04);
   const [lng, setLng] = useState(-98.2);
+  const [searchRadiusKm, setSearchRadiusKm] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -138,6 +144,7 @@ export function ReportarPerdidaPage() {
         lastSeenAt,
         lat,
         lng,
+        searchRadiusKm,
         description: description.trim(),
         contactName: contactName.trim(),
         contactPhone: contactPhone.trim(),
@@ -418,6 +425,23 @@ export function ReportarPerdidaPage() {
               }}
             />
           </Suspense>
+
+          <div className="mt-5">
+            <p className="mb-1 text-sm font-medium text-neutral-700">Zona de búsqueda</p>
+            <p className="mb-2 text-xs text-neutral-400">
+              Qué tan lejos pudo haberse alejado del punto marcado.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {radiusOptions.map((option) => (
+                <SelectChip
+                  key={option.value}
+                  label={option.label}
+                  selected={searchRadiusKm === option.value}
+                  onClick={() => setSearchRadiusKm(option.value)}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       )}
 

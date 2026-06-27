@@ -1,3 +1,5 @@
+import { API_URL, getToken } from './api';
+
 export type LostPetInput = {
   petName: string;
   species: 'perro' | 'gato';
@@ -6,6 +8,7 @@ export type LostPetInput = {
   lastSeenAt: string;
   lat: number;
   lng: number;
+  searchRadiusKm: number;
   description: string;
   contactName: string;
   contactPhone: string;
@@ -17,11 +20,47 @@ export type LostPetResult = {
   id: string;
 };
 
-// Mock temporal. Cuando Isabel tenga el endpoint de mascotas perdidas
-// (un tipo de reporte aparte de "perro de calle"), se reemplaza por la
-// llamada real al backend, igual que createReport en api.ts.
+const sizeMap: Record<string, string> = {
+  Pequeño: 'small',
+  Mediano: 'medium',
+  Grande: 'large',
+};
+
+// Publica una mascota perdida en el backend (POST /lost-pets, protegido).
 export async function createLostPetReport(input: LostPetInput): Promise<LostPetResult> {
-  await new Promise((resolve) => setTimeout(resolve, 600));
-  const slug = input.petName.trim().toLowerCase().replace(/\s+/g, '-') || 'mascota';
-  return { id: `perdido-${slug}-${Date.now()}` };
+  const token = getToken();
+  if (!token) throw new Error('Inicia sesión para publicar');
+
+  const body = {
+    petName: input.petName,
+    species: input.species === 'gato' ? 'cat' : 'dog',
+    size: sizeMap[input.size] ?? 'medium',
+    condition: 'lost',
+    lat: input.lat,
+    lng: input.lng,
+    searchRadiusKm: input.searchRadiusKm,
+    reward: input.reward || undefined,
+    contactWhatsapp: input.contactPhone,
+    description: input.description || undefined,
+    photosBase64: input.photoBase64 ? [input.photoBase64] : [],
+  };
+
+  const response = await fetch(`${API_URL}/lost-pets`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  const data = (await response.json().catch(() => null)) as
+    | { id?: string; data?: { id?: string }; message?: string }
+    | null;
+
+  if (!response.ok) {
+    throw new Error(data?.message ?? 'No se pudo publicar. Intenta de nuevo.');
+  }
+
+  return { id: String(data?.id ?? data?.data?.id ?? '') };
 }
