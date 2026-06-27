@@ -5,7 +5,8 @@ import { PageHeader } from '../components/ui/PageHeader';
 import { cn } from '../lib/cn';
 import { useAuth } from '../lib/useAuth';
 import { useVolunteerStatus } from '../lib/useVolunteerStatus';
-import { fileToBase64, postVolunteerApplication, updateMe } from '../lib/api';
+import { postVolunteerApplication, updateMe } from '../lib/api';
+import { compressImage } from '../lib/image';
 
 const ayudaOptions = ['Rescate', 'Transporte', 'Hogar temporal', 'Difusión', 'Apoyo veterinario'];
 const dispoOptions = ['Entre semana', 'Fines de semana', 'Mañanas', 'Tardes', 'Noches'];
@@ -52,7 +53,7 @@ function PhotoField({
   const read = async (files: FileList | null) => {
     if (!files || !files[0]) return;
     try {
-      onChange(await fileToBase64(files[0]));
+      onChange(await compressImage(files[0]));
     } catch {
       onChange(null);
     }

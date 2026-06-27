@@ -5,6 +5,7 @@ import { Camera, Dog, Cat, ArrowLeft, Check } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { cn } from '../lib/cn';
 import { createReport, type CreateReportInput } from '../lib/api';
+import { compressImage } from '../lib/image';
 import { useAuth } from '../lib/useAuth';
 
 const LocationPicker = lazy(() =>
@@ -162,32 +163,14 @@ export function ReportarPage() {
   const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    
+
     // Preview original instantáneo
     setPhotoUrl(URL.createObjectURL(file));
 
-    // Comprimir en canvas y convertir a Base64 (Optimización de UI)
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 800;
-        const scaleSize = MAX_WIDTH / img.width;
-        canvas.width = MAX_WIDTH;
-        canvas.height = img.height * scaleSize;
-        const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-        
-        // Convertir a base64 con calidad JPEG baja (0.6) para conexiones lentas
-        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
-        setPhotoBase64(compressedBase64);
-      };
-      if (e.target?.result) {
-        img.src = e.target.result as string;
-      }
-    };
-    reader.readAsDataURL(file);
+    // Comprimir antes de enviar (peso ligero, evita el error 413).
+    compressImage(file)
+      .then(setPhotoBase64)
+      .catch(() => setPhotoBase64(null));
   };
 
   const toggleCondition = (value: string) => {

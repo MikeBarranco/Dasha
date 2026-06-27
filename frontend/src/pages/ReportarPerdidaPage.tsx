@@ -5,6 +5,7 @@ import { Camera, Dog, Cat, ArrowLeft, Check, Search } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { cn } from '../lib/cn';
 import { createLostPetReport, type LostPetInput } from '../lib/lostPets';
+import { compressImage } from '../lib/image';
 import { useAuth } from '../lib/useAuth';
 
 const LocationPicker = lazy(() =>
@@ -109,24 +110,10 @@ export function ReportarPerdidaPage() {
 
     setPhotoUrl(URL.createObjectURL(file));
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 800;
-        const scaleSize = MAX_WIDTH / img.width;
-        canvas.width = MAX_WIDTH;
-        canvas.height = img.height * scaleSize;
-        const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-        setPhotoBase64(canvas.toDataURL('image/jpeg', 0.6));
-      };
-      if (e.target?.result) {
-        img.src = e.target.result as string;
-      }
-    };
-    reader.readAsDataURL(file);
+    // Comprimir antes de enviar (peso ligero, evita el error 413).
+    compressImage(file)
+      .then(setPhotoBase64)
+      .catch(() => setPhotoBase64(null));
   };
 
   const handleSubmit = async () => {
