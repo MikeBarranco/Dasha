@@ -884,7 +884,7 @@ export function MapView({
 
       {mode === 'perdidos' && lostPets.length === 0 && (
         <div className="pointer-events-none absolute left-1/2 top-16 z-10 -translate-x-1/2 rounded-xl bg-white/95 px-4 py-2 text-center text-xs text-neutral-500 shadow">
-          Aquí aparecerán las mascotas perdidas y su zona aproximada.
+          Por ahora no hay mascotas perdidas reportadas en el mapa.
         </div>
       )}
 

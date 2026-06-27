@@ -1,6 +1,7 @@
 import type { Report, Severity } from '../data/mockReports';
 import type { Animal, AnimalStatus } from '../data/mockAnimals';
 import type { Ally, AllyType } from '../data/mockAllies';
+import type { LostPet } from '../data/mockLostPets';
 
 export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
 const TOKEN_KEY = 'dasha-token';
@@ -218,11 +219,33 @@ export async function getStats(): Promise<Stats> {
   return requestRaw<Stats>('/stats');
 }
 
-// Lista pública de mascotas perdidas. Por ahora solo se usa para contar en el
-// tablero de administración; al conectar el mapa de Perdidos se reusará.
-export async function getLostPets(): Promise<{ species: string }[]> {
+// Lista pública de mascotas perdidas para el modo Perdidos del mapa y el conteo
+// del tablero. Tolerante a los nombres de campo del backend.
+export async function getLostPets(): Promise<LostPet[]> {
   const data = await requestRaw<Record<string, unknown>[]>('/lost-pets');
-  return (data ?? []).map((raw) => ({ species: String(raw.species ?? '') }));
+  return (data ?? []).map((raw) => {
+    const species = String(raw.species ?? '');
+    let photo = '';
+    if (typeof raw.photo === 'string') photo = raw.photo;
+    else if (typeof raw.photoUrl === 'string') photo = raw.photoUrl;
+    else if (Array.isArray(raw.photos) && raw.photos.length > 0) {
+      const first = raw.photos[0];
+      photo = typeof first === 'string' ? first : String((first as Record<string, unknown>)?.url ?? '');
+    }
+    return {
+      id: String(raw.id ?? ''),
+      petName: String(raw.petName ?? raw.name ?? 'Mascota'),
+      species: species === 'cat' || species === 'gato' ? 'gato' : 'perro',
+      photo: photo || '/placeholder-animal.svg',
+      lat: Number(raw.lat ?? 0),
+      lng: Number(raw.lng ?? 0),
+      searchRadiusKm: Number(raw.searchRadiusKm ?? raw.search_radius_km ?? 1),
+      lostAt: String(raw.lostAt ?? raw.lost_at ?? raw.createdAt ?? raw.created_at ?? ''),
+      description: raw.description ? String(raw.description) : undefined,
+      contactPhone:
+        String(raw.contactWhatsapp ?? raw.contactPhone ?? raw.whatsapp ?? '') || undefined,
+    };
+  });
 }
 
 // Fetch autenticado tolerante a la forma de la respuesta: acepta el dato directo
