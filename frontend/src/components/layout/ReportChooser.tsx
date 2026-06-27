@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { Dog, Search, X, ChevronRight } from 'lucide-react';
@@ -41,8 +42,22 @@ const options: Option[] = [
 
 export function ReportChooser({ open, onClose }: ReportChooserProps) {
   const navigate = useNavigate();
+  const armed = useRef(false);
+
+  useEffect(() => {
+    armed.current = false;
+    if (!open) return;
+    // Se "arma" poco después de abrir, para ignorar el toque que pudo
+    // dispararse junto con la apertura (el "+" y la opción de abajo quedan en
+    // la misma zona en móvil).
+    const timer = setTimeout(() => {
+      armed.current = true;
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [open]);
 
   const choose = (to: string) => {
+    if (!armed.current) return;
     onClose();
     navigate(to);
   };
@@ -61,7 +76,7 @@ export function ReportChooser({ open, onClose }: ReportChooserProps) {
             type="button"
             aria-label="Cerrar"
             onClick={onClose}
-            className="absolute inset-0 bg-neutral-900/35 backdrop-blur-sm"
+            className="absolute inset-0 bg-neutral-900/40"
           />
 
           <motion.div
