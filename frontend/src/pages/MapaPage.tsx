@@ -142,6 +142,23 @@ export function MapaPage() {
     return <MapListPanel reports={visibleReports} onSelect={selectFromList} onClose={closePanel} />;
   };
 
+  const headerByMode: Record<MapMode, { title: string; subtitle: string }> = {
+    calle: {
+      title: 'Mapa de rescates',
+      subtitle:
+        'Visualiza los animales que necesitan ayuda en Puebla, por colonia y por urgencia.',
+    },
+    aliados: {
+      title: 'Aliados en el mapa',
+      subtitle: 'Veterinarias, refugios y asociaciones que apoyan el rescate en Puebla.',
+    },
+    perdidos: {
+      title: 'Mascotas perdidas',
+      subtitle: 'Zonas de búsqueda activas. Ayuda a reunir a las mascotas con su familia.',
+    },
+  };
+  const header = headerByMode[mapMode];
+
   const statCards = [
     { label: 'Reportes activos', value: stats?.reportesActivos ?? null },
     { label: 'Rescates logrados', value: stats?.rescatesLogrados ?? null },
@@ -150,10 +167,7 @@ export function MapaPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Mapa de rescates"
-        subtitle="Visualiza los animales que necesitan ayuda en Puebla, por colonia y por urgencia."
-      />
+      <PageHeader title={header.title} subtitle={header.subtitle} />
 
       <div className="grid grid-cols-3 gap-3 sm:max-w-xl">
         {statCards.map((stat, index) => (
