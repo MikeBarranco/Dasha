@@ -134,3 +134,105 @@ export async function updateAdminReportStatus(id: string, status: string): Promi
 export async function deleteAdminReport(id: string): Promise<void> {
   await adminFetch(`/admin/reports/${id}`, { method: 'DELETE' });
 }
+
+// Convierte un archivo de imagen a una cadena Base64 (data URL) para mandarla en
+// el body, como espera el backend (el backend la sube a Cloudinary).
+export function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error('No se pudo leer la imagen'));
+    reader.readAsDataURL(file);
+  });
+}
+
+const animalStatusLabels: Record<string, string> = {
+  in_treatment: 'En tratamiento',
+  recovering: 'Recuperándose',
+  looking_for_foster: 'Busca hogar temporal',
+  looking_for_adoption: 'Busca adopción',
+};
+
+export const animalStatusOptions: { value: string; label: string }[] = [
+  { value: 'in_treatment', label: 'En tratamiento' },
+  { value: 'recovering', label: 'Recuperándose' },
+  { value: 'looking_for_foster', label: 'Busca hogar temporal' },
+  { value: 'looking_for_adoption', label: 'Busca adopción' },
+];
+
+export type AdminAnimal = {
+  id: string;
+  name: string;
+  species: 'perro' | 'gato';
+  status: string;
+  statusLabel: string;
+  story: string;
+  diagnosis: string;
+  treatment: string;
+  totalCostNeeded: number;
+  organizationId: string | null;
+  organizationName: string | null;
+  photos: string[];
+};
+
+function mapPhotos(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      if (typeof item === 'string') return item;
+      if (item && typeof item === 'object') return asString((item as Raw).url);
+      return '';
+    })
+    .filter(Boolean);
+}
+
+function mapAdminAnimal(raw: Raw): AdminAnimal {
+  const speciesRaw = asString(pick(raw, ['species']));
+  const statusRaw = asString(pick(raw, ['status']), 'in_treatment');
+  const org = pick(raw, ['organization']);
+  const orgObj = org && typeof org === 'object' ? (org as Raw) : null;
+
+  return {
+    id: asString(pick(raw, ['id', '_id'])),
+    name: asString(pick(raw, ['name'])),
+    species: speciesRaw === 'cat' || speciesRaw === 'gato' ? 'gato' : 'perro',
+    status: statusRaw,
+    statusLabel: animalStatusLabels[statusRaw] ?? statusRaw,
+    story: asString(pick(raw, ['story'])),
+    diagnosis: asString(pick(raw, ['diagnosis'])),
+    treatment: asString(pick(raw, ['treatment'])),
+    totalCostNeeded: Number(pick(raw, ['totalCostNeeded', 'total_cost_needed']) ?? 0),
+    organizationId: orgObj ? asString(orgObj.id) || null : (asString(pick(raw, ['organizationId'])) || null),
+    organizationName: orgObj ? asString(orgObj.name) || null : null,
+    photos: mapPhotos(pick(raw, ['photos'])),
+  };
+}
+
+export type AdminAnimalInput = {
+  name: string;
+  species: 'dog' | 'cat';
+  status: string;
+  story?: string;
+  diagnosis?: string;
+  treatment?: string;
+  totalCostNeeded?: number;
+  organizationId?: string | null;
+  photosBase64?: string[];
+};
+
+export async function getAdminAnimals(): Promise<AdminAnimal[]> {
+  const data = await adminFetch<Raw[]>('/admin/animals');
+  return (data ?? []).map(mapAdminAnimal);
+}
+
+export async function createAdminAnimal(input: AdminAnimalInput): Promise<void> {
+  await adminFetch('/admin/animals', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export async function updateAdminAnimal(id: string, input: AdminAnimalInput): Promise<void> {
+  await adminFetch(`/admin/animals/${id}`, { method: 'PATCH', body: JSON.stringify(input) });
+}
+
+export async function deleteAdminAnimal(id: string): Promise<void> {
+  await adminFetch(`/admin/animals/${id}`, { method: 'DELETE' });
+}

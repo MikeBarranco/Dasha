@@ -16,6 +16,7 @@ import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { AdminLayout } from './components/admin/AdminLayout';
 import { AdminHomePage } from './pages/admin/AdminHomePage';
 import { AdminReportsPage } from './pages/admin/AdminReportsPage';
+import { AdminAnimalsPage } from './pages/admin/AdminAnimalsPage';
 import { AdminPlaceholderPage } from './pages/admin/AdminPlaceholderPage';
 
 function App() {
@@ -40,7 +41,7 @@ function App() {
         <Route path="admin" element={<AdminLayout />}>
           <Route index element={<AdminHomePage />} />
           <Route path="reportes" element={<AdminReportsPage />} />
-          <Route path="animales" element={<AdminPlaceholderPage title="Animales" />} />
+          <Route path="animales" element={<AdminAnimalsPage />} />
           <Route path="aliados" element={<AdminPlaceholderPage title="Aliados" />} />
           <Route path="usuarios" element={<AdminPlaceholderPage title="Usuarios" />} />
           <Route path="foro" element={<AdminPlaceholderPage title="Foro" />} />
