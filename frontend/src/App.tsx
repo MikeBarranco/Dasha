@@ -18,6 +18,8 @@ import { AdminHomePage } from './pages/admin/AdminHomePage';
 import { AdminReportsPage } from './pages/admin/AdminReportsPage';
 import { AdminAnimalsPage } from './pages/admin/AdminAnimalsPage';
 import { AdminOrganizationsPage } from './pages/admin/AdminOrganizationsPage';
+import { AdminUsersPage } from './pages/admin/AdminUsersPage';
+import { AdminForumPage } from './pages/admin/AdminForumPage';
 import { AdminPlaceholderPage } from './pages/admin/AdminPlaceholderPage';
 
 function App() {
@@ -44,8 +46,8 @@ function App() {
           <Route path="reportes" element={<AdminReportsPage />} />
           <Route path="animales" element={<AdminAnimalsPage />} />
           <Route path="aliados" element={<AdminOrganizationsPage />} />
-          <Route path="usuarios" element={<AdminPlaceholderPage title="Usuarios" />} />
-          <Route path="foro" element={<AdminPlaceholderPage title="Foro" />} />
+          <Route path="usuarios" element={<AdminUsersPage />} />
+          <Route path="foro" element={<AdminForumPage />} />
           <Route path="voluntarios" element={<AdminPlaceholderPage title="Voluntarios" />} />
         </Route>
       </Routes>

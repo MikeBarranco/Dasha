@@ -319,3 +319,92 @@ export async function updateAdminOrganization(id: string, input: AdminOrgInput):
 export async function deleteAdminOrganization(id: string): Promise<void> {
   await adminFetch(`/admin/organizations/${id}`, { method: 'DELETE' });
 }
+
+const roleLabels: Record<string, string> = {
+  citizen: 'Ciudadano',
+  volunteer: 'Voluntario',
+  admin: 'Administrador',
+};
+
+function formatDate(iso: string): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function countFrom(raw: Raw, directKeys: string[], nestedKey: string): number | null {
+  const direct = pick(raw, directKeys);
+  if (direct !== undefined) return Number(direct);
+  const countObj = pick(raw, ['_count']);
+  if (countObj && typeof countObj === 'object') {
+    const value = (countObj as Raw)[nestedKey];
+    if (value !== undefined) return Number(value);
+  }
+  return null;
+}
+
+export type AdminUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  roleLabel: string;
+  reportsCount: number | null;
+  joined: string;
+};
+
+function mapAdminUser(raw: Raw): AdminUser {
+  const roleRaw = asString(pick(raw, ['role']), 'citizen');
+  return {
+    id: asString(pick(raw, ['id', '_id'])),
+    name: asString(pick(raw, ['name']), 'Sin nombre'),
+    email: asString(pick(raw, ['email'])),
+    role: roleRaw,
+    roleLabel: roleLabels[roleRaw] ?? roleRaw,
+    reportsCount: countFrom(raw, ['reportsCount', 'reports_count'], 'reports'),
+    joined: formatDate(asString(pick(raw, ['createdAt', 'created_at']))),
+  };
+}
+
+export async function getAdminUsers(): Promise<AdminUser[]> {
+  const data = await adminFetch<Raw[]>('/admin/users');
+  return (data ?? []).map(mapAdminUser);
+}
+
+export async function deleteAdminUser(id: string): Promise<void> {
+  await adminFetch(`/admin/users/${id}`, { method: 'DELETE' });
+}
+
+export type AdminForumPost = {
+  id: string;
+  author: string;
+  content: string;
+  createdAgo: string;
+  repliesCount: number | null;
+};
+
+function mapForumPost(raw: Raw): AdminForumPost {
+  const authorObj = pick(raw, ['author', 'user']);
+  const author =
+    authorObj && typeof authorObj === 'object'
+      ? asString((authorObj as Raw).name)
+      : asString(pick(raw, ['authorName']));
+
+  return {
+    id: asString(pick(raw, ['id', '_id'])),
+    author: author || 'Anónimo',
+    content: asString(pick(raw, ['content', 'text', 'body', 'message'])),
+    createdAgo: timeAgo(asString(pick(raw, ['createdAt', 'created_at']))),
+    repliesCount: countFrom(raw, ['repliesCount', 'replies_count'], 'replies'),
+  };
+}
+
+export async function getAdminForumPosts(): Promise<AdminForumPost[]> {
+  const data = await adminFetch<Raw[]>('/admin/forum/posts');
+  return (data ?? []).map(mapForumPost);
+}
+
+export async function deleteAdminForumPost(id: string): Promise<void> {
+  await adminFetch(`/admin/forum/posts/${id}`, { method: 'DELETE' });
+}
