@@ -236,3 +236,86 @@ export async function updateAdminAnimal(id: string, input: AdminAnimalInput): Pr
 export async function deleteAdminAnimal(id: string): Promise<void> {
   await adminFetch(`/admin/animals/${id}`, { method: 'DELETE' });
 }
+
+const orgTypeLabels: Record<string, string> = {
+  veterinary: 'Veterinaria',
+  shelter: 'Refugio',
+  ngo: 'Asociación',
+  educational: 'Educativo',
+};
+
+export const orgTypeOptions: { value: string; label: string }[] = [
+  { value: 'veterinary', label: 'Veterinaria' },
+  { value: 'shelter', label: 'Refugio' },
+  { value: 'ngo', label: 'Asociación' },
+  { value: 'educational', label: 'Educativo' },
+];
+
+export type AdminOrg = {
+  id: string;
+  name: string;
+  description: string;
+  logoUrl: string | null;
+  address: string;
+  phone: string;
+  whatsapp: string;
+  website: string;
+  orgType: string;
+  orgTypeLabel: string;
+  isVerified: boolean;
+  schedule: string;
+  lat: number;
+  lng: number;
+};
+
+function mapAdminOrg(raw: Raw): AdminOrg {
+  const typeRaw = asString(pick(raw, ['orgType', 'type']), 'ngo');
+  return {
+    id: asString(pick(raw, ['id', '_id'])),
+    name: asString(pick(raw, ['name'])),
+    description: asString(pick(raw, ['description'])),
+    logoUrl: asString(pick(raw, ['logoUrl', 'logo_url'])) || null,
+    address: asString(pick(raw, ['address'])),
+    phone: asString(pick(raw, ['phone'])),
+    whatsapp: asString(pick(raw, ['whatsapp'])),
+    website: asString(pick(raw, ['website'])),
+    orgType: typeRaw,
+    orgTypeLabel: orgTypeLabels[typeRaw] ?? typeRaw,
+    isVerified: Boolean(pick(raw, ['isVerified', 'is_verified'])),
+    schedule: asString(pick(raw, ['schedule'])),
+    lat: Number(pick(raw, ['lat']) ?? 0),
+    lng: Number(pick(raw, ['lng']) ?? 0),
+  };
+}
+
+export type AdminOrgInput = {
+  name: string;
+  orgType: string;
+  description?: string;
+  address?: string;
+  phone?: string;
+  whatsapp?: string;
+  website?: string;
+  schedule?: string;
+  isVerified?: boolean;
+  lat?: number;
+  lng?: number;
+  logoBase64?: string;
+};
+
+export async function getAdminOrganizations(): Promise<AdminOrg[]> {
+  const data = await adminFetch<Raw[]>('/admin/organizations');
+  return (data ?? []).map(mapAdminOrg);
+}
+
+export async function createAdminOrganization(input: AdminOrgInput): Promise<void> {
+  await adminFetch('/admin/organizations', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export async function updateAdminOrganization(id: string, input: AdminOrgInput): Promise<void> {
+  await adminFetch(`/admin/organizations/${id}`, { method: 'PATCH', body: JSON.stringify(input) });
+}
+
+export async function deleteAdminOrganization(id: string): Promise<void> {
+  await adminFetch(`/admin/organizations/${id}`, { method: 'DELETE' });
+}
