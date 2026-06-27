@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, HeartHandshake } from 'lucide-react';
+import { Check, HeartHandshake, ImagePlus, X } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { cn } from '../lib/cn';
 import { useAuth } from '../lib/useAuth';
 import { useVolunteerStatus } from '../lib/useVolunteerStatus';
+import { fileToBase64, postVolunteerApplication, updateMe } from '../lib/api';
 
 const ayudaOptions = ['Rescate', 'Transporte', 'Hogar temporal', 'Difusión', 'Apoyo veterinario'];
 const dispoOptions = ['Entre semana', 'Fines de semana', 'Mañanas', 'Tardes', 'Noches'];
@@ -37,6 +38,57 @@ function Chip({
   );
 }
 
+function PhotoField({
+  label,
+  hint,
+  value,
+  onChange,
+}: {
+  label: string;
+  hint: string;
+  value: string | null;
+  onChange: (value: string | null) => void;
+}) {
+  const read = async (files: FileList | null) => {
+    if (!files || !files[0]) return;
+    try {
+      onChange(await fileToBase64(files[0]));
+    } catch {
+      onChange(null);
+    }
+  };
+
+  return (
+    <div>
+      <p className="mb-1.5 text-sm font-medium text-neutral-700">{label}</p>
+      {value ? (
+        <div className="relative">
+          <img src={value} alt={label} className="h-32 w-full rounded-xl object-cover" />
+          <button
+            type="button"
+            onClick={() => onChange(null)}
+            aria-label="Quitar foto"
+            className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      ) : (
+        <label className="flex h-32 w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-neutral-300 text-neutral-400 transition-colors hover:border-cobalto/40 hover:text-cobalto">
+          <ImagePlus className="h-6 w-6" />
+          <span className="text-xs">{hint}</span>
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(event) => read(event.target.files)}
+          />
+        </label>
+      )}
+    </div>
+  );
+}
+
 export function SerVoluntarioPage() {
   const navigate = useNavigate();
   const { user: account } = useAuth();
@@ -46,7 +98,13 @@ export function SerVoluntarioPage() {
   const [ayuda, setAyuda] = useState<string[]>([]);
   const [dispo, setDispo] = useState<string[]>([]);
   const [motivation, setMotivation] = useState('');
+  const [ineFront, setIneFront] = useState<string | null>(null);
+  const [ineBack, setIneBack] = useState<string | null>(null);
+  const [selfie, setSelfie] = useState<string | null>(null);
+  const [fosterCapacity, setFosterCapacity] = useState('');
   const [accept, setAccept] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
   if (!account) {
@@ -80,17 +138,39 @@ export function SerVoluntarioPage() {
   }
 
   const phoneValid = /^\d{10}$/.test(phone.replace(/\s/g, ''));
-  const canSubmit = phoneValid && zone.trim().length > 1 && ayuda.length > 0 && accept;
+  const isFoster = ayuda.includes('Hogar temporal');
+  const docsReady = Boolean(ineFront && ineBack && selfie);
+  const canSubmit =
+    phoneValid && zone.trim().length > 1 && ayuda.length > 0 && docsReady && accept;
 
   const toggle = (list: string[], setList: (value: string[]) => void, value: string) => {
     setList(list.includes(value) ? list.filter((item) => item !== value) : [...list, value]);
   };
 
-  const handleSubmit = (event: FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!canSubmit) return;
-    apply();
-    setDone(true);
+    if (!canSubmit || submitting) return;
+    if (!ineFront || !ineBack || !selfie) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      await postVolunteerApplication({
+        ineFrontBase64: ineFront,
+        ineBackBase64: ineBack,
+        selfieBase64: selfie,
+        isFoster,
+        ...(isFoster && fosterCapacity ? { fosterCapacity: Number(fosterCapacity) } : {}),
+      });
+      // Guarda el teléfono en el perfil (el resto de campos es para revisión).
+      updateMe({ phone: phone.replace(/\s/g, '') }).catch(() => {});
+      apply();
+      setDone(true);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : 'No se pudo enviar la solicitud. Intenta de nuevo.',
+      );
+      setSubmitting(false);
+    }
   };
 
   if (done) {
@@ -170,6 +250,22 @@ export function SerVoluntarioPage() {
           </div>
         </div>
 
+        {isFoster && (
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-neutral-700">
+              ¿A cuántos animales puedes dar hogar temporal?
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={fosterCapacity}
+              onChange={(event) => setFosterCapacity(event.target.value.replace(/[^0-9]/g, ''))}
+              placeholder="Ej. 2"
+              className={inputClass}
+            />
+          </div>
+        )}
+
         <div>
           <p className="mb-2 text-sm font-medium text-neutral-700">Disponibilidad</p>
           <div className="flex flex-wrap gap-2">
@@ -198,6 +294,28 @@ export function SerVoluntarioPage() {
           />
         </div>
 
+        <div className="rounded-2xl border border-neutral-200 p-4">
+          <p className="text-sm font-semibold text-neutral-800">Verificación de identidad</p>
+          <p className="mt-0.5 text-xs text-neutral-500">
+            Sube tu INE (frente y reverso) y una selfie. Las usamos solo para validar tu identidad.
+          </p>
+          <div className="mt-3 space-y-3">
+            <PhotoField
+              label="INE (frente)"
+              hint="Subir foto"
+              value={ineFront}
+              onChange={setIneFront}
+            />
+            <PhotoField
+              label="INE (reverso)"
+              hint="Subir foto"
+              value={ineBack}
+              onChange={setIneBack}
+            />
+            <PhotoField label="Selfie" hint="Subir selfie" value={selfie} onChange={setSelfie} />
+          </div>
+        </div>
+
         <label className="flex items-start gap-3 text-sm text-neutral-600">
           <input
             type="checkbox"
@@ -208,13 +326,15 @@ export function SerVoluntarioPage() {
           Acepto que Dasha valide mi identidad para la seguridad de la comunidad.
         </label>
 
+        {error && <p className="text-sm text-alerta">{error}</p>}
+
         <button
           type="submit"
-          disabled={!canSubmit}
+          disabled={!canSubmit || submitting}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-cobalto py-3 font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
         >
           <HeartHandshake className="h-5 w-5" />
-          Enviar solicitud
+          {submitting ? 'Enviando…' : 'Enviar solicitud'}
         </button>
       </form>
     </div>
