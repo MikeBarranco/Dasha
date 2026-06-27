@@ -70,8 +70,21 @@ export function MapFilters({ filters, onChange, total, shown }: MapFiltersProps)
   };
 
   return (
-    <div className="mt-4">
-      <div className="flex items-center gap-3">
+    <div className="relative min-w-0">
+      <div className="flex items-center justify-end gap-3">
+        <span className="hidden whitespace-nowrap text-xs text-neutral-400 sm:inline">
+          {shown} de {total}
+        </span>
+        {active && (
+          <button
+            type="button"
+            onClick={() => onChange(emptyFilters)}
+            className="flex items-center gap-1 text-xs font-medium text-cobalto transition-colors hover:text-cobalto/80"
+          >
+            <X className="h-3.5 w-3.5" />
+            Limpiar
+          </button>
+        )}
         <button
           type="button"
           onClick={() => setOpen((value) => !value)}
@@ -85,19 +98,6 @@ export function MapFilters({ filters, onChange, total, shown }: MapFiltersProps)
             </span>
           )}
         </button>
-        <span className="text-xs text-neutral-400">
-          {shown} de {total}
-        </span>
-        {active && (
-          <button
-            type="button"
-            onClick={() => onChange(emptyFilters)}
-            className="ml-auto flex items-center gap-1 text-xs font-medium text-cobalto transition-colors hover:text-cobalto/80"
-          >
-            <X className="h-3.5 w-3.5" />
-            Limpiar
-          </button>
-        )}
       </div>
 
       <AnimatePresence initial={false}>
@@ -107,7 +107,7 @@ export function MapFilters({ filters, onChange, total, shown }: MapFiltersProps)
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.18, ease: 'easeOut' }}
-            className="mt-2 rounded-2xl border border-neutral-200 bg-white"
+            className="absolute right-0 top-full z-30 mt-2 w-72 max-w-[78vw] rounded-2xl border border-neutral-200 bg-white shadow-lg"
           >
             <div className="space-y-4 p-4">
               <Group label="Especie">

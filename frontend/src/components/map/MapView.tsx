@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import maplibregl, { type StyleSpecification } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Search, LocateFixed, Loader2, X, HeartHandshake, Check } from 'lucide-react';
+import { Search, LocateFixed, Loader2, X } from 'lucide-react';
 import { type Report, type Severity } from '../../data/mockReports';
 import { type Ally, type AllyType, allyTypeLabels } from '../../data/mockAllies';
+import { type LostPet, daysLost, lostColor } from '../../data/mockLostPets';
+import { type MapMode } from '../../lib/mapMode';
 import { MapLegend } from './MapLegend';
 
 const PUEBLA_CENTER: [number, number] = [-98.2, 19.04];
@@ -65,27 +67,18 @@ const allyColors: Record<AllyType, string> = {
   educational: '#15803D',
 };
 
-const allyFilterTypes: { value: AllyType; label: string }[] = [
-  { value: 'veterinary', label: 'Veterinarias' },
-  { value: 'shelter', label: 'Refugios' },
-  { value: 'ngo', label: 'Asociaciones' },
-  { value: 'educational', label: 'Educativos' },
-];
-
-function createAllyElement(type: AllyType): HTMLDivElement {
+function createAllyElement(ally: Ally): HTMLDivElement {
   const element = document.createElement('div');
-  element.style.width = '22px';
-  element.style.height = '22px';
-  element.style.borderRadius = '7px';
-  element.style.backgroundColor = allyColors[type] ?? allyColors.ngo;
-  element.style.border = '2px solid #ffffff';
-  element.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.25)';
-  element.style.display = 'flex';
-  element.style.alignItems = 'center';
-  element.style.justifyContent = 'center';
+  element.style.width = '40px';
+  element.style.height = '40px';
+  element.style.borderRadius = '9999px';
+  element.style.border = `3px solid ${allyColors[ally.orgType] ?? allyColors.ngo}`;
+  element.style.backgroundColor = '#ffffff';
+  element.style.backgroundImage = `url(${ally.logoUrl ?? '/placeholder-logo.svg'})`;
+  element.style.backgroundSize = 'cover';
+  element.style.backgroundPosition = 'center';
+  element.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.3)';
   element.style.cursor = 'pointer';
-  element.innerHTML =
-    '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
   return element;
 }
 
@@ -111,6 +104,50 @@ function buildAllyPopup(ally: Ally, onMore: () => void): HTMLDivElement {
   return node;
 }
 
+function createLostPetElement(pet: LostPet): HTMLDivElement {
+  const element = document.createElement('div');
+  element.style.width = '40px';
+  element.style.height = '40px';
+  element.style.borderRadius = '9999px';
+  element.style.border = `3px solid ${lostColor(pet.lostAt)}`;
+  element.style.backgroundColor = '#ffffff';
+  element.style.backgroundImage = `url(${pet.photo})`;
+  element.style.backgroundSize = 'cover';
+  element.style.backgroundPosition = 'center';
+  element.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.3)';
+  element.style.cursor = 'pointer';
+  return element;
+}
+
+function lostPopupHTML(pet: LostPet): string {
+  const days = daysLost(pet.lostAt);
+  const species = pet.species === 'perro' ? 'Perro' : 'Gato';
+  return (
+    `<div class="dasha-popup-name">${escapeHTML(pet.petName)}</div>` +
+    `<div class="dasha-popup-count">${species} · perdido hace ${days} día${days === 1 ? '' : 's'}</div>` +
+    (pet.contactPhone ? `<div class="dasha-popup-count">Tel: ${escapeHTML(pet.contactPhone)}</div>` : '')
+  );
+}
+
+type CircleFeature = {
+  type: 'Feature';
+  properties: { color: string };
+  geometry: { type: 'Polygon'; coordinates: number[][][] };
+};
+
+function circleFeature(lng: number, lat: number, radiusKm: number, color: string): CircleFeature {
+  const ring: number[][] = [];
+  const points = 64;
+  const dx = radiusKm / (111.32 * Math.cos((lat * Math.PI) / 180));
+  const dy = radiusKm / 110.574;
+  for (let i = 0; i < points; i += 1) {
+    const angle = (i / points) * 2 * Math.PI;
+    ring.push([lng + dx * Math.cos(angle), lat + dy * Math.sin(angle)]);
+  }
+  ring.push(ring[0]);
+  return { type: 'Feature', properties: { color }, geometry: { type: 'Polygon', coordinates: [ring] } };
+}
+
 function extendBounds(bounds: maplibregl.LngLatBounds, coords: unknown): void {
   if (!Array.isArray(coords)) return;
   if (typeof coords[0] === 'number') {
@@ -134,24 +171,36 @@ function createUserDot(): HTMLDivElement {
 type MapViewProps = {
   reports: Report[];
   allies?: Ally[];
+  lostPets?: LostPet[];
+  mode?: MapMode;
+  activeAllyTypes?: AllyType[];
   onSelectReport: (report: Report) => void;
   onSelectAlly?: (ally: Ally) => void;
   onOpenList?: () => void;
   onVisibleReportsChange?: (reports: Report[]) => void;
+  onVisibleAlliesChange?: (allies: Ally[]) => void;
+  onVisibleLostPetsChange?: (pets: LostPet[]) => void;
   focusReport?: Report | null;
   focusAlly?: Ally | null;
+  focusLostPet?: LostPet | null;
   resetSignal?: number;
 };
 
 export function MapView({
   reports,
   allies = [],
+  lostPets = [],
+  mode = 'calle',
+  activeAllyTypes = [],
   onSelectReport,
   onSelectAlly,
   onOpenList,
   onVisibleReportsChange,
+  onVisibleAlliesChange,
+  onVisibleLostPetsChange,
   focusReport,
   focusAlly,
+  focusLostPet,
   resetSignal,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -184,11 +233,17 @@ export function MapView({
   const allyMarkersRef = useRef<maplibregl.Marker[]>([]);
   const renderAllyMarkersRef = useRef<(() => void) | null>(null);
   const onSelectAllyRef = useRef(onSelectAlly);
-  const [activeAllyTypes, setActiveAllyTypes] = useState<AllyType[]>([]);
   const activeAllyTypesRef = useRef<AllyType[]>(activeAllyTypes);
-  const [allyFilterOpen, setAllyFilterOpen] = useState(false);
   const allyPopupRef = useRef<maplibregl.Popup | null>(null);
+  const lostPetsRef = useRef<LostPet[]>(lostPets);
+  const lostMarkersRef = useRef<maplibregl.Marker[]>([]);
+  const renderLostPetsRef = useRef<(() => void) | null>(null);
+  const lostPopupRef = useRef<maplibregl.Popup | null>(null);
+  const onVisibleAlliesRef = useRef(onVisibleAlliesChange);
+  const onVisibleLostPetsRef = useRef(onVisibleLostPetsChange);
   const focusAllyRef = useRef<Ally | null>(focusAlly ?? null);
+  const modeRef = useRef<MapMode>(mode);
+  const applyModeRef = useRef<(() => void) | null>(null);
   const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
@@ -206,6 +261,14 @@ export function MapView({
   useEffect(() => {
     onVisibleRef.current = onVisibleReportsChange;
   }, [onVisibleReportsChange]);
+
+  useEffect(() => {
+    onVisibleAlliesRef.current = onVisibleAlliesChange;
+  }, [onVisibleAlliesChange]);
+
+  useEffect(() => {
+    onVisibleLostPetsRef.current = onVisibleLostPetsChange;
+  }, [onVisibleLostPetsChange]);
 
   useEffect(() => {
     if (focusReport) {
@@ -362,6 +425,25 @@ export function MapView({
         },
       });
 
+      map.addSource('perdidos-zonas', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      });
+      map.addLayer({
+        id: 'perdidos-fill',
+        type: 'fill',
+        source: 'perdidos-zonas',
+        layout: { visibility: 'none' },
+        paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.15 },
+      });
+      map.addLayer({
+        id: 'perdidos-line',
+        type: 'line',
+        source: 'perdidos-zonas',
+        layout: { visibility: 'none' },
+        paint: { 'line-color': ['get', 'color'], 'line-width': 2, 'line-opacity': 0.6 },
+      });
+
       let hoveredId: number | null = null;
 
       const selectColonia = (id: number, name: string, at: maplibregl.LngLat) => {
@@ -410,7 +492,7 @@ export function MapView({
       });
 
       const updatePinVisibility = () => {
-        const show = map.getZoom() >= PIN_MIN_ZOOM;
+        const show = modeRef.current === 'calle' && map.getZoom() >= PIN_MIN_ZOOM;
         for (const marker of markersRef.current) {
           marker.getElement().style.display = show ? 'block' : 'none';
         }
@@ -459,11 +541,15 @@ export function MapView({
       const renderAllyMarkers = () => {
         for (const marker of allyMarkersRef.current) marker.remove();
         allyMarkersRef.current = [];
+        const inAliados = modeRef.current === 'aliados';
         const active = activeAllyTypesRef.current;
+        const showAll = active.length === 0;
         const focusId = focusAllyRef.current?.id;
         for (const ally of alliesRef.current) {
-          if (!active.includes(ally.orgType) && ally.id !== focusId) continue;
-          const element = createAllyElement(ally.orgType);
+          const isFocus = ally.id === focusId;
+          if (!inAliados && !isFocus) continue;
+          if (inAliados && !showAll && !active.includes(ally.orgType) && !isFocus) continue;
+          const element = createAllyElement(ally);
           element.addEventListener('click', (event) => {
             event.stopPropagation();
             allyPopup
@@ -480,6 +566,68 @@ export function MapView({
       };
       renderAllyMarkersRef.current = renderAllyMarkers;
       renderAllyMarkers();
+
+      const lostPopup = new maplibregl.Popup({
+        closeButton: true,
+        closeOnClick: true,
+        offset: 16,
+        className: 'dasha-popup',
+      });
+      lostPopupRef.current = lostPopup;
+
+      const renderLostPets = () => {
+        for (const marker of lostMarkersRef.current) marker.remove();
+        lostMarkersRef.current = [];
+        const inPerdidos = modeRef.current === 'perdidos';
+        const source = map.getSource('perdidos-zonas') as maplibregl.GeoJSONSource | undefined;
+        const features = inPerdidos
+          ? lostPetsRef.current.map((pet) =>
+              circleFeature(pet.lng, pet.lat, pet.searchRadiusKm, lostColor(pet.lostAt)),
+            )
+          : [];
+        source?.setData({ type: 'FeatureCollection', features });
+        if (inPerdidos) {
+          for (const pet of lostPetsRef.current) {
+            const element = createLostPetElement(pet);
+            element.addEventListener('click', (event) => {
+              event.stopPropagation();
+              lostPopup.setLngLat([pet.lng, pet.lat]).setHTML(lostPopupHTML(pet)).addTo(map);
+            });
+            const marker = new maplibregl.Marker({ element })
+              .setLngLat([pet.lng, pet.lat])
+              .addTo(map);
+            lostMarkersRef.current.push(marker);
+          }
+        }
+      };
+      renderLostPetsRef.current = renderLostPets;
+
+      const applyModeVisibility = () => {
+        const calle = modeRef.current === 'calle';
+        // Las divisiones de colonias (contorno) se ven en todos los modos;
+        // el mapa de calor (relleno) y el hover solo en Calle.
+        if (map.getLayer('colonias-line')) {
+          map.setLayoutProperty('colonias-line', 'visibility', 'visible');
+        }
+        for (const layerId of ['colonias-fill', 'colonias-hover']) {
+          if (map.getLayer(layerId)) {
+            map.setLayoutProperty(layerId, 'visibility', calle ? 'visible' : 'none');
+          }
+        }
+        const perdidosVisibility = modeRef.current === 'perdidos' ? 'visible' : 'none';
+        for (const layerId of ['perdidos-fill', 'perdidos-line']) {
+          if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', perdidosVisibility);
+        }
+        // Al cambiar de modo se cierran los globos para que no queden sueltos.
+        popup.remove();
+        allyPopup.remove();
+        lostPopup.remove();
+        updatePinVisibility();
+        renderAllyMarkers();
+        renderLostPets();
+      };
+      applyModeRef.current = applyModeVisibility;
+      applyModeVisibility();
 
       if ('geolocation' in navigator) {
         navigator.geolocation.getCurrentPosition(
@@ -501,6 +649,18 @@ export function MapView({
         onVisibleRef.current?.(
           reportsRef.current.filter((report) => bounds.contains([report.lng, report.lat])),
         );
+        const active = activeAllyTypesRef.current;
+        const showAllAllies = active.length === 0;
+        onVisibleAlliesRef.current?.(
+          alliesRef.current.filter(
+            (ally) =>
+              (showAllAllies || active.includes(ally.orgType)) &&
+              bounds.contains([ally.lng, ally.lat]),
+          ),
+        );
+        onVisibleLostPetsRef.current?.(
+          lostPetsRef.current.filter((pet) => bounds.contains([pet.lng, pet.lat])),
+        );
       };
       emitVisibleRef.current = emitVisible;
       map.on('moveend', emitVisible);
@@ -517,6 +677,8 @@ export function MapView({
       markersRef.current = [];
       for (const marker of allyMarkersRef.current) marker.remove();
       allyMarkersRef.current = [];
+      for (const marker of lostMarkersRef.current) marker.remove();
+      lostMarkersRef.current = [];
       userMarkerRef.current?.remove();
       userMarkerRef.current = null;
       if (geoErrorTimer.current) window.clearTimeout(geoErrorTimer.current);
@@ -543,13 +705,40 @@ export function MapView({
     alliesRef.current = allies;
     if (!mapReady) return;
     renderAllyMarkersRef.current?.();
+    emitVisibleRef.current?.();
   }, [allies, mapReady]);
 
   useEffect(() => {
     activeAllyTypesRef.current = activeAllyTypes;
     if (!mapReady) return;
     renderAllyMarkersRef.current?.();
+    emitVisibleRef.current?.();
   }, [activeAllyTypes, mapReady]);
+
+  useEffect(() => {
+    modeRef.current = mode;
+    if (!mapReady) return;
+    applyModeRef.current?.();
+    emitVisibleRef.current?.();
+  }, [mode, mapReady]);
+
+  useEffect(() => {
+    lostPetsRef.current = lostPets;
+    if (!mapReady) return;
+    renderLostPetsRef.current?.();
+    emitVisibleRef.current?.();
+  }, [lostPets, mapReady]);
+
+  useEffect(() => {
+    if (!focusLostPet || !mapReady) return;
+    const map = mapRef.current;
+    if (!map) return;
+    map.flyTo({ center: [focusLostPet.lng, focusLostPet.lat], zoom: 15, duration: 900 });
+    lostPopupRef.current
+      ?.setLngLat([focusLostPet.lng, focusLostPet.lat])
+      .setHTML(lostPopupHTML(focusLostPet))
+      .addTo(map);
+  }, [focusLostPet, mapReady]);
 
   useEffect(() => {
     focusAllyRef.current = focusAlly ?? null;
@@ -612,12 +801,6 @@ export function MapView({
     selectColoniaRef.current?.(entry.id, name, bounds.getCenter());
     onOpenListRef.current?.();
     setQuery('');
-  };
-
-  const toggleAllyType = (type: AllyType) => {
-    setActiveAllyTypes((prev) =>
-      prev.includes(type) ? prev.filter((value) => value !== type) : [...prev, type],
-    );
   };
 
   const suggestions =
@@ -699,57 +882,11 @@ export function MapView({
         </button>
       </div>
 
-      <div className="absolute left-3 top-16 z-10">
-        <button
-          type="button"
-          onClick={() => setAllyFilterOpen((value) => !value)}
-          className="flex items-center gap-1.5 rounded-xl bg-white/95 px-3 py-2 text-xs font-semibold text-cobalto shadow-lg backdrop-blur transition-colors hover:bg-white"
-        >
-          <HeartHandshake className="h-4 w-4" />
-          Aliados
-          {activeAllyTypes.length > 0 && (
-            <span className="ml-0.5 rounded-full bg-cobalto px-1.5 text-[10px] font-bold text-white">
-              {activeAllyTypes.length}
-            </span>
-          )}
-        </button>
-
-        {allyFilterOpen && (
-          <div className="mt-1 w-48 rounded-xl bg-white p-2 shadow-lg">
-            <p className="px-2 py-1 text-[11px] text-neutral-400">Mostrar en el mapa</p>
-            <ul className="space-y-0.5">
-              {allyFilterTypes.map((option) => {
-                const on = activeAllyTypes.includes(option.value);
-                return (
-                  <li key={option.value}>
-                    <button
-                      type="button"
-                      onClick={() => toggleAllyType(option.value)}
-                      className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-neutral-700 transition-colors hover:bg-neutral-50"
-                    >
-                      <span
-                        className="h-3 w-3 flex-shrink-0 rounded-[3px]"
-                        style={{ backgroundColor: allyColors[option.value] }}
-                      />
-                      <span className="flex-1">{option.label}</span>
-                      {on && <Check className="h-4 w-4 text-cobalto" />}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-            {activeAllyTypes.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setActiveAllyTypes([])}
-                className="mt-1 w-full rounded-lg px-2 py-1.5 text-left text-xs font-medium text-neutral-400 transition-colors hover:bg-neutral-50"
-              >
-                Ocultar todos
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+      {mode === 'perdidos' && lostPets.length === 0 && (
+        <div className="pointer-events-none absolute left-1/2 top-16 z-10 -translate-x-1/2 rounded-xl bg-white/95 px-4 py-2 text-center text-xs text-neutral-500 shadow">
+          Aquí aparecerán las mascotas perdidas y su zona aproximada.
+        </div>
+      )}
 
       {geoError && (
         <div className="absolute left-3 right-3 top-28 z-10 rounded-lg bg-white/95 px-3 py-2 text-center text-xs text-red-600 shadow">
@@ -757,7 +894,7 @@ export function MapView({
         </div>
       )}
 
-      <MapLegend />
+      <MapLegend mode={mode} />
     </div>
   );
 }

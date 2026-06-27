@@ -5,14 +5,20 @@ import { PageHeader } from '../components/ui/PageHeader';
 import { CountUp } from '../components/ui/CountUp';
 import { ReportDetail } from '../components/map/ReportDetail';
 import { MapListPanel } from '../components/map/MapListPanel';
+import { AllyListPanel } from '../components/map/AllyListPanel';
+import { LostPetListPanel } from '../components/map/LostPetListPanel';
 import { MapFilters } from '../components/map/MapFilters';
 import {
   applyReportFilters,
   emptyFilters,
   type ReportFilters,
 } from '../lib/reportFilters';
+import { MapModeSwitch } from '../components/map/MapModeSwitch';
+import { AllyFilters } from '../components/map/AllyFilters';
 import { mockReports, type Report } from '../data/mockReports';
-import { mockAllies, type Ally } from '../data/mockAllies';
+import { mockAllies, type Ally, type AllyType } from '../data/mockAllies';
+import { mockLostPets, type LostPet } from '../data/mockLostPets';
+import { type MapMode } from '../lib/mapMode';
 import { getReports, getStats, getAllies, type Stats } from '../lib/api';
 
 const MapView = lazy(() =>
@@ -24,12 +30,20 @@ export function MapaPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [reports, setReports] = useState<Report[] | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
-  const [panelOpen, setPanelOpen] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(() => Boolean(searchParams.get('aliado')));
   const [visibleReports, setVisibleReports] = useState<Report[]>([]);
   const [focusReport, setFocusReport] = useState<Report | null>(null);
   const [resetSignal, setResetSignal] = useState(0);
   const [filters, setFilters] = useState<ReportFilters>(emptyFilters);
   const [allies, setAllies] = useState<Ally[]>([]);
+  const [mapMode, setMapMode] = useState<MapMode>(() =>
+    searchParams.get('aliado') ? 'aliados' : 'calle',
+  );
+  const [allyTypes, setAllyTypes] = useState<AllyType[]>([]);
+  const [visibleAllies, setVisibleAllies] = useState<Ally[]>([]);
+  const [visibleLostPets, setVisibleLostPets] = useState<LostPet[]>([]);
+  const [listFocusAlly, setListFocusAlly] = useState<Ally | null>(null);
+  const [focusLostPet, setFocusLostPet] = useState<LostPet | null>(null);
 
   const filteredReports = useMemo(
     () => (reports ? applyReportFilters(reports, filters) : null),
@@ -68,10 +82,21 @@ export function MapaPage() {
     : null;
 
   const aliadoId = searchParams.get('aliado');
-  const focusAlly = useMemo(
+  const urlFocusAlly = useMemo(
     () => (aliadoId ? (allies.find((ally) => ally.id === aliadoId) ?? null) : null),
     [aliadoId, allies],
   );
+  const focusAlly = listFocusAlly ?? urlFocusAlly;
+
+  const changeMode = (next: MapMode) => {
+    setMapMode(next);
+    // En Aliados y Perdidos la lista de la zona se muestra sola; en Calle se abre
+    // al tocar una colonia.
+    setPanelOpen(next === 'aliados' || next === 'perdidos');
+    setListFocusAlly(null);
+    setFocusLostPet(null);
+    if (next !== 'aliados' && aliadoId) setSearchParams({});
+  };
 
   const handleSelectAlly = (ally: Ally) => {
     navigate(`/aliados?aliado=${ally.id}`);
@@ -90,9 +115,31 @@ export function MapaPage() {
     setFocusReport(report);
   };
 
+  const selectAllyFromList = (ally: Ally) => {
+    setListFocusAlly(ally);
+  };
+
+  const selectLostFromList = (pet: LostPet) => {
+    setFocusLostPet(pet);
+  };
+
   const closePanel = () => {
     setPanelOpen(false);
     setResetSignal((value) => value + 1);
+  };
+
+  const renderPanel = () => {
+    if (mapMode === 'aliados') {
+      return (
+        <AllyListPanel allies={visibleAllies} onSelect={selectAllyFromList} onClose={closePanel} />
+      );
+    }
+    if (mapMode === 'perdidos') {
+      return (
+        <LostPetListPanel pets={visibleLostPets} onSelect={selectLostFromList} onClose={closePanel} />
+      );
+    }
+    return <MapListPanel reports={visibleReports} onSelect={selectFromList} onClose={closePanel} />;
   };
 
   const statCards = [
@@ -125,14 +172,18 @@ export function MapaPage() {
         ))}
       </div>
 
-      {reports !== null && (
-        <MapFilters
-          filters={filters}
-          onChange={setFilters}
-          total={reports.length}
-          shown={filteredReports?.length ?? 0}
-        />
-      )}
+      <div className="relative z-30 mt-4 flex items-start justify-between gap-3">
+        <MapModeSwitch mode={mapMode} onChange={changeMode} />
+        {mapMode === 'calle' && reports !== null && (
+          <MapFilters
+            filters={filters}
+            onChange={setFilters}
+            total={reports.length}
+            shown={filteredReports?.length ?? 0}
+          />
+        )}
+        {mapMode === 'aliados' && <AllyFilters activeTypes={allyTypes} onChange={setAllyTypes} />}
+      </div>
 
       <div className="relative isolate mt-4 flex h-[60vh] min-h-[420px] overflow-hidden rounded-3xl border border-neutral-200">
         <div className="relative h-full flex-1">
@@ -143,12 +194,18 @@ export function MapaPage() {
               <MapView
                 reports={filteredReports}
                 allies={allies}
+                lostPets={mockLostPets}
+                mode={mapMode}
+                activeAllyTypes={allyTypes}
                 onSelectReport={openReport}
                 onSelectAlly={handleSelectAlly}
                 onOpenList={() => setPanelOpen(true)}
                 onVisibleReportsChange={setVisibleReports}
+                onVisibleAlliesChange={setVisibleAllies}
+                onVisibleLostPetsChange={setVisibleLostPets}
                 focusReport={focusReport}
                 focusAlly={focusAlly}
+                focusLostPet={focusLostPet}
                 resetSignal={resetSignal}
               />
             </Suspense>
@@ -165,7 +222,7 @@ export function MapaPage() {
               transition={{ duration: 0.2, ease: 'easeOut' }}
               className="hidden h-full w-80 flex-shrink-0 border-l border-neutral-200 bg-white md:block"
             >
-              <MapListPanel reports={visibleReports} onSelect={selectFromList} onClose={closePanel} />
+              {renderPanel()}
             </motion.div>
           )}
         </AnimatePresence>
@@ -181,7 +238,7 @@ export function MapaPage() {
             transition={{ duration: 0.2, ease: 'easeOut' }}
             className="mt-3 h-[55vh] overflow-hidden rounded-2xl border border-neutral-200 bg-white md:hidden"
           >
-            <MapListPanel reports={visibleReports} onSelect={selectFromList} onClose={closePanel} />
+            {renderPanel()}
           </motion.div>
         )}
       </AnimatePresence>
