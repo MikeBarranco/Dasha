@@ -2,7 +2,7 @@ import type { Report, Severity } from '../data/mockReports';
 import type { Animal, AnimalStatus } from '../data/mockAnimals';
 import type { Ally, AllyType } from '../data/mockAllies';
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
+export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
 const TOKEN_KEY = 'dasha-token';
 const USER_KEY = 'dasha-user';
 

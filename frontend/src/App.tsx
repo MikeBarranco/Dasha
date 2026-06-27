@@ -15,6 +15,7 @@ import { RegistroPage } from './pages/RegistroPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { AdminLayout } from './components/admin/AdminLayout';
 import { AdminHomePage } from './pages/admin/AdminHomePage';
+import { AdminReportsPage } from './pages/admin/AdminReportsPage';
 import { AdminPlaceholderPage } from './pages/admin/AdminPlaceholderPage';
 
 function App() {
@@ -38,7 +39,7 @@ function App() {
         </Route>
         <Route path="admin" element={<AdminLayout />}>
           <Route index element={<AdminHomePage />} />
-          <Route path="reportes" element={<AdminPlaceholderPage title="Reportes" />} />
+          <Route path="reportes" element={<AdminReportsPage />} />
           <Route path="animales" element={<AdminPlaceholderPage title="Animales" />} />
           <Route path="aliados" element={<AdminPlaceholderPage title="Aliados" />} />
           <Route path="usuarios" element={<AdminPlaceholderPage title="Usuarios" />} />
