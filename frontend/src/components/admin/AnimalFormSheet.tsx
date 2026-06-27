@@ -130,7 +130,7 @@ export function AnimalFormSheet({ animal, organizations, onClose, onSaved }: Ani
             )}
             <div className="flex flex-wrap gap-2">
               {newPhotos.map((photo, index) => (
-                <div key={photo} className="relative">
+                <div key={index} className="relative">
                   <img src={photo} alt="" className="h-16 w-16 rounded-lg object-cover" />
                   <button
                     type="button"
