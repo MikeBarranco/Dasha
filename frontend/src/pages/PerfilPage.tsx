@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence } from 'motion/react';
 import {
@@ -14,12 +14,14 @@ import {
 } from 'lucide-react';
 import { Avatar } from '../components/ui/Avatar';
 import { AvatarPicker } from '../components/perfil/AvatarPicker';
+import { MyReports } from '../components/perfil/MyReports';
 import { SocialLinks } from '../components/ui/SocialLinks';
 import { cn } from '../lib/cn';
 import { mockUser } from '../data/mockUser';
-import { useAvatar } from '../lib/useAvatar';
+import { useAvatar, setStoredAvatar } from '../lib/useAvatar';
 import { useAuth } from '../lib/useAuth';
 import { useVolunteerStatus } from '../lib/useVolunteerStatus';
+import { getMe, updateMe, type MeProfile } from '../lib/api';
 
 function StatCard({ value, label }: { value: number; label: string }) {
   return (
@@ -64,6 +66,23 @@ export function PerfilPage() {
   const { user: account, logout } = useAuth();
   const { status: volunteerStatus } = useVolunteerStatus();
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [me, setMe] = useState<MeProfile | null>(null);
+
+  useEffect(() => {
+    if (!account) return;
+    let active = true;
+    getMe()
+      .then((data) => {
+        if (!active) return;
+        setMe(data);
+        // Sincroniza el avatar elegido en otro dispositivo.
+        if (data.avatarUrl) setStoredAvatar(data.id, data.avatarUrl);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [account]);
   const xpPercent = Math.min(100, Math.round((user.xp / user.xpToNext) * 100));
   const unlockedCount = user.medals.filter((medal) => medal.unlocked).length;
 
@@ -137,8 +156,8 @@ export function PerfilPage() {
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <StatCard value={user.stats.reportes} label="Reportes" />
-        <StatCard value={user.stats.rescates} label="Rescates apoyados" />
+        <StatCard value={me?.reportsCount ?? user.stats.reportes} label="Reportes" />
+        <StatCard value={me?.rescuesCount ?? user.stats.rescates} label="Rescates apoyados" />
         <StatCard value={user.stats.seguidos} label="Siguiendo" />
       </div>
 
@@ -167,6 +186,8 @@ export function PerfilPage() {
             </button>
           </div>
         ))}
+
+      <MyReports />
 
       <div>
         <div className="mb-3 flex items-center justify-between">
@@ -235,6 +256,7 @@ export function PerfilPage() {
             current={avatar}
             onSelect={(url) => {
               setAvatar(url);
+              updateMe({ avatarUrl: url }).catch(() => {});
               setPickerOpen(false);
             }}
             onClose={() => setPickerOpen(false)}

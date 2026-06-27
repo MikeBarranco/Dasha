@@ -225,6 +225,105 @@ export async function getLostPets(): Promise<{ species: string }[]> {
   return (data ?? []).map((raw) => ({ species: String(raw.species ?? '') }));
 }
 
+// Fetch autenticado tolerante a la forma de la respuesta: acepta el dato directo
+// (como /me, que viene plano) o envuelto en { data }.
+async function authedRaw<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const token = getToken();
+  if (!token) throw new Error('Inicia sesión para continuar');
+
+  const response = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      ...((options.headers as Record<string, string>) ?? {}),
+    },
+  });
+
+  const body = (await response.json().catch(() => null)) as unknown;
+  if (!response.ok) {
+    const message =
+      body && typeof body === 'object' && !Array.isArray(body)
+        ? (body as { message?: string }).message
+        : undefined;
+    throw new Error(message ?? 'Ocurrió un error con el servidor');
+  }
+  if (body && typeof body === 'object' && !Array.isArray(body) && 'data' in body) {
+    return (body as { data: T }).data;
+  }
+  return body as T;
+}
+
+export type MeProfile = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  phone: string;
+  avatarUrl: string | null;
+  level: number;
+  experience: number;
+  reportsCount: number;
+  rescuesCount: number;
+};
+
+export async function getMe(): Promise<MeProfile> {
+  const raw = await authedRaw<Record<string, unknown>>('/me');
+  const count =
+    raw._count && typeof raw._count === 'object' ? (raw._count as Record<string, unknown>) : {};
+  return {
+    id: String(raw.id ?? ''),
+    name: String(raw.name ?? ''),
+    email: String(raw.email ?? ''),
+    role: String(raw.role ?? 'citizen'),
+    phone: String(raw.phone ?? ''),
+    avatarUrl: typeof raw.avatarUrl === 'string' && raw.avatarUrl ? raw.avatarUrl : null,
+    level: Number(raw.level ?? 1),
+    experience: Number(raw.experiencePoints ?? raw.experience ?? 0),
+    reportsCount: Number(raw.reportsCount ?? count.reports ?? 0),
+    rescuesCount: Number(raw.rescuesCount ?? count.rescueAssignments ?? 0),
+  };
+}
+
+export async function updateMe(data: {
+  name?: string;
+  phone?: string;
+  avatarUrl?: string;
+}): Promise<void> {
+  await authedRaw('/me', { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export async function getMyReports(): Promise<Report[]> {
+  const data = await authedRaw<Record<string, unknown>[]>('/me/reports');
+  return (data ?? []).map((raw) => {
+    const species = String(raw.species ?? '');
+    let photo = '';
+    if (typeof raw.photo === 'string') photo = raw.photo;
+    else if (typeof raw.photoUrl === 'string') photo = raw.photoUrl;
+    else if (Array.isArray(raw.photos) && raw.photos.length > 0) {
+      const first = raw.photos[0];
+      photo = typeof first === 'string' ? first : String((first as Record<string, unknown>)?.url ?? '');
+    }
+    const conditionRaw = String(raw.condition ?? '');
+    const urgencyRaw = String(raw.urgency ?? raw.severity ?? '');
+    const statusRaw = String(raw.status ?? '');
+    return {
+      id: String(raw.id ?? ''),
+      lat: Number(raw.lat ?? 0),
+      lng: Number(raw.lng ?? 0),
+      colonia: String(raw.colonia ?? 'Sin colonia'),
+      species: species === 'cat' || species === 'gato' ? 'gato' : 'perro',
+      condition: conditionLabels[conditionRaw] ?? conditionRaw,
+      severity: (urgencyToSeverity[urgencyRaw] ??
+        (['baja', 'media', 'critica'].includes(urgencyRaw) ? urgencyRaw : 'media')) as Severity,
+      photo: photo || '/placeholder-animal.svg',
+      description: String(raw.description ?? ''),
+      reportedAgo: timeAgo(String(raw.created_at ?? raw.createdAt ?? '')),
+      status: statusLabels[statusRaw] ?? (statusRaw || 'Activo'),
+    };
+  });
+}
+
 type RawAnimal = {
   id: string;
   name: string;

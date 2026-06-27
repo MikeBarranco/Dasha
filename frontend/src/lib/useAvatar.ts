@@ -17,6 +17,13 @@ function readAvatar(): string {
   return window.localStorage.getItem(key) ?? defaultAvatar;
 }
 
+// Guarda el avatar de un usuario y avisa a la app. Se usa para sincronizar el
+// avatar que viene del backend (GET /me) entre dispositivos.
+export function setStoredAvatar(userId: string, url: string): void {
+  window.localStorage.setItem(`${KEY_PREFIX}${userId}`, url);
+  window.dispatchEvent(new Event(CHANGE_EVENT));
+}
+
 export function useAvatar() {
   const [avatar, setAvatarState] = useState<string>(readAvatar);
 
