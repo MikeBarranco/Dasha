@@ -17,9 +17,9 @@ import { MapModeSwitch } from '../components/map/MapModeSwitch';
 import { AllyFilters } from '../components/map/AllyFilters';
 import { mockReports, type Report } from '../data/mockReports';
 import { mockAllies, type Ally, type AllyType } from '../data/mockAllies';
-import { mockLostPets, type LostPet } from '../data/mockLostPets';
+import { type LostPet } from '../data/mockLostPets';
 import { type MapMode } from '../lib/mapMode';
-import { getReports, getStats, getAllies, type Stats } from '../lib/api';
+import { getReports, getStats, getAllies, getLostPets, type Stats } from '../lib/api';
 
 const MapView = lazy(() =>
   import('../components/map/MapView').then((module) => ({ default: module.MapView })),
@@ -40,6 +40,7 @@ export function MapaPage() {
     searchParams.get('aliado') ? 'aliados' : 'calle',
   );
   const [allyTypes, setAllyTypes] = useState<AllyType[]>([]);
+  const [lostPets, setLostPets] = useState<LostPet[]>([]);
   const [visibleAllies, setVisibleAllies] = useState<Ally[]>([]);
   const [visibleLostPets, setVisibleLostPets] = useState<LostPet[]>([]);
   const [listFocusAlly, setListFocusAlly] = useState<Ally | null>(null);
@@ -70,6 +71,13 @@ export function MapaPage() {
       })
       .catch(() => {
         if (active) setAllies(mockAllies);
+      });
+    getLostPets()
+      .then((data) => {
+        if (active) setLostPets(data);
+      })
+      .catch(() => {
+        if (active) setLostPets([]);
       });
     return () => {
       active = false;
@@ -208,7 +216,7 @@ export function MapaPage() {
               <MapView
                 reports={filteredReports}
                 allies={allies}
-                lostPets={mockLostPets}
+                lostPets={lostPets}
                 mode={mapMode}
                 activeAllyTypes={allyTypes}
                 onSelectReport={openReport}
