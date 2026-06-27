@@ -116,6 +116,10 @@ export function PerfilPage() {
     );
   }
 
+  const realRole = me?.role ?? account.role;
+  const roleLabel =
+    realRole === 'admin' ? 'Administrador' : realRole === 'volunteer' ? 'Voluntario' : 'Ciudadano';
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -134,7 +138,7 @@ export function PerfilPage() {
           <h1 className="font-display text-2xl font-bold text-cobalto">{account.name}</h1>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-cobalto/10 px-2.5 py-0.5 text-xs font-medium text-cobalto">
-              {user.role}
+              {roleLabel}
             </span>
             <span className="text-xs text-neutral-400">
               Nivel {user.level} · {user.levelName}
@@ -161,7 +165,7 @@ export function PerfilPage() {
         <StatCard value={user.stats.seguidos} label="Siguiendo" />
       </div>
 
-      {user.role === 'Ciudadano' &&
+      {realRole === 'citizen' &&
         (volunteerStatus === 'pending' ? (
           <div className="rounded-2xl border border-purpura/20 bg-purpura/5 p-5">
             <h2 className="font-display text-lg font-bold text-purpura">Solicitud en revisión</h2>

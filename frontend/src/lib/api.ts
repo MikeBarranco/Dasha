@@ -293,6 +293,26 @@ export async function updateMe(data: {
   await authedRaw('/me', { method: 'PATCH', body: JSON.stringify(data) });
 }
 
+// Convierte una imagen a Base64 (data URL) para mandarla en el body.
+export function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error('No se pudo leer la imagen'));
+    reader.readAsDataURL(file);
+  });
+}
+
+export async function postVolunteerApplication(data: {
+  ineFrontBase64: string;
+  ineBackBase64: string;
+  selfieBase64: string;
+  isFoster?: boolean;
+  fosterCapacity?: number;
+}): Promise<void> {
+  await authedRaw('/me/volunteer-application', { method: 'POST', body: JSON.stringify(data) });
+}
+
 export async function getMyReports(): Promise<Report[]> {
   const data = await authedRaw<Record<string, unknown>[]>('/me/reports');
   return (data ?? []).map((raw) => {
