@@ -4,20 +4,24 @@ import { useDragControls, type PanInfo } from 'motion/react';
 // Cierre por deslizamiento para las hojas (bottom sheets), estilo iOS.
 // Permite arrastrar para cerrar desde cualquier parte de la hoja, pero solo
 // cuando el contenido esta hasta arriba y el dedo va hacia abajo; en cualquier
-// otro caso deja hacer scroll normal. Funciona con dedo (celular) y mouse.
+// otro caso deja hacer scroll normal. Es un gesto TACTIL (celular): con mouse
+// NO se arrastra la hoja (en escritorio se cierra con la X o clic afuera).
 export function useSheetDismiss(onClose: () => void) {
   const dragControls = useDragControls();
   const scrollRef = useRef<HTMLDivElement>(null);
   const startY = useRef(0);
   const decided = useRef(false);
+  const allowDrag = useRef(false);
 
   const onPointerDown = (event: React.PointerEvent) => {
     decided.current = false;
     startY.current = event.clientY;
+    // Solo habilitamos el arrastre con dedo/lapiz, no con mouse.
+    allowDrag.current = event.pointerType !== 'mouse';
   };
 
   const onPointerMove = (event: React.PointerEvent) => {
-    if (decided.current) return;
+    if (decided.current || !allowDrag.current) return;
     const deltaY = event.clientY - startY.current;
     const atTop = (scrollRef.current?.scrollTop ?? 0) <= 0;
     if (atTop && deltaY > 6) {
