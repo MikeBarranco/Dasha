@@ -30,8 +30,8 @@ export function AnimalFormSheet({ animal, organizations, onClose, onSaved }: Ani
   const [organizationId, setOrganizationId] = useState(animal?.organizationId ?? '');
   const [diagnosis, setDiagnosis] = useState(animal?.diagnosis ?? '');
   const [treatment, setTreatment] = useState(animal?.treatment ?? '');
-  const [story, setStory] = useState(animal?.story ?? '');
-  const [cost, setCost] = useState(animal?.totalCostNeeded ? String(animal.totalCostNeeded) : '');
+  const [history, setHistory] = useState(animal?.history ?? '');
+  const [cost, setCost] = useState(animal?.estimatedCost ? String(animal.estimatedCost) : '');
   const [newPhotos, setNewPhotos] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,10 +63,10 @@ export function AnimalFormSheet({ animal, organizations, onClose, onSaved }: Ani
       name: name.trim(),
       species,
       status,
-      story: story.trim() || undefined,
+      history: history.trim() || undefined,
       diagnosis: diagnosis.trim() || undefined,
       treatment: treatment.trim() || undefined,
-      totalCostNeeded: cost ? Number(cost) : undefined,
+      estimatedCost: cost ? Number(cost) : undefined,
       organizationId: organizationId || null,
       ...(newPhotos.length > 0 ? { photosBase64: newPhotos } : {}),
     };
@@ -233,8 +233,8 @@ export function AnimalFormSheet({ animal, organizations, onClose, onSaved }: Ani
 
           <Field label="Historia">
             <textarea
-              value={story}
-              onChange={(event) => setStory(event.target.value)}
+              value={history}
+              onChange={(event) => setHistory(event.target.value)}
               maxLength={600}
               rows={3}
               className={`${inputClass} resize-none`}

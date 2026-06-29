@@ -155,15 +155,21 @@ export function SerVoluntarioPage() {
     setSubmitting(true);
     setError(null);
     try {
+      const cleanPhone = phone.replace(/\s/g, '');
       await postVolunteerApplication({
         ineFrontBase64: ineFront,
         ineBackBase64: ineBack,
         selfieBase64: selfie,
         isFoster,
         ...(isFoster && fosterCapacity ? { fosterCapacity: Number(fosterCapacity) } : {}),
+        phone: cleanPhone,
+        zone: zone.trim(),
+        availability: dispo.join(', '),
+        helpType: ayuda.join(', '),
+        motivation: motivation.trim(),
       });
-      // Guarda el teléfono en el perfil (el resto de campos es para revisión).
-      updateMe({ phone: phone.replace(/\s/g, '') }).catch(() => {});
+      // También guarda el teléfono en el perfil del usuario.
+      updateMe({ phone: cleanPhone }).catch(() => {});
       apply();
       setDone(true);
     } catch (err) {

@@ -97,6 +97,32 @@ function VolunteerCard({
         </p>
       )}
 
+      {(volunteer.zone || volunteer.helpType || volunteer.availability || volunteer.motivation) && (
+        <div className="mt-2 space-y-0.5 text-xs text-neutral-500">
+          {volunteer.zone && (
+            <p>
+              <span className="font-medium text-neutral-600">Zona:</span> {volunteer.zone}
+            </p>
+          )}
+          {volunteer.helpType && (
+            <p>
+              <span className="font-medium text-neutral-600">Ayuda:</span> {volunteer.helpType}
+            </p>
+          )}
+          {volunteer.availability && (
+            <p>
+              <span className="font-medium text-neutral-600">Disponibilidad:</span>{' '}
+              {volunteer.availability}
+            </p>
+          )}
+          {volunteer.motivation && (
+            <p>
+              <span className="font-medium text-neutral-600">Motivación:</span> {volunteer.motivation}
+            </p>
+          )}
+        </div>
+      )}
+
       <div className="mt-3 flex gap-2">
         <PhotoThumb src={volunteer.ineFront} label="INE frente" onView={onView} />
         <PhotoThumb src={volunteer.ineBack} label="INE reverso" onView={onView} />
