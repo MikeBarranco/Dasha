@@ -83,8 +83,20 @@ export function PerfilPage() {
       active = false;
     };
   }, [account]);
-  const xpPercent = Math.min(100, Math.round((user.xp / user.xpToNext) * 100));
-  const unlockedCount = user.medals.filter((medal) => medal.unlocked).length;
+  const level = me?.level ?? user.level;
+  const xp = me?.experience ?? user.xp;
+  const xpToNext = me ? Math.max(1, me.level * 100) : user.xpToNext;
+  const xpPercent = Math.min(100, Math.round((xp / xpToNext) * 100));
+  // Las medallas reales (achievements) vienen ya desbloqueadas desde /me.
+  const medals = me
+    ? me.achievements.map((item) => ({
+        id: item.name,
+        name: item.name,
+        image: item.image,
+        unlocked: true,
+      }))
+    : user.medals;
+  const unlockedCount = medals.filter((medal) => medal.unlocked).length;
 
   if (!account) {
     return (
@@ -140,9 +152,7 @@ export function PerfilPage() {
             <span className="rounded-full bg-cobalto/10 px-2.5 py-0.5 text-xs font-medium text-cobalto">
               {roleLabel}
             </span>
-            <span className="text-xs text-neutral-400">
-              Nivel {user.level} · {user.levelName}
-            </span>
+            <span className="text-xs text-neutral-400">Nivel {level}</span>
           </div>
         </div>
       </div>
@@ -151,7 +161,7 @@ export function PerfilPage() {
         <div className="mb-1.5 flex items-center justify-between text-xs text-neutral-500">
           <span>Experiencia</span>
           <span>
-            {user.xp} / {user.xpToNext} XP
+            {xp} / {xpToNext} XP
           </span>
         </div>
         <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-100">
@@ -196,32 +206,42 @@ export function PerfilPage() {
       <div>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-display text-lg font-bold text-cobalto">Medallas</h2>
-          <span className="text-xs text-neutral-400">
-            {unlockedCount} de {user.medals.length}
-          </span>
+          {medals.length > 0 && (
+            <span className="text-xs text-neutral-400">
+              {unlockedCount} de {medals.length}
+            </span>
+          )}
         </div>
-        <div className="grid grid-cols-3 gap-4 sm:grid-cols-4">
-          {user.medals.map((medal) => (
-            <div key={medal.id} className="flex flex-col items-center text-center">
-              <div className="relative h-20 w-20">
-                <img
-                  src={medal.image}
-                  alt={medal.name}
-                  className={cn(
-                    'h-full w-full object-contain',
-                    !medal.unlocked && 'opacity-40 grayscale',
+        {medals.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-neutral-300 bg-white/60 px-6 py-8 text-center">
+            <p className="text-sm text-neutral-500">
+              Aún no tienes medallas. Reporta y ayuda para empezar a ganarlas.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-4 sm:grid-cols-4">
+            {medals.map((medal) => (
+              <div key={medal.id} className="flex flex-col items-center text-center">
+                <div className="relative h-20 w-20">
+                  <img
+                    src={medal.image}
+                    alt={medal.name}
+                    className={cn(
+                      'h-full w-full object-contain',
+                      !medal.unlocked && 'opacity-40 grayscale',
+                    )}
+                  />
+                  {!medal.unlocked && (
+                    <span className="absolute inset-0 flex items-center justify-center">
+                      <Lock className="h-5 w-5 text-neutral-400" />
+                    </span>
                   )}
-                />
-                {!medal.unlocked && (
-                  <span className="absolute inset-0 flex items-center justify-center">
-                    <Lock className="h-5 w-5 text-neutral-400" />
-                  </span>
-                )}
+                </div>
+                <p className="mt-1 text-xs font-medium text-neutral-600">{medal.name}</p>
               </div>
-              <p className="mt-1 text-xs font-medium text-neutral-600">{medal.name}</p>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="divide-y divide-neutral-100 overflow-hidden rounded-2xl border border-neutral-200 bg-white">

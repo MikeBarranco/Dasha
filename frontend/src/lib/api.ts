@@ -240,8 +240,14 @@ export async function getLostPets(): Promise<LostPet[]> {
       lat: Number(raw.lat ?? 0),
       lng: Number(raw.lng ?? 0),
       searchRadiusKm: Number(raw.searchRadiusKm ?? raw.search_radius_km ?? 1),
-      lostAt: String(raw.lostAt ?? raw.lost_at ?? raw.createdAt ?? raw.created_at ?? ''),
-      description: raw.description ? String(raw.description) : undefined,
+      lostAt: String(
+        raw.lastSeenAt ?? raw.lostAt ?? raw.lost_at ?? raw.createdAt ?? raw.created_at ?? '',
+      ),
+      description: raw.description
+        ? String(raw.description)
+        : raw.distinctiveMarks
+          ? String(raw.distinctiveMarks)
+          : undefined,
       contactPhone:
         String(raw.contactWhatsapp ?? raw.contactPhone ?? raw.whatsapp ?? '') || undefined,
     };
@@ -277,6 +283,12 @@ async function authedRaw<T>(path: string, options: RequestInit = {}): Promise<T>
   return body as T;
 }
 
+export type Achievement = {
+  name: string;
+  description: string;
+  image: string;
+};
+
 export type MeProfile = {
   id: string;
   name: string;
@@ -288,12 +300,31 @@ export type MeProfile = {
   experience: number;
   reportsCount: number;
   rescuesCount: number;
+  achievements: Achievement[];
 };
 
 export async function getMe(): Promise<MeProfile> {
   const raw = await authedRaw<Record<string, unknown>>('/me');
   const count =
     raw._count && typeof raw._count === 'object' ? (raw._count as Record<string, unknown>) : {};
+
+  // Cada elemento desbloqueado viene como { achievement: { name, description, iconUrl } }.
+  const rawAchievements = Array.isArray(raw.achievements) ? raw.achievements : [];
+  const achievements: Achievement[] = rawAchievements
+    .map((item) => {
+      const nested =
+        item && typeof item === 'object' && 'achievement' in item
+          ? (item as Record<string, unknown>).achievement
+          : item;
+      const obj = nested && typeof nested === 'object' ? (nested as Record<string, unknown>) : {};
+      return {
+        name: String(obj.name ?? ''),
+        description: String(obj.description ?? ''),
+        image: String(obj.iconUrl ?? obj.image ?? ''),
+      };
+    })
+    .filter((item) => item.name || item.image);
+
   return {
     id: String(raw.id ?? ''),
     name: String(raw.name ?? ''),
@@ -305,6 +336,7 @@ export async function getMe(): Promise<MeProfile> {
     experience: Number(raw.experiencePoints ?? raw.experience ?? 0),
     reportsCount: Number(raw.reportsCount ?? count.reports ?? 0),
     rescuesCount: Number(raw.rescuesCount ?? count.rescueAssignments ?? 0),
+    achievements,
   };
 }
 
@@ -322,6 +354,11 @@ export async function postVolunteerApplication(data: {
   selfieBase64: string;
   isFoster?: boolean;
   fosterCapacity?: number;
+  phone?: string;
+  zone?: string;
+  availability?: string;
+  helpType?: string;
+  motivation?: string;
 }): Promise<void> {
   await authedRaw('/me/volunteer-application', { method: 'POST', body: JSON.stringify(data) });
 }
@@ -361,11 +398,13 @@ type RawAnimal = {
   id: string;
   name: string;
   species: string;
-  story: string | null;
+  history?: string | null;
+  story?: string | null;
   status: string;
   diagnosis: string | null;
   treatment: string | null;
-  totalCostNeeded: string | null;
+  estimatedCost?: string | number | null;
+  totalCostNeeded?: string | number | null;
   totalRaised: string | null;
   photos: { url: string; orderIndex: number }[] | null;
   organization: { name?: string; address?: string } | null;
@@ -392,10 +431,10 @@ export async function getAnimals(): Promise<Animal[]> {
       size: 'Mediano',
       zone: raw.organization?.address ?? raw.organization?.name ?? 'Puebla',
       photos: photos.length > 0 ? photos : ['/placeholder-animal.svg'],
-      story: raw.story ?? '',
+      story: raw.history ?? raw.story ?? '',
       diagnosis: raw.diagnosis ?? raw.treatment ?? 'En valoración',
       vet: raw.organization?.name ?? 'Aliado Dasha',
-      totalNeeded: Number(raw.totalCostNeeded ?? 0),
+      totalNeeded: Number(raw.estimatedCost ?? raw.totalCostNeeded ?? 0),
       totalRaised: Number(raw.totalRaised ?? 0),
       status: animalStatusLabels[raw.status] ?? 'En tratamiento',
     };
