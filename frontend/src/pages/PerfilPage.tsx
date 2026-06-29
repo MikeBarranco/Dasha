@@ -18,6 +18,7 @@ import { MyReports } from '../components/perfil/MyReports';
 import { SocialLinks } from '../components/ui/SocialLinks';
 import { cn } from '../lib/cn';
 import { mockUser } from '../data/mockUser';
+import { resolveMedals } from '../data/medals';
 import { useAvatar, setStoredAvatar } from '../lib/useAvatar';
 import { useAuth } from '../lib/useAuth';
 import { useVolunteerStatus } from '../lib/useVolunteerStatus';
@@ -67,6 +68,9 @@ export function PerfilPage() {
   const { status: volunteerStatus } = useVolunteerStatus();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [me, setMe] = useState<MeProfile | null>(null);
+  const [selectedMedal, setSelectedMedal] = useState<{ name: string; description: string } | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!account) return;
@@ -87,15 +91,9 @@ export function PerfilPage() {
   const xp = me?.experience ?? user.xp;
   const xpToNext = me ? Math.max(1, me.level * 100) : user.xpToNext;
   const xpPercent = Math.min(100, Math.round((xp / xpToNext) * 100));
-  // Las medallas reales (achievements) vienen ya desbloqueadas desde /me.
-  const medals = me
-    ? me.achievements.map((item) => ({
-        id: item.name,
-        name: item.name,
-        image: item.image,
-        unlocked: true,
-      }))
-    : user.medals;
+  // Catálogo completo de medallas; se encienden las que el usuario ya ganó
+  // (los achievements reales de /me).
+  const medals = resolveMedals(me ? me.achievements.map((item) => item.name) : []);
   const unlockedCount = medals.filter((medal) => medal.unlocked).length;
 
   if (!account) {
@@ -206,40 +204,42 @@ export function PerfilPage() {
       <div>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-display text-lg font-bold text-cobalto">Medallas</h2>
-          {medals.length > 0 && (
-            <span className="text-xs text-neutral-400">
-              {unlockedCount} de {medals.length}
-            </span>
-          )}
+          <span className="text-xs text-neutral-400">
+            {unlockedCount} de {medals.length}
+          </span>
         </div>
-        {medals.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-neutral-300 bg-white/60 px-6 py-8 text-center">
-            <p className="text-sm text-neutral-500">
-              Aún no tienes medallas. Reporta y ayuda para empezar a ganarlas.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-3 gap-4 sm:grid-cols-4">
-            {medals.map((medal) => (
-              <div key={medal.id} className="flex flex-col items-center text-center">
-                <div className="relative h-20 w-20">
-                  <img
-                    src={medal.image}
-                    alt={medal.name}
-                    className={cn(
-                      'h-full w-full object-contain',
-                      !medal.unlocked && 'opacity-40 grayscale',
-                    )}
-                  />
-                  {!medal.unlocked && (
-                    <span className="absolute inset-0 flex items-center justify-center">
-                      <Lock className="h-5 w-5 text-neutral-400" />
-                    </span>
+        <div className="grid grid-cols-3 gap-4 sm:grid-cols-4">
+          {medals.map((medal) => (
+            <button
+              key={medal.id}
+              type="button"
+              onClick={() => setSelectedMedal({ name: medal.name, description: medal.description })}
+              title={medal.description}
+              className="flex flex-col items-center text-center"
+            >
+              <div className="relative h-20 w-20">
+                <img
+                  src={medal.image}
+                  alt={medal.name}
+                  className={cn(
+                    'h-full w-full object-contain',
+                    !medal.unlocked && 'opacity-40 grayscale',
                   )}
-                </div>
-                <p className="mt-1 text-xs font-medium text-neutral-600">{medal.name}</p>
+                />
+                {!medal.unlocked && (
+                  <span className="absolute inset-0 flex items-center justify-center">
+                    <Lock className="h-5 w-5 text-neutral-400" />
+                  </span>
+                )}
               </div>
-            ))}
+              <p className="mt-1 text-xs font-medium text-neutral-600">{medal.name}</p>
+            </button>
+          ))}
+        </div>
+        {selectedMedal && (
+          <div className="mt-3 rounded-2xl border border-neutral-200 bg-white p-3 text-center">
+            <p className="text-sm font-semibold text-cobalto">{selectedMedal.name}</p>
+            <p className="mt-0.5 text-xs text-neutral-500">{selectedMedal.description}</p>
           </div>
         )}
       </div>

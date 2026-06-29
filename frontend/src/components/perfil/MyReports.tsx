@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { getMyReports } from '../../lib/api';
+import { EmptyState } from '../ui/EmptyState';
 import type { Report } from '../../data/mockReports';
 
 export function MyReports() {
@@ -47,9 +48,11 @@ export function MyReports() {
       )}
 
       {reports !== null && reports.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-neutral-300 bg-white/60 px-6 py-8 text-center">
-          <p className="text-sm text-neutral-500">Todavía no has hecho reportes.</p>
-        </div>
+        <EmptyState
+          image="/illustrations/vacio-reportes.webp"
+          title="Aún no has hecho reportes"
+          message="Cuando reportes un animalito, aquí verás tu historial."
+        />
       )}
 
       {reports !== null && reports.length > 0 && (
