@@ -50,4 +50,12 @@ router.delete('/forum/replies/:id', AdminController.deleteForumReply);
 router.get('/volunteers', AdminController.getVolunteerApplications);
 router.patch('/volunteers/:id/status', AdminController.updateVolunteerStatus);
 
+// ==========================================
+// EVENTOS
+// ==========================================
+router.get('/events', AdminController.getAllEvents);
+router.post('/events', AdminController.createEvent);
+router.patch('/events/:id', AdminController.updateEvent);
+router.delete('/events/:id', AdminController.deleteEvent);
+
 export default router;

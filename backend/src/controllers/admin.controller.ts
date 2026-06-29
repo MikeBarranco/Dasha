@@ -43,7 +43,15 @@ export class AdminController {
   // ==========================================
   static async getAllReports(req: Request, res: Response, next: NextFunction) {
     try {
+      const { userId } = req.query;
+      
+      const whereClause: any = {};
+      if (userId) {
+        whereClause.userId = userId as string;
+      }
+
       const reports = await prisma.report.findMany({
+        where: whereClause,
         orderBy: { createdAt: 'desc' },
         include: {
           user: { select: { name: true, email: true } },
@@ -340,6 +348,8 @@ export class AdminController {
           selfieUrl: true,
           isFoster: true,
           fosterCapacity: true,
+          phone: true,
+          volunteerPrefs: true,
           createdAt: true
         },
         orderBy: { createdAt: 'desc' }
@@ -405,6 +415,96 @@ export class AdminController {
       });
 
       res.status(200).json({ message: `Solicitud ${status === 'approved' ? 'aprobada' : 'rechazada'} exitosamente`, user: updatedUser });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ==========================================
+  // EVENTOS
+  // ==========================================
+  static async getAllEvents(req: Request, res: Response, next: NextFunction) {
+    try {
+      const events = await prisma.event.findMany({
+        orderBy: { eventDate: 'desc' },
+        include: {
+          organization: { select: { name: true } }
+        }
+      });
+      res.status(200).json(events);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async createEvent(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { imageBase64, eventDate, endDate, organizationId, ...data } = req.body;
+      
+      let imageUrl = null;
+      let imagePublicId = null;
+
+      if (imageBase64) {
+        const uploadRes = await cloudinary.uploader.upload(imageBase64, {
+          folder: 'dasha/events'
+        });
+        imageUrl = uploadRes.secure_url;
+        imagePublicId = uploadRes.public_id;
+      }
+
+      const event = await prisma.event.create({
+        data: {
+          ...data,
+          organizationId,
+          eventDate: new Date(eventDate),
+          endDate: endDate ? new Date(endDate) : null,
+          imageUrl,
+          imagePublicId
+        }
+      });
+
+      res.status(201).json(event);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async updateEvent(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      const { imageBase64, eventDate, endDate, organizationId, ...data } = req.body;
+      
+      const updateData: any = { ...data };
+      if (organizationId) updateData.organizationId = organizationId;
+      if (eventDate) updateData.eventDate = new Date(eventDate);
+      if (endDate) updateData.endDate = new Date(endDate);
+
+      if (imageBase64 && imageBase64.startsWith('data:image')) {
+        const uploadRes = await cloudinary.uploader.upload(imageBase64, {
+          folder: 'dasha/events'
+        });
+        updateData.imageUrl = uploadRes.secure_url;
+        updateData.imagePublicId = uploadRes.public_id;
+      }
+
+      const updated = await prisma.event.update({
+        where: { id },
+        data: updateData
+      });
+
+      res.status(200).json(updated);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async deleteEvent(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      await prisma.event.delete({
+        where: { id }
+      });
+      res.status(200).json({ message: 'Evento eliminado correctamente' });
     } catch (error) {
       next(error);
     }

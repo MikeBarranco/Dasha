@@ -294,6 +294,7 @@ model User {
   experiencePoints Int                                    @default(0) @map("experience_points")
   reputationScore  Int                                    @default(0) @map("reputation_score")
   notifPrefs       Json?                                  @map("notif_prefs")
+  volunteerPrefs   Json?                                  @map("volunteer_prefs")
   createdAt        DateTime                               @default(now()) @map("created_at") @db.Timestamptz
   updatedAt        DateTime                               @default(now()) @map("updated_at") @db.Timestamptz
   lastLogin        DateTime?                              @map("last_login") @db.Timestamptz
