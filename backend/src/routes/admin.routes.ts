@@ -12,6 +12,7 @@ router.use(requireRole('admin'));
 // USUARIOS
 // ==========================================
 router.get('/users', AdminController.getAllUsers);
+router.patch('/users/:id/role', AdminController.updateUserRole);
 router.delete('/users/:id', AdminController.deleteUser);
 
 // ==========================================
