@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { ProgressBar } from '../components/ui/ProgressBar';
+import { EmptyState } from '../components/ui/EmptyState';
 import { AnimalDetail } from '../components/rehab/AnimalDetail';
 import { mockAnimals, type Animal, type AnimalSize, type AnimalStatus } from '../data/mockAnimals';
 import { getAnimals } from '../lib/api';
@@ -224,15 +225,20 @@ export function RehabilitacionPage() {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="mt-8 rounded-2xl border border-dashed border-neutral-300 py-12 text-center">
-          <p className="text-sm text-neutral-500">No encontramos animalitos con esos filtros.</p>
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="mt-2 text-sm font-medium text-cobalto hover:underline"
+        <div className="mt-8">
+          <EmptyState
+            image="/illustrations/vacio-reportes.webp"
+            title="Sin resultados"
+            message="No encontramos animalitos con esos filtros."
           >
-            Limpiar filtros
-          </button>
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="mt-3 text-sm font-medium text-cobalto hover:underline"
+            >
+              Limpiar filtros
+            </button>
+          </EmptyState>
         </div>
       ) : (
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

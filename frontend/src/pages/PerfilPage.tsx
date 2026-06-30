@@ -18,6 +18,7 @@ import { MyReports } from '../components/perfil/MyReports';
 import { SocialLinks } from '../components/ui/SocialLinks';
 import { cn } from '../lib/cn';
 import { mockUser } from '../data/mockUser';
+import { resolveMedals } from '../data/medals';
 import { useAvatar, setStoredAvatar } from '../lib/useAvatar';
 import { useAuth } from '../lib/useAuth';
 import { useVolunteerStatus } from '../lib/useVolunteerStatus';
@@ -67,6 +68,9 @@ export function PerfilPage() {
   const { status: volunteerStatus } = useVolunteerStatus();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [me, setMe] = useState<MeProfile | null>(null);
+  const [selectedMedal, setSelectedMedal] = useState<{ name: string; description: string } | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!account) return;
@@ -83,8 +87,14 @@ export function PerfilPage() {
       active = false;
     };
   }, [account]);
-  const xpPercent = Math.min(100, Math.round((user.xp / user.xpToNext) * 100));
-  const unlockedCount = user.medals.filter((medal) => medal.unlocked).length;
+  const level = me?.level ?? user.level;
+  const xp = me?.experience ?? user.xp;
+  const xpToNext = me ? Math.max(1, me.level * 100) : user.xpToNext;
+  const xpPercent = Math.min(100, Math.round((xp / xpToNext) * 100));
+  // Catálogo completo de medallas; se encienden las que el usuario ya ganó
+  // (los achievements reales de /me).
+  const medals = resolveMedals(me ? me.achievements.map((item) => item.name) : []);
+  const unlockedCount = medals.filter((medal) => medal.unlocked).length;
 
   if (!account) {
     return (
@@ -140,9 +150,7 @@ export function PerfilPage() {
             <span className="rounded-full bg-cobalto/10 px-2.5 py-0.5 text-xs font-medium text-cobalto">
               {roleLabel}
             </span>
-            <span className="text-xs text-neutral-400">
-              Nivel {user.level} · {user.levelName}
-            </span>
+            <span className="text-xs text-neutral-400">Nivel {level}</span>
           </div>
         </div>
       </div>
@@ -151,7 +159,7 @@ export function PerfilPage() {
         <div className="mb-1.5 flex items-center justify-between text-xs text-neutral-500">
           <span>Experiencia</span>
           <span>
-            {user.xp} / {user.xpToNext} XP
+            {xp} / {xpToNext} XP
           </span>
         </div>
         <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-100">
@@ -197,12 +205,18 @@ export function PerfilPage() {
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-display text-lg font-bold text-cobalto">Medallas</h2>
           <span className="text-xs text-neutral-400">
-            {unlockedCount} de {user.medals.length}
+            {unlockedCount} de {medals.length}
           </span>
         </div>
         <div className="grid grid-cols-3 gap-4 sm:grid-cols-4">
-          {user.medals.map((medal) => (
-            <div key={medal.id} className="flex flex-col items-center text-center">
+          {medals.map((medal) => (
+            <button
+              key={medal.id}
+              type="button"
+              onClick={() => setSelectedMedal({ name: medal.name, description: medal.description })}
+              title={medal.description}
+              className="flex flex-col items-center text-center"
+            >
               <div className="relative h-20 w-20">
                 <img
                   src={medal.image}
@@ -219,9 +233,15 @@ export function PerfilPage() {
                 )}
               </div>
               <p className="mt-1 text-xs font-medium text-neutral-600">{medal.name}</p>
-            </div>
+            </button>
           ))}
         </div>
+        {selectedMedal && (
+          <div className="mt-3 rounded-2xl border border-neutral-200 bg-white p-3 text-center">
+            <p className="text-sm font-semibold text-cobalto">{selectedMedal.name}</p>
+            <p className="mt-0.5 text-xs text-neutral-500">{selectedMedal.description}</p>
+          </div>
+        )}
       </div>
 
       <div className="divide-y divide-neutral-100 overflow-hidden rounded-2xl border border-neutral-200 bg-white">

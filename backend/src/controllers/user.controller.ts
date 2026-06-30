@@ -178,7 +178,11 @@ export class UserController {
         return;
       }
 
-      const { ineFrontBase64, ineBackBase64, selfieBase64, isFoster, fosterCapacity, phone, zone, availability, helpType, motivation } = req.body;
+      const { 
+        ineFrontBase64, ineBackBase64, selfieBase64, 
+        isFoster, fosterCapacity, 
+        phone, zone, availability, helpType, motivation 
+      } = req.body;
 
       if (!ineFrontBase64 || !ineBackBase64 || !selfieBase64) {
         res.status(400).json({ error: 'Debes proporcionar las fotos del INE (frente y reverso) y la selfie' });
@@ -204,22 +208,25 @@ export class UserController {
           fosterCapacity: fosterCapacity || 0,
           phone: phone || undefined,
           volunteerPrefs: {
-            zone: zone || '',
-            availability: availability || '',
-            helpType: helpType || '',
-            motivation: motivation || ''
+            zone,
+            availability,
+            helpType,
+            motivation
           }
         },
         select: {
           id: true,
           name: true,
           volunteerStatus: true,
-          isFoster: true
+          isFoster: true,
+          phone: true,
+          volunteerPrefs: true
         }
       });
 
       res.status(200).json({ message: 'Solicitud enviada correctamente', user: updatedUser });
     } catch (error) {
+      console.error('Error en applyForVolunteer:', error);
       next(error);
     }
   }

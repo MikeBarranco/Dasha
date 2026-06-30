@@ -104,6 +104,8 @@ function mapAdminReport(raw: Raw): AdminReport {
         ? asString(reporterRaw)
         : null;
 
+  const photos = mapPhotos(pick(raw, ['photos']));
+
   return {
     id: asString(pick(raw, ['id', '_id'])),
     species: speciesRaw === 'cat' || speciesRaw === 'gato' ? 'gato' : 'perro',
@@ -113,7 +115,8 @@ function mapAdminReport(raw: Raw): AdminReport {
     status: asString(pick(raw, ['status']), 'active'),
     description: asString(pick(raw, ['description'])),
     colonia: asString(pick(raw, ['colonia', 'neighborhood', 'colony']), 'Sin colonia'),
-    photo: asString(pick(raw, ['photo', 'photoUrl', 'photo_url']), '/placeholder-animal.svg'),
+    photo:
+      photos[0] || asString(pick(raw, ['photo', 'photoUrl', 'photo_url'])) || '/placeholder-animal.svg',
     createdAgo: timeAgo(asString(pick(raw, ['createdAt', 'created_at']))),
     reporter,
   };
@@ -155,10 +158,10 @@ export type AdminAnimal = {
   species: 'perro' | 'gato';
   status: string;
   statusLabel: string;
-  story: string;
+  history: string;
   diagnosis: string;
   treatment: string;
-  totalCostNeeded: number;
+  estimatedCost: number;
   organizationId: string | null;
   organizationName: string | null;
   photos: string[];
@@ -187,10 +190,10 @@ function mapAdminAnimal(raw: Raw): AdminAnimal {
     species: speciesRaw === 'cat' || speciesRaw === 'gato' ? 'gato' : 'perro',
     status: statusRaw,
     statusLabel: animalStatusLabels[statusRaw] ?? statusRaw,
-    story: asString(pick(raw, ['story'])),
+    history: asString(pick(raw, ['history', 'story'])),
     diagnosis: asString(pick(raw, ['diagnosis'])),
     treatment: asString(pick(raw, ['treatment'])),
-    totalCostNeeded: Number(pick(raw, ['totalCostNeeded', 'total_cost_needed']) ?? 0),
+    estimatedCost: Number(pick(raw, ['estimatedCost', 'totalCostNeeded', 'total_cost_needed']) ?? 0),
     organizationId: orgObj ? asString(orgObj.id) || null : (asString(pick(raw, ['organizationId'])) || null),
     organizationName: orgObj ? asString(orgObj.name) || null : null,
     photos: mapPhotos(pick(raw, ['photos'])),
@@ -201,10 +204,10 @@ export type AdminAnimalInput = {
   name: string;
   species: 'dog' | 'cat';
   status: string;
-  story?: string;
+  history?: string;
   diagnosis?: string;
   treatment?: string;
-  totalCostNeeded?: number;
+  estimatedCost?: number;
   organizationId?: string | null;
   photosBase64?: string[];
 };
@@ -413,6 +416,10 @@ export type AdminVolunteer = {
   statusLabel: string;
   isFoster: boolean;
   fosterCapacity: number | null;
+  zone: string;
+  availability: string;
+  helpType: string;
+  motivation: string;
   ineFront: string | null;
   ineBack: string | null;
   selfie: string | null;
@@ -422,8 +429,10 @@ export type AdminVolunteer = {
 function mapVolunteer(raw: Raw): AdminVolunteer {
   const userObj = pick(raw, ['user']);
   const user = userObj && typeof userObj === 'object' ? (userObj as Raw) : raw;
-  const statusRaw = asString(pick(raw, ['status']), 'pending');
+  const statusRaw = asString(pick(raw, ['status', 'volunteerStatus']), 'pending');
   const fosterCapacityRaw = pick(raw, ['fosterCapacity', 'foster_capacity']);
+  const prefsObj = pick(raw, ['volunteerPrefs']);
+  const prefs = prefsObj && typeof prefsObj === 'object' ? (prefsObj as Raw) : raw;
 
   return {
     id: asString(pick(raw, ['id', '_id'])),
@@ -434,6 +443,10 @@ function mapVolunteer(raw: Raw): AdminVolunteer {
     statusLabel: volunteerStatusLabels[statusRaw] ?? statusRaw,
     isFoster: Boolean(pick(raw, ['isFoster', 'is_foster'])),
     fosterCapacity: fosterCapacityRaw !== undefined ? Number(fosterCapacityRaw) : null,
+    zone: asString(pick(prefs, ['zone'])),
+    availability: asString(pick(prefs, ['availability'])),
+    helpType: asString(pick(prefs, ['helpType'])),
+    motivation: asString(pick(prefs, ['motivation'])),
     ineFront: asString(pick(raw, ['ineFrontUrl', 'ine_front_url', 'ineFront'])) || null,
     ineBack: asString(pick(raw, ['ineBackUrl', 'ine_back_url', 'ineBack'])) || null,
     selfie: asString(pick(raw, ['selfieUrl', 'selfie_url', 'selfie'])) || null,
