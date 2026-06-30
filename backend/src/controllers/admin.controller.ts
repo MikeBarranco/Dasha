@@ -38,6 +38,26 @@ export class AdminController {
     }
   }
 
+  static async updateUserRole(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      const { role } = req.body;
+      
+      if (!['user', 'volunteer', 'admin'].includes(role)) {
+        res.status(400).json({ error: 'Rol inválido' });
+        return;
+      }
+
+      const updated = await prisma.user.update({
+        where: { id },
+        data: { role }
+      });
+      res.status(200).json({ message: 'Rol actualizado correctamente', user: updated });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // ==========================================
   // REPORTES
   // ==========================================
