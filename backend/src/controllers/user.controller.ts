@@ -178,7 +178,7 @@ export class UserController {
         return;
       }
 
-      const { ineFrontBase64, ineBackBase64, selfieBase64, isFoster, fosterCapacity } = req.body;
+      const { ineFrontBase64, ineBackBase64, selfieBase64, isFoster, fosterCapacity, phone, zone, availability, helpType, motivation } = req.body;
 
       if (!ineFrontBase64 || !ineBackBase64 || !selfieBase64) {
         res.status(400).json({ error: 'Debes proporcionar las fotos del INE (frente y reverso) y la selfie' });
@@ -201,7 +201,14 @@ export class UserController {
           ineBackUrl: backRes.secure_url,
           selfieUrl: selfieRes.secure_url,
           isFoster: isFoster || false,
-          fosterCapacity: fosterCapacity || 0
+          fosterCapacity: fosterCapacity || 0,
+          phone: phone || undefined,
+          volunteerPrefs: {
+            zone: zone || '',
+            availability: availability || '',
+            helpType: helpType || '',
+            motivation: motivation || ''
+          }
         },
         select: {
           id: true,

@@ -32,8 +32,8 @@ app.use(
 );
 app.use(helmet());
 app.use(morgan('dev'));
-app.use(express.json({ limit: '5mb' }));
-app.use(express.urlencoded({ limit: '5mb', extended: true }));
+app.use(express.json({ limit: '20mb' }));
+app.use(express.urlencoded({ limit: '20mb', extended: true }));
 
 // Routes
 app.use(passport.initialize());

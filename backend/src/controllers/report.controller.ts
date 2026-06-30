@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { v2 as cloudinary } from 'cloudinary';
 import { ReportService } from '../services/report.service';
 import { analyzeAnimalPhoto } from '../services/animalAnalysis.service';
+import { AchievementService } from '../services/achievement.service';
 
 // Configurar Cloudinary (toma las credenciales de process.env automáticamente)
 cloudinary.config({
@@ -38,6 +39,11 @@ export class ReportController {
       };
 
       const report = await ReportService.createReport(data);
+      
+      // Evaluar logros de reportero de forma asíncrona (sin bloquear la respuesta)
+      if (data.userId) {
+        AchievementService.checkAndGrantReporterAchievements(data.userId);
+      }
       
       res.status(201).json({
         status: 'success',
