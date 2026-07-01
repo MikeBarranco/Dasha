@@ -16,6 +16,7 @@ import { ShareButton } from '../ui/ShareButton';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 import { useSheetDismiss } from '../../lib/useSheetDismiss';
 import { allyTypeLabels, type Ally } from '../../data/mockAllies';
+import { whatsappUrl } from '../../lib/whatsapp';
 
 type AllyDetailProps = {
   ally: Ally;
@@ -30,6 +31,7 @@ export function AllyDetail({ ally, onClose }: AllyDetailProps) {
   const gallery = ally.gallery ?? [];
   const events = ally.events ?? [];
   const badges = ally.badges ?? [];
+  const waLink = whatsappUrl(ally.whatsapp, `Hola ${ally.name}, los contacto desde la app Dasha.`);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
@@ -127,12 +129,12 @@ export function AllyDetail({ ally, onClose }: AllyDetailProps) {
                 <Phone className="h-4 w-4" /> Llamar
               </a>
             )}
-            {ally.whatsapp && (
+            {waLink && (
               <a
-                href={`https://wa.me/52${ally.whatsapp}`}
+                href={waLink}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-1.5 rounded-xl border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
+                className="flex items-center gap-1.5 rounded-xl bg-exito px-3 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
               >
                 <MessageCircle className="h-4 w-4" /> WhatsApp
               </a>

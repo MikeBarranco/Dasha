@@ -7,6 +7,7 @@ import { type Ally, type AllyType, allyTypeLabels } from '../../data/mockAllies'
 import { type LostPet, daysLost, lostColor } from '../../data/mockLostPets';
 import { type MapMode } from '../../lib/mapMode';
 import { getColoniesByCp, type Colonia } from '../../lib/api';
+import { whatsappUrl } from '../../lib/whatsapp';
 import { MapLegend } from './MapLegend';
 
 const PUEBLA_CENTER: [number, number] = [-98.2, 19.04];
@@ -123,10 +124,19 @@ function createLostPetElement(pet: LostPet): HTMLDivElement {
 function lostPopupHTML(pet: LostPet): string {
   const days = daysLost(pet.lostAt);
   const species = pet.species === 'perro' ? 'Perro' : 'Gato';
+  const waUrl = whatsappUrl(
+    pet.contactPhone,
+    `Hola, vi el reporte de ${pet.petName} en Dasha. ¿Puedo ayudar?`,
+  );
+  const contact = waUrl
+    ? `<a href="${waUrl}" target="_blank" rel="noreferrer" style="display:inline-block;margin-top:6px;padding:6px 10px;border-radius:8px;background:#16a34a;color:#fff;font-size:12px;font-weight:600;text-decoration:none;">Contactar por WhatsApp</a>`
+    : pet.contactPhone
+      ? `<div class="dasha-popup-count">Tel: ${escapeHTML(pet.contactPhone)}</div>`
+      : '';
   return (
     `<div class="dasha-popup-name">${escapeHTML(pet.petName)}</div>` +
     `<div class="dasha-popup-count">${species} · perdido hace ${days} día${days === 1 ? '' : 's'}</div>` +
-    (pet.contactPhone ? `<div class="dasha-popup-count">Tel: ${escapeHTML(pet.contactPhone)}</div>` : '')
+    contact
   );
 }
 
