@@ -1,7 +1,7 @@
 import { Link, NavLink } from 'react-router-dom';
-import { Bell } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { Avatar } from '../ui/Avatar';
+import { NotificationsBell } from './NotificationsBell';
 import { useAvatar } from '../../lib/useAvatar';
 import { useAuth } from '../../lib/useAuth';
 
@@ -54,13 +54,7 @@ export function TopBar({ onReportClick }: TopBarProps) {
           >
             Reportar
           </button>
-          <button
-            type="button"
-            className="rounded-full p-2 text-neutral-500 transition-colors hover:bg-neutral-100"
-            aria-label="Notificaciones"
-          >
-            <Bell className="h-5 w-5" />
-          </button>
+          <NotificationsBell />
           {account ? (
             <Link to="/perfil" aria-label="Mi perfil">
               <Avatar name={account.name} src={avatar} className="h-9 w-9 text-sm" />
