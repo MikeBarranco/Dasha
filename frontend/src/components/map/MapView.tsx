@@ -6,6 +6,7 @@ import { type Report, type Severity } from '../../data/mockReports';
 import { type Ally, type AllyType, allyTypeLabels } from '../../data/mockAllies';
 import { type LostPet, daysLost, lostColor } from '../../data/mockLostPets';
 import { type MapMode } from '../../lib/mapMode';
+import { getColoniesByCp, type Colonia } from '../../lib/api';
 import { MapLegend } from './MapLegend';
 
 const PUEBLA_CENTER: [number, number] = [-98.2, 19.04];
@@ -219,6 +220,9 @@ export function MapView({
   >(null);
   const [coloniaNames, setColoniaNames] = useState<string[]>([]);
   const [query, setQuery] = useState('');
+  // Resultados de la búsqueda por CP, llaveados al CP consultado para no mostrar
+  // datos viejos mientras se teclea otro código.
+  const [cpResults, setCpResults] = useState<{ cp: string; list: Colonia[] } | null>(null);
   const [locating, setLocating] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -316,6 +320,29 @@ export function MapView({
       cancelled = true;
     };
   }, []);
+
+  // Búsqueda por código postal: al teclear 5 dígitos se consulta al backend
+  // (las colonias de ese CP viven en la base, no en el geojson local). El
+  // setState solo ocurre dentro de callbacks async para no disparar renders en
+  // cascada.
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (!/^\d{5}$/.test(trimmed)) return;
+    let active = true;
+    const timer = window.setTimeout(() => {
+      getColoniesByCp(trimmed)
+        .then((data) => {
+          if (active) setCpResults({ cp: trimmed, list: data });
+        })
+        .catch(() => {
+          if (active) setCpResults({ cp: trimmed, list: [] });
+        });
+    }, 300);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [query]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -803,8 +830,35 @@ export function MapView({
     setQuery('');
   };
 
+  // Busca la colonia del CP dentro del geojson local (comparando sin acentos ni
+  // mayúsculas). Si está, vuela a su polígono y la resalta como el buscador por
+  // nombre; si no, vuela a las coordenadas que da el backend.
+  const handleSelectCpColonia = (colonia: Colonia) => {
+    const map = mapRef.current;
+    if (!map) return;
+    const target = normalizeText(colonia.name);
+    let matchedName: string | null = null;
+    for (const name of coloniaIndexRef.current.keys()) {
+      if (normalizeText(name) === target) {
+        matchedName = name;
+        break;
+      }
+    }
+    if (matchedName) {
+      handleSelectColonia(matchedName);
+      return;
+    }
+    if (colonia.lat && colonia.lng) {
+      map.flyTo({ center: [colonia.lng, colonia.lat], zoom: 15, duration: 800 });
+      onOpenListRef.current?.();
+      setQuery('');
+    }
+  };
+
+  const isCpQuery = /^\d+$/.test(query.trim());
+  const cpReady = cpResults !== null && cpResults.cp === query.trim();
   const suggestions =
-    query.trim().length >= 2
+    !isCpQuery && query.trim().length >= 2
       ? coloniaNames
           .filter((name) => normalizeText(name).includes(normalizeText(query)))
           .slice(0, 6)
@@ -823,7 +877,7 @@ export function MapView({
                 autoFocus
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Buscar colonia..."
+                placeholder="Busca por colonia o código postal"
                 className="w-full bg-transparent text-base text-neutral-700 outline-none placeholder:text-neutral-400"
               />
               <button
@@ -855,6 +909,38 @@ export function MapView({
                   </li>
                 ))}
               </ul>
+            )}
+
+            {isCpQuery && query.trim().length === 5 && (
+              <div className="absolute mt-1 w-full overflow-hidden rounded-xl bg-white shadow-lg">
+                {!cpReady ? (
+                  <p className="px-3 py-2 text-sm text-neutral-400">Buscando colonias...</p>
+                ) : cpResults.list.length > 0 ? (
+                  <ul className="max-h-60 overflow-y-auto py-1">
+                    {cpResults.list.map((colonia, index) => (
+                      <li key={`${colonia.name}-${index}`}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleSelectCpColonia(colonia);
+                            setSearchOpen(false);
+                          }}
+                          className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-50"
+                        >
+                          <span className="truncate">{colonia.name}</span>
+                          <span className="flex-shrink-0 text-xs text-neutral-400">
+                            {colonia.postalCode}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="px-3 py-2 text-sm text-neutral-400">
+                    No encontramos colonias con ese código postal.
+                  </p>
+                )}
+              </div>
             )}
           </div>
         ) : (
