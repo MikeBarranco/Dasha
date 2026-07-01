@@ -306,6 +306,42 @@ async function authedRaw<T>(path: string, options: RequestInit = {}): Promise<T>
   return body as T;
 }
 
+export type AppNotification = {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  link: string | null;
+  read: boolean;
+  createdAgo: string;
+};
+
+// Lee las notificaciones del usuario. Tolerante: el backend puede nombrar los
+// campos de varias formas (title/message, body/message, read/isRead/seen, etc.).
+export async function getNotifications(): Promise<AppNotification[]> {
+  const data = await authedRaw<Record<string, unknown>[]>('/me/notifications');
+  return (data ?? []).map((raw) => {
+    const readValue = raw.read ?? raw.isRead ?? raw.seen ?? raw.readAt;
+    return {
+      id: String(raw.id ?? raw._id ?? ''),
+      type: String(raw.type ?? 'announcement'),
+      title: String(raw.title ?? raw.message ?? 'Aviso'),
+      body: String(raw.body ?? raw.description ?? (raw.title ? '' : raw.message) ?? ''),
+      link: raw.link ? String(raw.link) : raw.url ? String(raw.url) : null,
+      read: Boolean(readValue),
+      createdAgo: timeAgo(String(raw.createdAt ?? raw.created_at ?? '')),
+    };
+  });
+}
+
+export async function markNotificationRead(id: string): Promise<void> {
+  await authedRaw(`/me/notifications/${id}/read`, { method: 'PATCH' });
+}
+
+export async function markAllNotificationsRead(): Promise<void> {
+  await authedRaw('/me/notifications/read-all', { method: 'POST' });
+}
+
 export type Achievement = {
   name: string;
   description: string;
