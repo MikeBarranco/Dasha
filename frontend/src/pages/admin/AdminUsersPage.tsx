@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Trash2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Trash2, AlertCircle, RefreshCw, ShieldCheck } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { Avatar } from '../../components/ui/Avatar';
 import { useAuth } from '../../lib/useAuth';
@@ -17,6 +17,31 @@ const roleStyles: Record<string, string> = {
   citizen: 'bg-neutral-100 text-neutral-500',
 };
 
+// Cuentas del equipo core: no se les puede cambiar el rol ni eliminarlas desde
+// el panel. Es una salvaguarda del front; lo ideal es que el backend también lo
+// impida (ver mensaje a Isabel).
+const PROTECTED_EMAILS = [
+  'isarumachorro.742@gmail.com',
+  'espartan1047@gmail.com',
+  'mike.11.barranco@gmail.com',
+  'monicatapia1002@gmail.com',
+  'sumayramontserrat@gmail.com',
+];
+
+function isProtected(email: string): boolean {
+  return PROTECTED_EMAILS.includes(email.trim().toLowerCase());
+}
+
+// Orden de despliegue: primero admins, luego voluntarios, luego ciudadanos.
+const roleOrder: Record<string, number> = { admin: 0, volunteer: 1, citizen: 2 };
+
+const roleFilters: { value: string; label: string }[] = [
+  { value: 'all', label: 'Todos' },
+  { value: 'admin', label: 'Administradores' },
+  { value: 'volunteer', label: 'Voluntarios' },
+  { value: 'citizen', label: 'Ciudadanos' },
+];
+
 export function AdminUsersPage() {
   const { user: current } = useAuth();
   const [users, setUsers] = useState<AdminUser[] | null>(null);
@@ -24,6 +49,7 @@ export function AdminUsersPage() {
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [savingRoleId, setSavingRoleId] = useState<string | null>(null);
+  const [roleFilter, setRoleFilter] = useState('all');
 
   const fetchUsers = (reset: boolean) => {
     if (reset) {
@@ -73,6 +99,16 @@ export function AdminUsersPage() {
   };
 
   const changeRole = async (id: string, role: string) => {
+    const target = users?.find((user) => user.id === id);
+    if (!target || target.role === role) return;
+    if (isProtected(target.email)) return;
+    // Al quitarle el rol de administrador a alguien, pedir confirmación.
+    if (target.role === 'admin' && role !== 'admin') {
+      const ok = window.confirm(
+        `¿Seguro que quieres quitarle el rol de administrador a ${target.name}?`,
+      );
+      if (!ok) return;
+    }
     const label = roleOptions.find((option) => option.value === role)?.label ?? role;
     let previous: AdminUser[] | null = null;
     setSavingRoleId(id);
@@ -84,13 +120,25 @@ export function AdminUsersPage() {
     });
     try {
       await updateAdminUserRole(id, role);
-    } catch {
+    } catch (err) {
       setUsers(previous);
-      alert('No se pudo cambiar el rol. Intenta de nuevo.');
+      const detail = err instanceof Error ? err.message : '';
+      alert(
+        detail
+          ? `No se pudo cambiar el rol: ${detail}`
+          : 'No se pudo cambiar el rol. Intenta de nuevo.',
+      );
     } finally {
       setSavingRoleId(null);
     }
   };
+
+  const visibleUsers = (users ?? [])
+    .filter((user) => roleFilter === 'all' || user.role === roleFilter)
+    .sort((a, b) => {
+      const order = (roleOrder[a.role] ?? 99) - (roleOrder[b.role] ?? 99);
+      return order !== 0 ? order : a.name.localeCompare(b.name, 'es');
+    });
 
   return (
     <div>
@@ -100,6 +148,26 @@ export function AdminUsersPage() {
           <span className="text-sm text-neutral-400">{users.length}</span>
         )}
       </div>
+
+      {users !== null && !error && users.length > 0 && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {roleFilters.map((filter) => (
+            <button
+              key={filter.value}
+              type="button"
+              onClick={() => setRoleFilter(filter.value)}
+              className={cn(
+                'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                roleFilter === filter.value
+                  ? 'bg-cobalto text-white'
+                  : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200',
+              )}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {users === null && (
         <div className="mt-6 space-y-3">
@@ -131,10 +199,17 @@ export function AdminUsersPage() {
         </div>
       )}
 
-      {users !== null && users.length > 0 && (
+      {users !== null && !error && users.length > 0 && visibleUsers.length === 0 && (
+        <div className="mt-6 flex flex-col items-center justify-center rounded-2xl border border-dashed border-neutral-300 bg-white/60 px-6 py-12 text-center">
+          <p className="font-semibold text-neutral-700">Sin usuarios con ese rol</p>
+        </div>
+      )}
+
+      {users !== null && visibleUsers.length > 0 && (
         <div className="mt-6 space-y-3">
-          {users.map((user) => {
+          {visibleUsers.map((user) => {
             const isSelf = current?.id === user.id;
+            const protectedAccount = isProtected(user.email);
             return (
               <div
                 key={user.id}
@@ -163,6 +238,14 @@ export function AdminUsersPage() {
 
                 {isSelf ? (
                   <span className="flex-shrink-0 text-xs text-neutral-400">Tú</span>
+                ) : protectedAccount ? (
+                  <span
+                    className="flex flex-shrink-0 items-center gap-1 text-xs text-neutral-400"
+                    title="Cuenta protegida del equipo"
+                  >
+                    <ShieldCheck className="h-4 w-4" />
+                    Equipo
+                  </span>
                 ) : confirmId === user.id ? (
                   <div className="flex flex-shrink-0 items-center gap-2">
                     <button
