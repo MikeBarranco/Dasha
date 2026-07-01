@@ -80,14 +80,20 @@ input[type='password']::-ms-clear {
 
 .dasha-popup-more {
   margin-top: 8px;
-  width: 100%;
-  border-radius: 8px;
-  background: var(--color-cobalto);
-  padding: 6px 10px;
+  display: inline-block;
+  border: none;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--color-cobalto) 12%, transparent);
+  padding: 5px 12px;
   font-size: 12px;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--color-cobalto);
   cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.dasha-popup-more:hover {
+  background: color-mix(in srgb, var(--color-cobalto) 20%, transparent);
 }
 
 .dasha-popup-count {
