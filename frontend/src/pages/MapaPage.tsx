@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { CountUp } from '../components/ui/CountUp';
 import { ReportDetail } from '../components/map/ReportDetail';
+import { LostPetDetail } from '../components/map/LostPetDetail';
 import { MapListPanel } from '../components/map/MapListPanel';
 import { AllyListPanel } from '../components/map/AllyListPanel';
 import { LostPetListPanel } from '../components/map/LostPetListPanel';
@@ -45,6 +46,7 @@ export function MapaPage() {
   const [visibleLostPets, setVisibleLostPets] = useState<LostPet[]>([]);
   const [listFocusAlly, setListFocusAlly] = useState<Ally | null>(null);
   const [focusLostPet, setFocusLostPet] = useState<LostPet | null>(null);
+  const [detailLostPet, setDetailLostPet] = useState<LostPet | null>(null);
 
   const filteredReports = useMemo(
     () => (reports ? applyReportFilters(reports, filters) : null),
@@ -128,6 +130,8 @@ export function MapaPage() {
   };
 
   const selectLostFromList = (pet: LostPet) => {
+    // Vuela a la mascota y abre el globo (mismo flujo que tocar el pin). La
+    // tarjeta se abre con "Ver más". Solo un estado activo a la vez => cierre limpio.
     setFocusLostPet(pet);
   };
 
@@ -221,6 +225,7 @@ export function MapaPage() {
                 activeAllyTypes={allyTypes}
                 onSelectReport={openReport}
                 onSelectAlly={handleSelectAlly}
+                onSelectLostPet={setDetailLostPet}
                 onOpenList={() => setPanelOpen(true)}
                 onVisibleReportsChange={setVisibleReports}
                 onVisibleAlliesChange={setVisibleAllies}
@@ -267,6 +272,12 @@ export function MapaPage() {
 
       <AnimatePresence>
         {selectedReport && <ReportDetail report={selectedReport} onClose={closeReport} />}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {detailLostPet && (
+          <LostPetDetail pet={detailLostPet} onClose={() => setDetailLostPet(null)} />
+        )}
       </AnimatePresence>
     </div>
   );

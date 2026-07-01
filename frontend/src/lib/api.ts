@@ -273,6 +273,7 @@ export async function getLostPets(): Promise<LostPet[]> {
           : undefined,
       contactPhone:
         String(raw.contactWhatsapp ?? raw.contactPhone ?? raw.whatsapp ?? '') || undefined,
+      reward: raw.reward ? String(raw.reward) : undefined,
     };
   });
 }

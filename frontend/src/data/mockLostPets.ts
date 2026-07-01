@@ -9,6 +9,7 @@ export type LostPet = {
   lostAt: string;
   description?: string;
   contactPhone?: string;
+  reward?: string;
 };
 
 // El modo Perdidos del mapa usa datos reales de getLostPets(); aquí solo viven

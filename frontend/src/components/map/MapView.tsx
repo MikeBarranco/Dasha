@@ -121,23 +121,23 @@ function createLostPetElement(pet: LostPet): HTMLDivElement {
   return element;
 }
 
-function lostPopupHTML(pet: LostPet): string {
+function buildLostPopup(pet: LostPet, onMore: () => void): HTMLDivElement {
+  const node = document.createElement('div');
   const days = daysLost(pet.lostAt);
   const species = pet.species === 'perro' ? 'Perro' : 'Gato';
   const waUrl = whatsappUrl(
     pet.contactPhone,
     `Hola, vi el reporte de ${pet.petName} en Dasha. ¿Puedo ayudar?`,
   );
-  const contact = waUrl
-    ? `<a href="${waUrl}" target="_blank" rel="noreferrer" style="display:inline-block;margin-top:6px;padding:6px 10px;border-radius:8px;background:#16a34a;color:#fff;font-size:12px;font-weight:600;text-decoration:none;">Contactar por WhatsApp</a>`
-    : pet.contactPhone
-      ? `<div class="dasha-popup-count">Tel: ${escapeHTML(pet.contactPhone)}</div>`
-      : '';
-  return (
+  node.innerHTML =
     `<div class="dasha-popup-name">${escapeHTML(pet.petName)}</div>` +
     `<div class="dasha-popup-count">${species} · perdido hace ${days} día${days === 1 ? '' : 's'}</div>` +
-    contact
-  );
+    (waUrl
+      ? `<a href="${waUrl}" target="_blank" rel="noreferrer" style="display:inline-block;margin-top:6px;padding:6px 10px;border-radius:8px;background:#16a34a;color:#fff;font-size:12px;font-weight:600;text-decoration:none;">Contactar por WhatsApp</a>`
+      : '') +
+    '<button type="button" class="dasha-popup-more">Ver más</button>';
+  node.querySelector('button')?.addEventListener('click', onMore);
+  return node;
 }
 
 type CircleFeature = {
@@ -187,6 +187,7 @@ type MapViewProps = {
   activeAllyTypes?: AllyType[];
   onSelectReport: (report: Report) => void;
   onSelectAlly?: (ally: Ally) => void;
+  onSelectLostPet?: (pet: LostPet) => void;
   onOpenList?: () => void;
   onVisibleReportsChange?: (reports: Report[]) => void;
   onVisibleAlliesChange?: (allies: Ally[]) => void;
@@ -205,6 +206,7 @@ export function MapView({
   activeAllyTypes = [],
   onSelectReport,
   onSelectAlly,
+  onSelectLostPet,
   onOpenList,
   onVisibleReportsChange,
   onVisibleAlliesChange,
@@ -247,6 +249,7 @@ export function MapView({
   const allyMarkersRef = useRef<maplibregl.Marker[]>([]);
   const renderAllyMarkersRef = useRef<(() => void) | null>(null);
   const onSelectAllyRef = useRef(onSelectAlly);
+  const onSelectLostPetRef = useRef(onSelectLostPet);
   const activeAllyTypesRef = useRef<AllyType[]>(activeAllyTypes);
   const allyPopupRef = useRef<maplibregl.Popup | null>(null);
   const lostPetsRef = useRef<LostPet[]>(lostPets);
@@ -263,6 +266,10 @@ export function MapView({
   useEffect(() => {
     onSelectAllyRef.current = onSelectAlly;
   }, [onSelectAlly]);
+
+  useEffect(() => {
+    onSelectLostPetRef.current = onSelectLostPet;
+  }, [onSelectLostPet]);
 
   useEffect(() => {
     onSelectRef.current = onSelectReport;
@@ -471,14 +478,19 @@ export function MapView({
         type: 'fill',
         source: 'perdidos-zonas',
         layout: { visibility: 'none' },
-        paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.15 },
+        paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.12 },
       });
       map.addLayer({
         id: 'perdidos-line',
         type: 'line',
         source: 'perdidos-zonas',
         layout: { visibility: 'none' },
-        paint: { 'line-color': ['get', 'color'], 'line-width': 2, 'line-opacity': 0.6 },
+        paint: {
+          'line-color': ['get', 'color'],
+          'line-width': 2,
+          'line-opacity': 0.7,
+          'line-dasharray': [2, 2],
+        },
       });
 
       let hoveredId: number | null = null;
@@ -628,7 +640,17 @@ export function MapView({
             const element = createLostPetElement(pet);
             element.addEventListener('click', (event) => {
               event.stopPropagation();
-              lostPopup.setLngLat([pet.lng, pet.lat]).setHTML(lostPopupHTML(pet)).addTo(map);
+              // Vuela a la mascota y abre el globo; "Ver más" abre la tarjeta.
+              map.flyTo({ center: [pet.lng, pet.lat], zoom: 15, duration: 900 });
+              lostPopup
+                .setLngLat([pet.lng, pet.lat])
+                .setDOMContent(
+                  buildLostPopup(pet, () => {
+                    lostPopup.remove();
+                    onSelectLostPetRef.current?.(pet);
+                  }),
+                )
+                .addTo(map);
             });
             const marker = new maplibregl.Marker({ element })
               .setLngLat([pet.lng, pet.lat])
@@ -773,7 +795,12 @@ export function MapView({
     map.flyTo({ center: [focusLostPet.lng, focusLostPet.lat], zoom: 15, duration: 900 });
     lostPopupRef.current
       ?.setLngLat([focusLostPet.lng, focusLostPet.lat])
-      .setHTML(lostPopupHTML(focusLostPet))
+      .setDOMContent(
+        buildLostPopup(focusLostPet, () => {
+          lostPopupRef.current?.remove();
+          onSelectLostPetRef.current?.(focusLostPet);
+        }),
+      )
       .addTo(map);
   }, [focusLostPet, mapReady]);
 
