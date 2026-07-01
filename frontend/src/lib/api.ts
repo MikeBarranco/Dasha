@@ -176,6 +176,29 @@ async function requestRaw<T>(path: string): Promise<T> {
   return (await response.json()) as T;
 }
 
+export type Colonia = {
+  name: string;
+  postalCode: string;
+  lat: number;
+  lng: number;
+};
+
+// GET /colonies?cp=XXXXX -> colonias de ese código postal (backend con 822 sembradas).
+// Se lee tolerante por si el backend cambia nombres de campo.
+export async function getColoniesByCp(cp: string): Promise<Colonia[]> {
+  const data = await requestRaw<Record<string, unknown>[]>(
+    `/colonies?cp=${encodeURIComponent(cp)}`,
+  );
+  return (data ?? [])
+    .map((raw) => ({
+      name: String(raw.name ?? raw.colonia ?? raw.neighborhood ?? ''),
+      postalCode: String(raw.postalCode ?? raw.postal_code ?? raw.cp ?? cp),
+      lat: Number(raw.lat ?? raw.latitude ?? 0),
+      lng: Number(raw.lng ?? raw.lon ?? raw.longitude ?? 0),
+    }))
+    .filter((colonia) => colonia.name);
+}
+
 type ListedReport = {
   id: string;
   lat: number;
