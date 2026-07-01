@@ -17,15 +17,16 @@ async function adminFetch<T>(path: string, options: RequestInit = {}): Promise<T
   });
 
   const body = (await response.json().catch(() => null)) as
-    | { status?: string; message?: string; data?: unknown }
+    | { status?: string; message?: string; error?: string; data?: unknown }
     | unknown[]
     | null;
 
   if (!response.ok || (body && !Array.isArray(body) && body.status === 'error')) {
+    // El backend a veces manda el detalle en `message` y otras en `error`.
     const message =
-      body && !Array.isArray(body) ? body.message : undefined;
+      body && !Array.isArray(body) ? (body.message ?? body.error) : undefined;
     if (response.status === 403) throw new Error('Tu cuenta no tiene permisos de administrador');
-    throw new Error(message ?? 'Ocurrió un error con el servidor');
+    throw new Error(message ?? `Ocurrió un error con el servidor (${response.status})`);
   }
 
   if (body && !Array.isArray(body) && 'data' in body) return body.data as T;
