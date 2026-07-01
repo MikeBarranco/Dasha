@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ScrollToTop } from './components/layout/ScrollToTop';
+import { AnalyticsTracker } from './components/layout/AnalyticsTracker';
 import { AppLayout } from './components/layout/AppLayout';
 import { MapaPage } from './pages/MapaPage';
 import { ReportarPage } from './pages/ReportarPage';
@@ -26,6 +27,7 @@ function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
+      <AnalyticsTracker />
       <Routes>
         <Route path="login" element={<LoginPage />} />
         <Route path="registro" element={<RegistroPage />} />
