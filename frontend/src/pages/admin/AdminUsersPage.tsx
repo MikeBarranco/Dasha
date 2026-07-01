@@ -3,7 +3,13 @@ import { Trash2, AlertCircle, RefreshCw } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { Avatar } from '../../components/ui/Avatar';
 import { useAuth } from '../../lib/useAuth';
-import { getAdminUsers, deleteAdminUser, type AdminUser } from '../../lib/adminApi';
+import {
+  getAdminUsers,
+  deleteAdminUser,
+  updateAdminUserRole,
+  roleOptions,
+  type AdminUser,
+} from '../../lib/adminApi';
 
 const roleStyles: Record<string, string> = {
   admin: 'bg-purpura/10 text-purpura',
@@ -17,6 +23,7 @@ export function AdminUsersPage() {
   const [error, setError] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [savingRoleId, setSavingRoleId] = useState<string | null>(null);
 
   const fetchUsers = (reset: boolean) => {
     if (reset) {
@@ -62,6 +69,26 @@ export function AdminUsersPage() {
       alert('No se pudo eliminar el usuario. Intenta de nuevo.');
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const changeRole = async (id: string, role: string) => {
+    const label = roleOptions.find((option) => option.value === role)?.label ?? role;
+    let previous: AdminUser[] | null = null;
+    setSavingRoleId(id);
+    setUsers((list) => {
+      previous = list;
+      return list
+        ? list.map((user) => (user.id === id ? { ...user, role, roleLabel: label } : user))
+        : list;
+    });
+    try {
+      await updateAdminUserRole(id, role);
+    } catch {
+      setUsers(previous);
+      alert('No se pudo cambiar el rol. Intenta de nuevo.');
+    } finally {
+      setSavingRoleId(null);
     }
   };
 
@@ -155,14 +182,29 @@ export function AdminUsersPage() {
                     </button>
                   </div>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => setConfirmId(user.id)}
-                    aria-label="Eliminar usuario"
-                    className="flex-shrink-0 rounded-lg p-2 text-neutral-500 transition-colors hover:bg-alerta/5 hover:text-alerta"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <div className="flex flex-shrink-0 items-center gap-2">
+                    <select
+                      value={user.role}
+                      onChange={(event) => changeRole(user.id, event.target.value)}
+                      disabled={savingRoleId === user.id}
+                      aria-label="Cambiar rol"
+                      className="rounded-lg border border-neutral-200 bg-white px-2 py-1.5 text-xs text-neutral-700 outline-none focus:ring-2 focus:ring-cobalto/30 disabled:opacity-60"
+                    >
+                      {roleOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmId(user.id)}
+                      aria-label="Eliminar usuario"
+                      className="rounded-lg p-2 text-neutral-500 transition-colors hover:bg-alerta/5 hover:text-alerta"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 )}
               </div>
             );
