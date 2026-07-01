@@ -364,6 +364,19 @@ export async function getAdminUsers(): Promise<AdminUser[]> {
   return (data ?? []).map(mapAdminUser);
 }
 
+export const roleOptions: { value: string; label: string }[] = [
+  { value: 'citizen', label: 'Ciudadano' },
+  { value: 'volunteer', label: 'Voluntario' },
+  { value: 'admin', label: 'Administrador' },
+];
+
+export async function updateAdminUserRole(id: string, role: string): Promise<void> {
+  await adminFetch(`/admin/users/${id}/role`, {
+    method: 'PATCH',
+    body: JSON.stringify({ role }),
+  });
+}
+
 export async function deleteAdminUser(id: string): Promise<void> {
   await adminFetch(`/admin/users/${id}`, { method: 'DELETE' });
 }
