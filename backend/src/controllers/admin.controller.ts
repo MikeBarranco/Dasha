@@ -205,9 +205,23 @@ export class AdminController {
   static async deleteReport(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
-      await prisma.report.delete({
-        where: { id }
+      
+      await prisma.$transaction(async (tx) => {
+        // Eliminar dependencias
+        await tx.reportStatusHistory.deleteMany({ where: { reportId: id } });
+        await tx.caseAction.deleteMany({ where: { reportId: id } });
+        await tx.rescueAssignment.deleteMany({ where: { reportId: id } });
+        await tx.resource.deleteMany({ where: { reportId: id } });
+        await tx.lostPetMatch.deleteMany({ 
+          where: { OR: [{ reportId: id }, { matchedReportId: id }] } 
+        });
+        await tx.reportFlag.deleteMany({ where: { reportId: id } });
+        
+        // El modelo ReportPhoto tiene onDelete: Cascade en el schema, así que se borra solo
+        
+        await tx.report.delete({ where: { id } });
       });
+      
       res.status(200).json({ message: 'Reporte eliminado correctamente' });
     } catch (error) {
       next(error);
