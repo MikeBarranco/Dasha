@@ -21,4 +21,16 @@ router.get('/reports', requireAuth, UserController.getMyReports);
 // POST /api/v1/me/volunteer-application (Protegida, enviar solicitud)
 router.post('/volunteer-application', requireAuth, UserController.applyForVolunteer);
 
+// GET /api/v1/me/notifications (Protegida, mis notificaciones)
+router.get('/notifications', requireAuth, UserController.getMyNotifications);
+
+// PATCH /api/v1/me/notifications/:id (Protegida, marcar como leída)
+router.patch('/notifications/:id', requireAuth, UserController.updateNotification);
+
+// POST /api/v1/me/notifications/read-all (Protegida, marcar todas como leídas)
+router.post('/notifications/read-all', requireAuth, UserController.markAllNotificationsRead);
+
+// POST /api/v1/me/push-subscription (Protegida, guardar token para push)
+router.post('/push-subscription', requireAuth, UserController.savePushSubscription);
+
 export default router;

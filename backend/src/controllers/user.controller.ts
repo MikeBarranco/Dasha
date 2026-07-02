@@ -230,4 +230,77 @@ export class UserController {
       next(error);
     }
   }
+
+  static async getMyNotifications(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) return res.status(401).json({ error: 'No autorizado' });
+
+      const notifications = await prisma.notification.findMany({
+        where: { userId },
+        orderBy: { sentAt: 'desc' }
+      });
+      res.status(200).json(notifications);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async updateNotification(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      const { id } = req.params;
+      const { isRead } = req.body;
+
+      if (!userId) return res.status(401).json({ error: 'No autorizado' });
+
+      const notif = await prisma.notification.updateMany({
+        where: { id, userId },
+        data: { isRead }
+      });
+
+      if (notif.count === 0) {
+        return res.status(404).json({ error: 'Notificación no encontrada' });
+      }
+
+      res.status(200).json({ message: 'Notificación actualizada' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async markAllNotificationsRead(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) return res.status(401).json({ error: 'No autorizado' });
+
+      await prisma.notification.updateMany({
+        where: { userId, isRead: false },
+        data: { isRead: true }
+      });
+
+      res.status(200).json({ message: 'Todas las notificaciones marcadas como leídas' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async savePushSubscription(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      const subscription = req.body;
+
+      if (!userId) return res.status(401).json({ error: 'No autorizado' });
+      if (!subscription || !subscription.endpoint) {
+        return res.status(400).json({ error: 'Suscripción inválida' });
+      }
+
+      const { NotificationService } = await import('../services/notification.service');
+      const saved = await NotificationService.saveSubscription(userId, subscription);
+      
+      res.status(200).json(saved);
+    } catch (error) {
+      next(error);
+    }
+  }
 }

@@ -57,6 +57,14 @@ export class AchievementService {
               }
             });
           }
+
+          const { NotificationService } = await import('./notification.service');
+          await NotificationService.sendNotification({
+            userId,
+            title: '¡Nueva Medalla Desbloqueada! 🏅',
+            body: `Has ganado la medalla: ${achievement.name}. ¡Gracias por tu ayuda!`,
+            type: 'achievement'
+          });
         }
       }
     } catch (error) {

@@ -26,6 +26,30 @@ export class AdminController {
   static async deleteUser(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
+
+      const user = await prisma.user.findUnique({ where: { id } });
+      if (!user) {
+        res.status(404).json({ error: 'Usuario no encontrado' });
+        return;
+      }
+      
+      const protectedEmails = [
+        'isarumachorro.742@gmail.com',
+        'espartan1047@gmail.com',
+        'mike.11.barranco@gmail.com',
+        'monicatapia1002@gmail.com',
+        'sumayramontserrat@gmail.com'
+      ];
+      if (protectedEmails.includes(user.email)) {
+        res.status(403).json({ error: 'No se pueden eliminar las cuentas del equipo fundador.' });
+        return;
+      }
+      
+      if (user.role === 'admin') {
+        res.status(403).json({ error: 'No se puede eliminar a un administrador. Debe ser degradado a ciudadano primero.' });
+        return;
+      }
+
       // Cascade delete relies on schema referential actions. Prisma usually requires manual cascade if not defined in schema.
       // We will try deleting the user. If Prisma throws a foreign key error, we'd need to manually delete relations.
       // But for this MVP, we use Prisma's delete.
@@ -42,9 +66,39 @@ export class AdminController {
     try {
       const id = req.params.id as string;
       const { role } = req.body;
+      const requesterId = req.user?.id;
       
-      if (!['user', 'volunteer', 'admin'].includes(role)) {
+      if (!['citizen', 'volunteer', 'admin'].includes(role)) {
         res.status(400).json({ error: 'Rol inválido' });
+        return;
+      }
+
+      const targetUser = await prisma.user.findUnique({ where: { id } });
+      if (!targetUser) {
+        res.status(404).json({ error: 'Usuario no encontrado' });
+        return;
+      }
+
+      if (requesterId === id) {
+        res.status(403).json({ error: 'No puedes cambiar tu propio rol.' });
+        return;
+      }
+
+      const protectedEmails = [
+        'isarumachorro.742@gmail.com',
+        'espartan1047@gmail.com',
+        'mike.11.barranco@gmail.com',
+        'monicatapia1002@gmail.com',
+        'sumayramontserrat@gmail.com'
+      ];
+      
+      if (protectedEmails.includes(targetUser.email) && role !== 'admin') {
+        res.status(403).json({ error: 'Las cuentas fundadoras no pueden perder sus privilegios de administrador.' });
+        return;
+      }
+
+      if (targetUser.role === 'admin' && role !== 'admin') {
+        res.status(403).json({ error: 'No se puede degradar a un administrador desde el panel.' });
         return;
       }
 
@@ -88,10 +142,26 @@ export class AdminController {
     try {
       const id = req.params.id as string;
       const data = req.body;
+      
+      const currentReport = await prisma.report.findUnique({ where: { id } });
+      
       const updated = await prisma.report.update({
         where: { id },
         data
       });
+
+      if (currentReport && data.status && currentReport.status !== data.status) {
+        const { NotificationService } = await import('../services/notification.service');
+        await NotificationService.sendNotification({
+          userId: currentReport.userId,
+          title: 'Actualización de tu reporte',
+          body: `El estado de tu reporte ha cambiado a: ${data.status}.`,
+          type: 'report_update',
+          referenceId: id,
+          referenceType: 'report'
+        });
+      }
+
       res.status(200).json(updated);
     } catch (error) {
       next(error);
@@ -263,10 +333,43 @@ export class AdminController {
       const id = req.params.id as string;
       const { photosBase64, ...data } = req.body;
       
+      const currentAnimal = await prisma.animalProfile.findUnique({ where: { id } });
+      
       const updated = await prisma.animalProfile.update({
         where: { id },
         data
       });
+
+      if (currentAnimal && data.status && currentAnimal.status !== data.status) {
+        const statusMap: Record<string, string> = {
+          'in_treatment': 'tratamiento',
+          'recovering': 'recuperado',
+          'looking_for_foster': 'veterinaria',
+          'in_foster': 'veterinaria',
+          'looking_for_adoption': 'recuperado',
+          'adopted': 'adopcion'
+        };
+        
+        const type = statusMap[data.status] || 'veterinaria';
+        const titleMap: Record<string, string> = {
+          'in_treatment': 'En tratamiento',
+          'recovering': 'En recuperación',
+          'looking_for_foster': 'Buscando hogar temporal',
+          'in_foster': 'En hogar temporal',
+          'looking_for_adoption': 'Listo para adopción',
+          'adopted': '¡Adoptado!'
+        };
+        
+        await prisma.animalTimelineEvent.create({
+          data: {
+            animalId: id,
+            title: titleMap[data.status] || `Cambio de estado`,
+            description: `El estado del caso se actualizó automáticamente.`,
+            type,
+            date: new Date()
+          }
+        });
+      }
 
       // If new photos are provided, we could append them or replace them.
       // We will append them here.
@@ -302,6 +405,105 @@ export class AdminController {
         where: { id }
       });
       res.status(200).json({ message: 'Animal eliminado correctamente' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async deleteAnimalPhoto(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id, photoId } = req.params;
+
+      const photo = await prisma.animalPhoto.findFirst({
+        where: { id: photoId, animalId: id }
+      });
+
+      if (!photo) {
+        res.status(404).json({ error: 'Foto no encontrada o no pertenece a este animal' });
+        return;
+      }
+
+      if (photo.publicId) {
+        await cloudinary.uploader.destroy(photo.publicId).catch(() => {});
+      }
+
+      await prisma.animalPhoto.delete({
+        where: { id: photoId }
+      });
+
+      res.status(200).json({ message: 'Foto eliminada correctamente' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async createAnimalTimelineEvent(req: Request, res: Response, next: NextFunction) {
+    try {
+      const animalId = req.params.id as string;
+      const { title, description, type, date } = req.body;
+      
+      const animal = await prisma.animalProfile.findUnique({ where: { id: animalId } });
+      if (!animal) {
+        res.status(404).json({ error: 'Animal no encontrado' });
+        return;
+      }
+
+      const event = await prisma.animalTimelineEvent.create({
+        data: {
+          animalId,
+          title,
+          description,
+          type,
+          date: date ? new Date(date) : new Date()
+        }
+      });
+      res.status(201).json(event);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async updateAnimalTimelineEvent(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id, eventId } = req.params;
+      const { title, description, type, date } = req.body;
+
+      const updated = await prisma.animalTimelineEvent.updateMany({
+        where: { id: eventId, animalId: id },
+        data: {
+          title,
+          description,
+          type,
+          ...(date && { date: new Date(date) })
+        }
+      });
+
+      if (updated.count === 0) {
+        res.status(404).json({ error: 'Evento no encontrado o no pertenece a este animal' });
+        return;
+      }
+
+      const event = await prisma.animalTimelineEvent.findUnique({ where: { id: eventId } });
+      res.status(200).json(event);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async deleteAnimalTimelineEvent(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id, eventId } = req.params;
+
+      const deleted = await prisma.animalTimelineEvent.deleteMany({
+        where: { id: eventId, animalId: id }
+      });
+
+      if (deleted.count === 0) {
+        res.status(404).json({ error: 'Evento no encontrado o no pertenece a este animal' });
+        return;
+      }
+
+      res.status(200).json({ message: 'Evento eliminado correctamente' });
     } catch (error) {
       next(error);
     }
@@ -434,6 +636,23 @@ export class AdminController {
         }
       });
 
+      const { NotificationService } = await import('../services/notification.service');
+      if (status === 'approved') {
+        await NotificationService.sendNotification({
+          userId: id,
+          title: '¡Solicitud aprobada! 🎉',
+          body: 'Felicidades, tu solicitud ha sido aprobada. Ahora eres parte de Dasha.',
+          type: 'system'
+        });
+      } else {
+        await NotificationService.sendNotification({
+          userId: id,
+          title: 'Actualización de solicitud',
+          body: 'Tu solicitud de voluntariado no pudo ser aprobada en este momento.',
+          type: 'system'
+        });
+      }
+
       res.status(200).json({ message: `Solicitud ${status === 'approved' ? 'aprobada' : 'rechazada'} exitosamente`, user: updatedUser });
     } catch (error) {
       next(error);
@@ -525,6 +744,86 @@ export class AdminController {
         where: { id }
       });
       res.status(200).json({ message: 'Evento eliminado correctamente' });
+    } catch (error) {
+      next(error);
+    }
+  }
+  // ==========================================
+  // NOVEDADES (CHANGELOG)
+  // ==========================================
+  static async createChangelogEntry(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { title, content, type, imageBase64, isPublished } = req.body;
+      
+      let imageUrl = null;
+      if (imageBase64 && imageBase64.startsWith('data:image')) {
+        const uploadRes = await cloudinary.uploader.upload(imageBase64, { folder: 'dasha/changelog' });
+        imageUrl = uploadRes.secure_url;
+      }
+
+      const entry = await prisma.changelogEntry.create({
+        data: { title, content, type, imageUrl, isPublished: isPublished || false }
+      });
+
+      // Notificación masiva si se publica
+      if (entry.isPublished) {
+        const { NotificationService } = await import('../services/notification.service');
+        const allUsers = await prisma.user.findMany({ select: { id: true } });
+        
+        // Enviar notificación (in-app y push) a cada usuario
+        for (const u of allUsers) {
+          await NotificationService.sendNotification({
+            userId: u.id,
+            title: `Nuevo Aviso: ${title}`,
+            body: 'Toca para leer más información en la sección de Comunidad.',
+            type: 'announcement',
+            referenceId: entry.id,
+            referenceType: 'changelog'
+          });
+        }
+      }
+
+      res.status(201).json(entry);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async updateChangelogEntry(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      const { title, content, type, imageBase64, isPublished } = req.body;
+      
+      const updateData: any = {};
+      if (title) updateData.title = title;
+      if (content) updateData.content = content;
+      if (type) updateData.type = type;
+      if (isPublished !== undefined) updateData.isPublished = isPublished;
+
+      if (imageBase64 && imageBase64.startsWith('data:image')) {
+        const uploadRes = await cloudinary.uploader.upload(imageBase64, { folder: 'dasha/changelog' });
+        updateData.imageUrl = uploadRes.secure_url;
+      }
+
+      // Evitar notificación masiva duplicada si ya estaba publicado
+      // Podría implementarse una bandera extra o comparar, pero por simplicidad solo se notifica al crear si isPublished=true
+      
+      const updated = await prisma.changelogEntry.update({
+        where: { id },
+        data: updateData
+      });
+
+      res.status(200).json(updated);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async deleteChangelogEntry(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      await prisma.changelogEntry.delete({ where: { id } });
+      res.status(200).json({ message: 'Novedad eliminada correctamente' });
     } catch (error) {
       next(error);
     }

@@ -7,6 +7,33 @@ export class AnimalService {
    */
   static async createProfile(data: any, photos: any[]) {
     return await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const report = await tx.report.findUnique({ where: { id: data.reportId } });
+      const timelineEvents: any[] = [];
+      
+      if (report) {
+        timelineEvents.push({
+          title: 'Reporte ciudadano',
+          description: 'Se recibió el reporte inicial del caso.',
+          type: 'reportado',
+          date: report.createdAt
+        });
+        if (report.volunteerId) {
+          timelineEvents.push({
+            title: 'Rescate iniciado',
+            description: 'Un voluntario fue asignado al caso.',
+            type: 'rescatado',
+            date: report.updatedAt
+          });
+        }
+      }
+      
+      timelineEvents.push({
+        title: 'Ingreso a rehabilitación',
+        description: 'Se creó el perfil médico del animal.',
+        type: 'veterinaria',
+        date: new Date()
+      });
+
       // Crear el perfil del animal
       const animal = await tx.animalProfile.create({
         data: {
@@ -32,10 +59,14 @@ export class AnimalService {
               publicId: photo.publicId,
               orderIndex: index
             }))
+          },
+          timeline: {
+            create: timelineEvents
           }
         },
         include: {
-          photos: true
+          photos: true,
+          timeline: { orderBy: { date: 'asc' } }
         }
       });
 
@@ -99,7 +130,8 @@ export class AnimalService {
           }
         },
         organization: { select: { name: true } },
-        currentFoster: { select: { name: true } }
+        currentFoster: { select: { name: true } },
+        timeline: { orderBy: { date: 'asc' } }
       }
     });
   }
