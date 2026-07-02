@@ -64,7 +64,7 @@ export function RegistroPage() {
     setLoading(true);
     try {
       await register(`${nombre.trim()} ${apellidos.trim()}`, email.trim(), password);
-      navigate('/');
+      navigate('/mapa');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo crear la cuenta');
     } finally {

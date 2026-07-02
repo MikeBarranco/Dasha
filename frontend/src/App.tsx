@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ScrollToTop } from './components/layout/ScrollToTop';
 import { AnalyticsTracker } from './components/layout/AnalyticsTracker';
 import { AppLayout } from './components/layout/AppLayout';
+import { LandingPage } from './pages/LandingPage';
 import { MapaPage } from './pages/MapaPage';
 import { ReportarPage } from './pages/ReportarPage';
 import { ReportarPerdidaPage } from './pages/ReportarPerdidaPage';
@@ -29,11 +30,12 @@ function App() {
       <ScrollToTop />
       <AnalyticsTracker />
       <Routes>
+        <Route path="/" element={<LandingPage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="registro" element={<RegistroPage />} />
         <Route path="auth/callback" element={<AuthCallbackPage />} />
         <Route element={<AppLayout />}>
-          <Route index element={<MapaPage />} />
+          <Route path="mapa" element={<MapaPage />} />
           <Route path="reportar" element={<ReportarPage />} />
           <Route path="reportar-perdida" element={<ReportarPerdidaPage />} />
           <Route path="rehabilitacion" element={<RehabilitacionPage />} />

@@ -52,7 +52,7 @@ export function BottomNav({ onReportClick }: BottomNavProps) {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] md:hidden">
       <div className="mx-auto grid max-w-md grid-cols-5 items-end rounded-[28px] border border-white/50 bg-white/80 px-2 shadow-[0_8px_30px_rgba(0,0,0,0.12)] backdrop-blur-md">
-        <NavItem to="/" label="Mapa" icon={MapIcon} end />
+        <NavItem to="/mapa" label="Mapa" icon={MapIcon} end />
         <NavItem to="/rehabilitacion" label="Rescates" icon={Heart} />
         <div className="flex justify-center">
           <button
