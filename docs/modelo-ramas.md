@@ -35,5 +35,17 @@ gitGraph
 1. Se crea una rama desde `staging` con el prefijo según el tipo de cambio
    (`feat/`, `fix/`, `chore/`, `docs/`).
 2. Se trabaja y se prueba (`lint`, `typecheck`, `build` y revisión en el navegador).
-3. Se abre un Pull Request hacia `staging`; se revisa y se integra.
-4. Cuando `staging` está estable, se libera a `main` (producción).
+3. Se abre un Pull Request hacia `staging`. Al abrirlo, **GitHub Actions (CI)**
+   corre automáticamente `lint` y `build` de frontend y backend; si algo falla,
+   no se integra.
+4. Se revisa el Pull Request y se integra a `staging`.
+5. Cuando `staging` está estable, se libera a `main` (producción).
+
+## Despliegue (CD)
+
+- **Frontend:** desplegado en **Vercel**, que publica automáticamente en cada
+  integración. La rama `staging` publica en `staging.dashamx.me` (pruebas); la
+  rama `main` publicará en `dashamx.me` (producción), pendiente hasta pulir para
+  la entrega final.
+- **Backend:** desplegado en un **Droplet de DigitalOcean** (por SSH), a cargo
+  del área de backend.
