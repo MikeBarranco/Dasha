@@ -190,7 +190,7 @@ export class AdminController {
           userId: currentReport.userId,
           title: 'Actualización de tu reporte',
           body: `El estado de tu reporte ha cambiado a: ${data.status}.`,
-          type: 'report_update',
+          type: 'status_change',
           referenceId: id,
           referenceType: 'report'
         });
