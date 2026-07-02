@@ -322,25 +322,43 @@ export type AppNotification = {
 export async function getNotifications(): Promise<AppNotification[]> {
   const data = await authedRaw<Record<string, unknown>[]>('/me/notifications');
   return (data ?? []).map((raw) => {
-    const readValue = raw.read ?? raw.isRead ?? raw.seen ?? raw.readAt;
+    const readValue = raw.isRead ?? raw.is_read ?? raw.read ?? raw.seen ?? raw.readAt;
     return {
       id: String(raw.id ?? raw._id ?? ''),
-      type: String(raw.type ?? 'announcement'),
+      type: String(raw.type ?? 'system'),
       title: String(raw.title ?? raw.message ?? 'Aviso'),
       body: String(raw.body ?? raw.description ?? (raw.title ? '' : raw.message) ?? ''),
       link: raw.link ? String(raw.link) : raw.url ? String(raw.url) : null,
       read: Boolean(readValue),
-      createdAgo: timeAgo(String(raw.createdAt ?? raw.created_at ?? '')),
+      createdAgo: timeAgo(
+        String(raw.sentAt ?? raw.sent_at ?? raw.createdAt ?? raw.created_at ?? ''),
+      ),
     };
   });
 }
 
+// Marca una notificación como leída. Contrato de Isabel: PATCH al recurso con
+// el cuerpo { isRead: true } (no una subruta /read).
 export async function markNotificationRead(id: string): Promise<void> {
-  await authedRaw(`/me/notifications/${id}/read`, { method: 'PATCH' });
+  await authedRaw(`/me/notifications/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ isRead: true }),
+  });
 }
 
-export async function markAllNotificationsRead(): Promise<void> {
-  await authedRaw('/me/notifications/read-all', { method: 'POST' });
+// Guarda la suscripción Web Push de este dispositivo. Enviamos el JSON estándar
+// del navegador (endpoint + keys p256dh/auth) más una etiqueta del dispositivo.
+export async function savePushSubscription(subscription: PushSubscriptionJSON): Promise<void> {
+  await authedRaw('/me/push-subscription', {
+    method: 'POST',
+    body: JSON.stringify({
+      endpoint: subscription.endpoint,
+      keys: subscription.keys,
+      p256dh: subscription.keys?.p256dh,
+      auth: subscription.keys?.auth,
+      device: typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 80) : undefined,
+    }),
+  });
 }
 
 export type Achievement = {

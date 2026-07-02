@@ -15,6 +15,7 @@ import {
 import { Avatar } from '../components/ui/Avatar';
 import { AvatarPicker } from '../components/perfil/AvatarPicker';
 import { MyReports } from '../components/perfil/MyReports';
+import { PushToggle } from '../components/perfil/PushToggle';
 import { SocialLinks } from '../components/ui/SocialLinks';
 import { cn } from '../lib/cn';
 import { mockUser } from '../data/mockUser';
@@ -243,6 +244,8 @@ export function PerfilPage() {
           </div>
         )}
       </div>
+
+      <PushToggle />
 
       <div className="divide-y divide-neutral-100 overflow-hidden rounded-2xl border border-neutral-200 bg-white">
         {account.role === 'admin' && (

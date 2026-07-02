@@ -4,12 +4,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { Bell, CheckCheck } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { useAuth } from '../../lib/useAuth';
-import {
-  getNotifications,
-  markNotificationRead,
-  markAllNotificationsRead,
-  type AppNotification,
-} from '../../lib/api';
+import { getNotifications, markNotificationRead, type AppNotification } from '../../lib/api';
 
 export function NotificationsBell() {
   const navigate = useNavigate();
@@ -78,8 +73,9 @@ export function NotificationsBell() {
   };
 
   const markAll = () => {
+    const unreadIds = items ? items.filter((n) => !n.read).map((n) => n.id) : [];
     setItems((list) => (list ? list.map((n) => ({ ...n, read: true })) : list));
-    markAllNotificationsRead().catch(() => {});
+    unreadIds.forEach((id) => markNotificationRead(id).catch(() => {}));
   };
 
   return (
