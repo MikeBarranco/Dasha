@@ -213,7 +213,7 @@ export function AllyDetail({ ally, onClose }: AllyDetailProps) {
 
           <button
             type="button"
-            onClick={() => navigate(`/?aliado=${ally.id}`)}
+            onClick={() => navigate(`/mapa?aliado=${ally.id}`)}
             className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-cobalto py-3 font-semibold text-white transition-opacity hover:opacity-90"
           >
             <MapIcon className="h-5 w-5" /> Ver en el mapa

@@ -33,8 +33,8 @@ export function AuthCallbackPage() {
           // Guardar el perfil completo y notificar a la app
           setSession(user, token);
           window.dispatchEvent(new Event('dasha-auth-change'));
-          // Redirigir al inicio o mapa
-          navigate('/', { replace: true });
+          // Redirigir al mapa (la app); la portada "/" es para visitantes sin sesión
+          navigate('/mapa', { replace: true });
         } else {
           throw new Error('Fallo al obtener perfil del usuario');
         }

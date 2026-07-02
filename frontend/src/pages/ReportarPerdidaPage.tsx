@@ -173,7 +173,7 @@ export function ReportarPerdidaPage() {
         <div className="mt-8 flex gap-3">
           <button
             type="button"
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/mapa')}
             className="rounded-xl bg-cobalto px-5 py-3 font-medium text-white"
           >
             Ir al mapa

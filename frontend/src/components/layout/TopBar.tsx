@@ -6,7 +6,7 @@ import { useAvatar } from '../../lib/useAvatar';
 import { useAuth } from '../../lib/useAuth';
 
 const navItems = [
-  { to: '/', label: 'Mapa', end: true },
+  { to: '/mapa', label: 'Mapa', end: true },
   { to: '/rehabilitacion', label: 'Rehabilitación', end: false },
   { to: '/comunidad', label: 'Comunidad', end: false },
   { to: '/aliados', label: 'Aliados', end: false },
@@ -23,7 +23,7 @@ export function TopBar({ onReportClick }: TopBarProps) {
   return (
     <header className="sticky top-0 z-40 border-b border-neutral-200/70 bg-lino/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 md:px-8">
-        <Link to="/" className="flex items-center gap-2">
+        <Link to="/mapa" className="flex items-center gap-2">
           <img src="/brand/logo-mark.png" alt="Dasha" className="h-9 w-9 rounded-full" />
           <span className="font-display text-xl font-bold text-cobalto">Dasha</span>
         </Link>

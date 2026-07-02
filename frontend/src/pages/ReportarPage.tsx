@@ -249,7 +249,7 @@ export function ReportarPage() {
         <div className="mt-8 flex gap-3">
           <button
             type="button"
-            onClick={() => navigate(newReportId ? `/?reporte=${newReportId}` : '/')}
+            onClick={() => navigate(newReportId ? `/mapa?reporte=${newReportId}` : '/mapa')}
             className="rounded-xl bg-cobalto px-5 py-3 font-medium text-white"
           >
             Ver mi reporte

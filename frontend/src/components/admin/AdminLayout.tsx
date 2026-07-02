@@ -12,7 +12,7 @@ export function AdminLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   if (!user) return <Navigate to="/login" replace />;
-  if (user.role !== 'admin') return <Navigate to="/" replace />;
+  if (user.role !== 'admin') return <Navigate to="/mapa" replace />;
 
   const current =
     adminSections.find((section) => location.pathname === section.to) ?? adminSections[0];
@@ -33,7 +33,7 @@ export function AdminLayout() {
             </div>
           </div>
           <Link
-            to="/"
+            to="/mapa"
             className="flex flex-shrink-0 items-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
           >
             <ArrowLeft className="h-4 w-4" />

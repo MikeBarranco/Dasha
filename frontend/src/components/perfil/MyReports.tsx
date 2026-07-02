@@ -61,7 +61,7 @@ export function MyReports() {
             <button
               key={report.id}
               type="button"
-              onClick={() => navigate(`/?reporte=${report.id}`)}
+              onClick={() => navigate(`/mapa?reporte=${report.id}`)}
               className="flex w-full items-center gap-3 rounded-2xl border border-neutral-200 bg-white p-3 text-left transition-colors hover:border-cobalto/40 hover:bg-neutral-50"
             >
               <img
