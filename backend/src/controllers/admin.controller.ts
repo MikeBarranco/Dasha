@@ -50,13 +50,47 @@ export class AdminController {
         return;
       }
 
-      // Cascade delete relies on schema referential actions. Prisma usually requires manual cascade if not defined in schema.
-      // We will try deleting the user. If Prisma throws a foreign key error, we'd need to manually delete relations.
-      // But for this MVP, we use Prisma's delete.
-      await prisma.user.delete({
-        where: { id }
+      // Para evitar errores de llaves foráneas, borramos en transacción todo lo que le pertenece
+      await prisma.$transaction(async (tx) => {
+        // 1. Obtener los IDs de los reportes del usuario
+        const userReports = await tx.report.findMany({ where: { userId: id }, select: { id: true } });
+        const reportIds = userReports.map(r => r.id);
+
+        if (reportIds.length > 0) {
+          // Borrar dependencias de los reportes (fotos tienen cascade en schema)
+          await tx.reportStatusHistory.deleteMany({ where: { reportId: { in: reportIds } } });
+          await tx.caseAction.deleteMany({ where: { reportId: { in: reportIds } } });
+          await tx.rescueAssignment.deleteMany({ where: { reportId: { in: reportIds } } });
+          await tx.resource.deleteMany({ where: { reportId: { in: reportIds } } });
+          await tx.lostPetMatch.deleteMany({ where: { reportId: { in: reportIds } } });
+          await tx.reportFlag.deleteMany({ where: { reportId: { in: reportIds } } });
+          
+          // Finalmente, borrar los reportes
+          await tx.report.deleteMany({ where: { userId: id } });
+        }
+
+        // 2. Borrar dependencias directas del usuario
+        await tx.authProvider.deleteMany({ where: { userId: id } });
+        await tx.userAvatar.deleteMany({ where: { userId: id } });
+        await tx.pushSubscription.deleteMany({ where: { userId: id } });
+        await tx.notification.deleteMany({ where: { userId: id } });
+        await tx.eventReminder.deleteMany({ where: { userId: id } });
+        await tx.userAchievement.deleteMany({ where: { userId: id } });
+        await tx.reputationEvent.deleteMany({ where: { userId: id } });
+        await tx.forumVote.deleteMany({ where: { userId: id } });
+        await tx.forumReply.deleteMany({ where: { userId: id } });
+        await tx.forumPost.deleteMany({ where: { userId: id } });
+        
+        // 3. Desvincular de relaciones opcionales (voluntario, adoptante, etc.)
+        await tx.report.updateMany({ where: { volunteerId: id }, data: { volunteerId: null } });
+        await tx.animalProfile.updateMany({ where: { currentFosterId: id }, data: { currentFosterId: null } });
+        await tx.animalProfile.updateMany({ where: { adoptedByUserId: id }, data: { adoptedByUserId: null } });
+
+        // 4. Borrar al usuario
+        await tx.user.delete({ where: { id } });
       });
-      res.status(200).json({ message: 'Usuario eliminado correctamente' });
+
+      res.status(200).json({ message: 'Usuario y sus reportes eliminados correctamente' });
     } catch (error) {
       next(error);
     }
