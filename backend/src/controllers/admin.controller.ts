@@ -151,7 +151,7 @@ export class AdminController {
       });
 
       if (currentReport && data.status && currentReport.status !== data.status) {
-        const { NotificationService } = await import('../services/notification.service');
+        const { NotificationService } = await import('../services/notification.service.js');
         await NotificationService.sendNotification({
           userId: currentReport.userId,
           title: 'Actualización de tu reporte',
@@ -412,7 +412,7 @@ export class AdminController {
 
   static async deleteAnimalPhoto(req: Request, res: Response, next: NextFunction) {
     try {
-      const { id, photoId } = req.params;
+      const { id, photoId } = req.params as { id: string; photoId: string };
 
       const photo = await prisma.animalPhoto.findFirst({
         where: { id: photoId, animalId: id }
@@ -465,7 +465,7 @@ export class AdminController {
 
   static async updateAnimalTimelineEvent(req: Request, res: Response, next: NextFunction) {
     try {
-      const { id, eventId } = req.params;
+      const { id, eventId } = req.params as { id: string; eventId: string };
       const { title, description, type, date } = req.body;
 
       const updated = await prisma.animalTimelineEvent.updateMany({
@@ -492,7 +492,7 @@ export class AdminController {
 
   static async deleteAnimalTimelineEvent(req: Request, res: Response, next: NextFunction) {
     try {
-      const { id, eventId } = req.params;
+      const { id, eventId } = req.params as { id: string; eventId: string };
 
       const deleted = await prisma.animalTimelineEvent.deleteMany({
         where: { id: eventId, animalId: id }
@@ -636,7 +636,7 @@ export class AdminController {
         }
       });
 
-      const { NotificationService } = await import('../services/notification.service');
+      const { NotificationService } = await import('../services/notification.service.js');
       if (status === 'approved') {
         await NotificationService.sendNotification({
           userId: id,
@@ -767,7 +767,7 @@ export class AdminController {
 
       // Notificación masiva si se publica
       if (entry.isPublished) {
-        const { NotificationService } = await import('../services/notification.service');
+        const { NotificationService } = await import('../services/notification.service.js');
         const allUsers = await prisma.user.findMany({ select: { id: true } });
         
         // Enviar notificación (in-app y push) a cada usuario

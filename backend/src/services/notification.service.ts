@@ -31,7 +31,8 @@ export class NotificationService {
       data: {
         userId,
         endpoint,
-        keys: subscription.keys,
+        p256dh: subscription.keys.p256dh,
+        auth: subscription.keys.auth,
       }
     });
   }
@@ -82,7 +83,7 @@ export class NotificationService {
         try {
           const pushSubscription = {
             endpoint: sub.endpoint,
-            keys: sub.keys as { p256dh: string; auth: string }
+            keys: { p256dh: sub.p256dh, auth: sub.auth }
           };
           await webpush.sendNotification(pushSubscription, pushPayload);
         } catch (error: any) {

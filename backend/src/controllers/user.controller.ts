@@ -249,7 +249,7 @@ export class UserController {
   static async updateNotification(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = (req as any).user?.id;
-      const { id } = req.params;
+      const { id } = req.params as { id: string };
       const { isRead } = req.body;
 
       if (!userId) return res.status(401).json({ error: 'No autorizado' });
@@ -295,7 +295,7 @@ export class UserController {
         return res.status(400).json({ error: 'Suscripción inválida' });
       }
 
-      const { NotificationService } = await import('../services/notification.service');
+      const { NotificationService } = await import('../services/notification.service.js');
       const saved = await NotificationService.saveSubscription(userId, subscription);
       
       res.status(200).json(saved);

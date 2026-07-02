@@ -58,7 +58,7 @@ export class AchievementService {
             });
           }
 
-          const { NotificationService } = await import('./notification.service');
+          const { NotificationService } = await import('./notification.service.js');
           await NotificationService.sendNotification({
             userId,
             title: '¡Nueva Medalla Desbloqueada! 🏅',
