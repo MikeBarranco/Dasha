@@ -62,7 +62,7 @@ export class AdminController {
           await tx.caseAction.deleteMany({ where: { reportId: { in: reportIds } } });
           await tx.rescueAssignment.deleteMany({ where: { reportId: { in: reportIds } } });
           await tx.resource.deleteMany({ where: { reportId: { in: reportIds } } });
-          await tx.lostPetMatch.deleteMany({ where: { reportId: { in: reportIds } } });
+          await tx.lostPetMatch.deleteMany({ where: { matchedReportId: { in: reportIds } } });
           await tx.reportFlag.deleteMany({ where: { reportId: { in: reportIds } } });
           
           // Finalmente, borrar los reportes
