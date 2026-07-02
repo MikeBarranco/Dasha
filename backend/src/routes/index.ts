@@ -9,6 +9,7 @@ import animalRoutes from './animal.routes';
 import colonyRoutes from './colony.routes';
 import adminRoutes from './admin.routes';
 import lostPetRoutes from './lost-pet.routes';
+import changelogRoutes from './changelog.routes';
 
 const router = Router();
 
@@ -22,6 +23,7 @@ router.use('/animals', animalRoutes);
 router.use('/colonies', colonyRoutes);
 router.use('/admin', adminRoutes);
 router.use('/lost-pets', lostPetRoutes);
+router.use('/changelog', changelogRoutes);
 
 router.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

@@ -37,6 +37,11 @@ router.get('/animals', AdminController.getAllAnimals);
 router.post('/animals', AdminController.createAnimal);
 router.patch('/animals/:id', AdminController.updateAnimal);
 router.delete('/animals/:id', AdminController.deleteAnimal);
+router.delete('/animals/:id/photos/:photoId', AdminController.deleteAnimalPhoto);
+
+router.post('/animals/:id/timeline', AdminController.createAnimalTimelineEvent);
+router.patch('/animals/:id/timeline/:eventId', AdminController.updateAnimalTimelineEvent);
+router.delete('/animals/:id/timeline/:eventId', AdminController.deleteAnimalTimelineEvent);
 
 // ==========================================
 // FORO
@@ -58,5 +63,12 @@ router.get('/events', AdminController.getAllEvents);
 router.post('/events', AdminController.createEvent);
 router.patch('/events/:id', AdminController.updateEvent);
 router.delete('/events/:id', AdminController.deleteEvent);
+
+// ==========================================
+// NOVEDADES (CHANGELOG)
+// ==========================================
+router.post('/changelog', AdminController.createChangelogEntry);
+router.patch('/changelog/:id', AdminController.updateChangelogEntry);
+router.delete('/changelog/:id', AdminController.deleteChangelogEntry);
 
 export default router;

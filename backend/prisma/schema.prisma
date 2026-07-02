@@ -558,6 +558,7 @@ model AnimalProfile {
   caseActions          CaseAction[]
   fosterAssignments    FosterAssignment[]
   adoptionApplications AdoptionApplication[]
+  timeline             AnimalTimelineEvent[]
 
   @@map("animal_profiles")
 }
@@ -574,6 +575,20 @@ model AnimalPhoto {
   animal AnimalProfile @relation(fields: [animalId], references: [id], onDelete: Cascade)
 
   @@map("animal_photos")
+}
+
+model AnimalTimelineEvent {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  animalId    String   @map("animal_id") @db.Uuid
+  title       String   @db.VarChar(200)
+  description String?
+  type        String   @db.VarChar(50)
+  date        DateTime @map("date") @db.Timestamptz
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  animal AnimalProfile @relation(fields: [animalId], references: [id], onDelete: Cascade)
+
+  @@map("animal_timeline_events")
 }
 
 model MedicalRecord {
@@ -979,4 +994,17 @@ model AuditLog {
   admin User @relation(fields: [adminId], references: [id])
 
   @@map("audit_log")
+}
+
+model ChangelogEntry {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title       String   @db.VarChar(200)
+  content     String
+  type        String   @db.VarChar(50)
+  imageUrl    String?  @map("image_url")
+  isPublished Boolean  @default(false) @map("is_published")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamptz
+
+  @@map("changelog_entries")
 }
