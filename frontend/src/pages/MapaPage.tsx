@@ -171,11 +171,33 @@ export function MapaPage() {
   };
   const header = headerByMode[mapMode];
 
-  const statCards = [
-    { label: 'Reportes activos', value: stats?.reportesActivos ?? null },
-    { label: 'Rescates logrados', value: stats?.rescatesLogrados ?? null },
-    { label: 'Voluntarios', value: stats?.voluntarios ?? null },
-  ];
+  // Los contadores corresponden al modo activo y se derivan de los datos reales
+  // que alimentan el mapa (no de un total global), para que siempre coincidan
+  // con lo que se ve en pantalla.
+  const statCards = useMemo<{ label: string; value: number | null }[]>(() => {
+    if (mapMode === 'perdidos') {
+      return [
+        { label: 'Mascotas perdidas', value: lostPets.length },
+        { label: 'Perros', value: lostPets.filter((pet) => pet.species === 'perro').length },
+        { label: 'Gatos', value: lostPets.filter((pet) => pet.species === 'gato').length },
+      ];
+    }
+    if (mapMode === 'aliados') {
+      return [
+        { label: 'Aliados', value: allies.length },
+        {
+          label: 'Veterinarias',
+          value: allies.filter((ally) => ally.orgType === 'veterinary').length,
+        },
+        { label: 'Refugios', value: allies.filter((ally) => ally.orgType === 'shelter').length },
+      ];
+    }
+    return [
+      { label: 'Reportes activos', value: reports?.length ?? null },
+      { label: 'Rescates logrados', value: stats?.rescatesLogrados ?? null },
+      { label: 'Voluntarios', value: stats?.voluntarios ?? null },
+    ];
+  }, [mapMode, lostPets, allies, reports, stats]);
 
   return (
     <div>
