@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight } from 'lucide-react';
 import { getMyReports } from '../../lib/api';
 import { EmptyState } from '../ui/EmptyState';
 import type { Report } from '../../data/mockReports';
+
+const PREVIEW_COUNT = 4;
 
 export function MyReports() {
   const navigate = useNavigate();
   const [reports, setReports] = useState<Report[] | null>(null);
   const [failed, setFailed] = useState(false);
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -30,6 +32,9 @@ export function MyReports() {
   // Si falla la carga, no mostramos la sección (no estorba el perfil).
   if (failed) return null;
 
+  const shown = reports ? (showAll ? reports : reports.slice(0, PREVIEW_COUNT)) : [];
+  const hasMore = reports ? reports.length > PREVIEW_COUNT : false;
+
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
@@ -40,9 +45,9 @@ export function MyReports() {
       </div>
 
       {reports === null && (
-        <div className="space-y-2">
-          {[0, 1].map((index) => (
-            <div key={index} className="h-16 animate-pulse rounded-2xl bg-neutral-100" />
+        <div className="grid grid-cols-4 gap-2 sm:gap-3">
+          {[0, 1, 2, 3].map((index) => (
+            <div key={index} className="aspect-square animate-pulse rounded-xl bg-neutral-100" />
           ))}
         </div>
       )}
@@ -56,35 +61,44 @@ export function MyReports() {
       )}
 
       {reports !== null && reports.length > 0 && (
-        <div className="space-y-2">
-          {reports.map((report) => (
+        <>
+          <div className="grid grid-cols-4 gap-2 sm:gap-3">
+            {shown.map((report) => (
+              <button
+                key={report.id}
+                type="button"
+                onClick={() => navigate(`/mapa?reporte=${report.id}`)}
+                title={`${report.colonia} · ${report.condition}`}
+                className="group relative aspect-square overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100"
+              >
+                <img
+                  src={report.photo}
+                  alt=""
+                  onError={(event) => {
+                    event.currentTarget.onerror = null;
+                    event.currentTarget.src = '/placeholder-animal.svg';
+                  }}
+                  className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                />
+                <span className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent px-1.5 py-1">
+                  <span className="block truncate text-[10px] font-medium text-white">
+                    {report.colonia}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {hasMore && (
             <button
-              key={report.id}
               type="button"
-              onClick={() => navigate(`/mapa?reporte=${report.id}`)}
-              className="flex w-full items-center gap-3 rounded-2xl border border-neutral-200 bg-white p-3 text-left transition-colors hover:border-cobalto/40 hover:bg-neutral-50"
+              onClick={() => setShowAll((value) => !value)}
+              className="mt-3 text-sm font-medium text-cobalto hover:underline"
             >
-              <img
-                src={report.photo}
-                alt=""
-                onError={(event) => {
-                  event.currentTarget.onerror = null;
-                  event.currentTarget.src = '/placeholder-animal.svg';
-                }}
-                className="h-12 w-12 flex-shrink-0 rounded-xl object-cover"
-              />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-neutral-800">{report.colonia}</p>
-                <p className="text-xs text-neutral-500">
-                  {report.species === 'gato' ? 'Gato' : 'Perro'} · {report.condition} ·{' '}
-                  {report.status}
-                </p>
-                <p className="text-xs text-neutral-400">{report.reportedAgo}</p>
-              </div>
-              <ChevronRight className="h-4 w-4 flex-shrink-0 text-neutral-300" />
+              {showAll ? 'Ver menos' : `Ver más (${reports.length})`}
             </button>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </div>
   );
