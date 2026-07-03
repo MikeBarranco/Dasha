@@ -91,8 +91,13 @@ export function AdminUsersPage() {
       await deleteAdminUser(id);
       setUsers((list) => (list ? list.filter((user) => user.id !== id) : list));
       setConfirmId(null);
-    } catch {
-      alert('No se pudo eliminar el usuario. Intenta de nuevo.');
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : '';
+      alert(
+        detail
+          ? `No se pudo eliminar: ${detail}`
+          : 'No se pudo eliminar el usuario. Intenta de nuevo.',
+      );
     } finally {
       setDeletingId(null);
     }
