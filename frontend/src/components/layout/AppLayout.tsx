@@ -1,14 +1,33 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useOutlet } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { TopBar } from './TopBar';
 import { BottomNav } from './BottomNav';
 import { ReportChooser } from './ReportChooser';
+import { Onboarding } from '../onboarding/Onboarding';
+import {
+  hasSeenOnboarding,
+  markOnboardingSeen,
+  ONBOARDING_OPEN_EVENT,
+} from '../../lib/onboarding';
 
 export function AppLayout() {
   const location = useLocation();
   const outlet = useOutlet();
   const [chooserOpen, setChooserOpen] = useState(false);
+  // Se muestra la primera vez en este dispositivo; se puede reabrir desde el perfil.
+  const [showOnboarding, setShowOnboarding] = useState(() => !hasSeenOnboarding());
+
+  useEffect(() => {
+    const open = () => setShowOnboarding(true);
+    window.addEventListener(ONBOARDING_OPEN_EVENT, open);
+    return () => window.removeEventListener(ONBOARDING_OPEN_EVENT, open);
+  }, []);
+
+  const closeOnboarding = () => {
+    markOnboardingSeen();
+    setShowOnboarding(false);
+  };
 
   const openChooser = () => setChooserOpen(true);
 
@@ -30,6 +49,9 @@ export function AppLayout() {
       </main>
       <BottomNav onReportClick={openChooser} />
       <ReportChooser open={chooserOpen} onClose={() => setChooserOpen(false)} />
+      <AnimatePresence>
+        {showOnboarding && <Onboarding onClose={closeOnboarding} />}
+      </AnimatePresence>
     </div>
   );
 }
