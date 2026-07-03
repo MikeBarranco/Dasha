@@ -23,10 +23,13 @@ async function adminFetch<T>(path: string, options: RequestInit = {}): Promise<T
 
   if (!response.ok || (body && !Array.isArray(body) && body.status === 'error')) {
     // El backend a veces manda el detalle en `message` y otras en `error`.
+    // Priorizamos ese mensaje real: así vemos la causa exacta en vez de un texto
+    // genérico que la esconde. Solo si no viene mensaje usamos un respaldo.
     const message =
       body && !Array.isArray(body) ? (body.message ?? body.error) : undefined;
+    if (message) throw new Error(message);
     if (response.status === 403) throw new Error('Tu cuenta no tiene permisos de administrador');
-    throw new Error(message ?? `Ocurrió un error con el servidor (${response.status})`);
+    throw new Error(`Ocurrió un error con el servidor (${response.status})`);
   }
 
   if (body && !Array.isArray(body) && 'data' in body) return body.data as T;
