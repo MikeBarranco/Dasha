@@ -24,15 +24,20 @@ export function AccountSettingsSheet({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Nombre: solo letras (con acentos/ñ), espacios y ' . - ; entre 2 y 50
+  // caracteres. Se colapsan espacios repetidos para que "aaaa   bbbb" no pase.
+  const cleanName = name.trim().replace(/\s+/g, ' ');
+  const nameCharsOk = /^[\p{L}\p{M}\s'.-]+$/u.test(cleanName);
+  const nameValid = cleanName.length >= 2 && cleanName.length <= 50 && nameCharsOk;
+
   const digits = phone.replace(/\D/g, '');
   const phoneValid = digits.length === 0 || digits.length === 10;
-  const canSave = name.trim().length >= 2 && phoneValid && !saving;
+  const canSave = nameValid && phoneValid && !saving;
 
   const save = async () => {
     if (!canSave) return;
     setSaving(true);
     setError(null);
-    const cleanName = name.trim();
     try {
       await updateMe({ name: cleanName, phone: digits });
       onSaved({ name: cleanName, phone: digits });
@@ -77,9 +82,14 @@ export function AccountSettingsSheet({
             <input
               value={name}
               onChange={(event) => setName(event.target.value)}
-              maxLength={60}
+              maxLength={50}
               className="mt-1 w-full rounded-xl border border-neutral-200 px-3 py-2 text-base text-neutral-800 outline-none focus:ring-2 focus:ring-cobalto/30"
             />
+            {name.length > 0 && !nameValid && (
+              <span className="mt-1 block text-xs text-alerta">
+                Usa solo letras (2 a 50 caracteres).
+              </span>
+            )}
           </label>
 
           <label className="block">

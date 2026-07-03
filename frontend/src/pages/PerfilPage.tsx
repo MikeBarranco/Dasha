@@ -147,7 +147,7 @@ export function PerfilPage() {
           </span>
         </button>
         <div className="min-w-0">
-          <h1 className="font-display text-2xl font-bold text-cobalto">
+          <h1 className="truncate font-display text-2xl font-bold text-cobalto">
             {me?.name ?? account.name}
           </h1>
           <div className="mt-1 flex flex-wrap items-center gap-2">
