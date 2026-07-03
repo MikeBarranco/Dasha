@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence } from 'motion/react';
 import {
-  Lock,
   ChevronRight,
   Settings,
   LogOut,
@@ -16,6 +15,8 @@ import { Avatar } from '../components/ui/Avatar';
 import { AvatarPicker } from '../components/perfil/AvatarPicker';
 import { MyReports } from '../components/perfil/MyReports';
 import { PushToggle } from '../components/perfil/PushToggle';
+import { MedalsSheet } from '../components/perfil/MedalsSheet';
+import { AccountSettingsSheet } from '../components/perfil/AccountSettingsSheet';
 import { SocialLinks } from '../components/ui/SocialLinks';
 import { cn } from '../lib/cn';
 import { mockUser } from '../data/mockUser';
@@ -69,9 +70,9 @@ export function PerfilPage() {
   const { status: volunteerStatus } = useVolunteerStatus();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [me, setMe] = useState<MeProfile | null>(null);
-  const [selectedMedal, setSelectedMedal] = useState<{ name: string; description: string } | null>(
-    null,
-  );
+  const [medalsOpen, setMedalsOpen] = useState(false);
+  const [focusMedalId, setFocusMedalId] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     if (!account) return;
@@ -140,13 +141,15 @@ export function PerfilPage() {
           className="relative flex-shrink-0"
           aria-label="Cambiar avatar"
         >
-          <Avatar name={account.name} src={avatar} className="h-20 w-20 text-2xl" />
+          <Avatar name={me?.name ?? account.name} src={avatar} className="h-20 w-20 text-2xl" />
           <span className="absolute -bottom-0.5 -right-0.5 flex h-7 w-7 items-center justify-center rounded-full border-2 border-lino bg-cobalto text-white">
             <Camera className="h-3.5 w-3.5" />
           </span>
         </button>
         <div className="min-w-0">
-          <h1 className="font-display text-2xl font-bold text-cobalto">{account.name}</h1>
+          <h1 className="font-display text-2xl font-bold text-cobalto">
+            {me?.name ?? account.name}
+          </h1>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-cobalto/10 px-2.5 py-0.5 text-xs font-medium text-cobalto">
               {roleLabel}
@@ -171,7 +174,7 @@ export function PerfilPage() {
       <div className="grid grid-cols-3 gap-3">
         <StatCard value={me?.reportsCount ?? user.stats.reportes} label="Reportes" />
         <StatCard value={me?.rescuesCount ?? user.stats.rescates} label="Rescates apoyados" />
-        <StatCard value={user.stats.seguidos} label="Siguiendo" />
+        <StatCard value={unlockedCount} label="Medallas" />
       </div>
 
       {realRole === 'citizen' &&
@@ -205,42 +208,51 @@ export function PerfilPage() {
       <div>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-display text-lg font-bold text-cobalto">Medallas</h2>
-          <span className="text-xs text-neutral-400">
-            {unlockedCount} de {medals.length}
-          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setFocusMedalId(null);
+              setMedalsOpen(true);
+            }}
+            className="text-sm font-medium text-cobalto hover:underline"
+          >
+            Ver todas
+          </button>
         </div>
-        <div className="grid grid-cols-3 gap-4 sm:grid-cols-4">
-          {medals.map((medal) => (
+
+        {unlockedCount === 0 ? (
+          <div className="rounded-2xl border border-dashed border-neutral-200 bg-white p-5 text-center">
+            <p className="text-sm text-neutral-500">Aún no tienes medallas.</p>
             <button
-              key={medal.id}
               type="button"
-              onClick={() => setSelectedMedal({ name: medal.name, description: medal.description })}
-              title={medal.description}
-              className="flex flex-col items-center text-center"
+              onClick={() => {
+                setFocusMedalId(null);
+                setMedalsOpen(true);
+              }}
+              className="mt-1 text-sm font-medium text-cobalto hover:underline"
             >
-              <div className="relative h-20 w-20">
-                <img
-                  src={medal.image}
-                  alt={medal.name}
-                  className={cn(
-                    'h-full w-full object-contain',
-                    !medal.unlocked && 'opacity-40 grayscale',
-                  )}
-                />
-                {!medal.unlocked && (
-                  <span className="absolute inset-0 flex items-center justify-center">
-                    <Lock className="h-5 w-5 text-neutral-400" />
-                  </span>
-                )}
-              </div>
-              <p className="mt-1 text-xs font-medium text-neutral-600">{medal.name}</p>
+              Ve todas las que puedes conseguir
             </button>
-          ))}
-        </div>
-        {selectedMedal && (
-          <div className="mt-3 rounded-2xl border border-neutral-200 bg-white p-3 text-center">
-            <p className="text-sm font-semibold text-cobalto">{selectedMedal.name}</p>
-            <p className="mt-0.5 text-xs text-neutral-500">{selectedMedal.description}</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-4 sm:grid-cols-5">
+            {medals
+              .filter((medal) => medal.unlocked)
+              .map((medal) => (
+                <button
+                  key={medal.id}
+                  type="button"
+                  onClick={() => {
+                    setFocusMedalId(medal.id);
+                    setMedalsOpen(true);
+                  }}
+                  title={medal.description}
+                  className="flex flex-col items-center text-center"
+                >
+                  <img src={medal.image} alt={medal.name} className="h-16 w-16 object-contain" />
+                  <p className="mt-1 text-[11px] font-medium text-neutral-600">{medal.name}</p>
+                </button>
+              ))}
           </div>
         )}
       </div>
@@ -255,7 +267,11 @@ export function PerfilPage() {
             onClick={() => navigate('/admin')}
           />
         )}
-        <RowButton icon={Settings} label="Ajustes de la cuenta" />
+        <RowButton
+          icon={Settings}
+          label="Ajustes de la cuenta"
+          onClick={() => setSettingsOpen(true)}
+        />
         <RowButton
           icon={Sparkles}
           label="Novedades"
@@ -287,6 +303,30 @@ export function PerfilPage() {
               setPickerOpen(false);
             }}
             onClose={() => setPickerOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {medalsOpen && (
+          <MedalsSheet
+            medals={medals}
+            initialSelectedId={focusMedalId}
+            onClose={() => setMedalsOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {settingsOpen && (
+          <AccountSettingsSheet
+            initialName={me?.name ?? account.name}
+            initialPhone={me?.phone ?? ''}
+            onSaved={({ name, phone }) => {
+              setMe((prev) => (prev ? { ...prev, name, phone } : prev));
+              setSettingsOpen(false);
+            }}
+            onClose={() => setSettingsOpen(false)}
           />
         )}
       </AnimatePresence>
