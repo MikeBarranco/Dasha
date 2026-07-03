@@ -9,6 +9,7 @@ import {
   Camera,
   Sparkles,
   ShieldCheck,
+  HelpCircle,
   type LucideIcon,
 } from 'lucide-react';
 import { Avatar } from '../components/ui/Avatar';
@@ -17,6 +18,7 @@ import { MyReports } from '../components/perfil/MyReports';
 import { PushToggle } from '../components/perfil/PushToggle';
 import { MedalsSheet } from '../components/perfil/MedalsSheet';
 import { AccountSettingsSheet } from '../components/perfil/AccountSettingsSheet';
+import { openOnboarding } from '../lib/onboarding';
 import { SocialLinks } from '../components/ui/SocialLinks';
 import { cn } from '../lib/cn';
 import { mockUser } from '../data/mockUser';
@@ -276,6 +278,11 @@ export function PerfilPage() {
           icon={Sparkles}
           label="Novedades"
           onClick={() => navigate('/novedades')}
+        />
+        <RowButton
+          icon={HelpCircle}
+          label="¿Cómo funciona Dasha?"
+          onClick={() => openOnboarding()}
         />
         <RowButton
           icon={LogOut}
