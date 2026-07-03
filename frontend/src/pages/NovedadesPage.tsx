@@ -1,17 +1,21 @@
 import { motion } from 'motion/react';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Heart } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { cn } from '../lib/cn';
-import { releaseNotes } from '../data/novedades';
+import { releaseNotes, originStory } from '../data/novedades';
 
 export function NovedadesPage() {
   return (
     <div>
-      <PageHeader title="Novedades" subtitle="Lo nuevo en cada versión de Dasha." />
+      <PageHeader
+        title="Novedades"
+        subtitle="Todo lo que hemos construido en Dasha, versión por versión."
+      />
 
       <div className="relative">
+        {/* Línea del timeline: centrada bajo los puntos (16px = centro del punto). */}
         <span
-          className="absolute bottom-4 left-[17px] top-4 w-px bg-neutral-200"
+          className="absolute bottom-6 left-4 top-3 w-px -translate-x-1/2 bg-neutral-200"
           aria-hidden="true"
         />
 
@@ -28,7 +32,7 @@ export function NovedadesPage() {
               >
                 <span
                   className={cn(
-                    'absolute left-0 top-1 flex h-9 w-9 items-center justify-center rounded-full ring-4 ring-lino',
+                    'absolute left-0 top-1 flex h-8 w-8 items-center justify-center rounded-full ring-4 ring-lino',
                     latest ? 'bg-cobalto text-white' : 'bg-cobalto/10 text-cobalto',
                   )}
                 >
@@ -71,6 +75,28 @@ export function NovedadesPage() {
           })}
         </div>
       </div>
+
+      {/* Historia de origen */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.1, ease: 'easeOut' }}
+        className="mt-8 rounded-2xl border border-purpura/20 bg-purpura/5 p-6"
+      >
+        <div className="flex items-center gap-2">
+          <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-purpura/10 text-purpura">
+            <Heart className="h-4 w-4" />
+          </span>
+          <h2 className="font-display text-lg font-bold text-purpura">{originStory.title}</h2>
+        </div>
+        <div className="mt-3 space-y-3">
+          {originStory.paragraphs.map((paragraph) => (
+            <p key={paragraph} className="text-sm leading-relaxed text-neutral-600">
+              {paragraph}
+            </p>
+          ))}
+        </div>
+      </motion.div>
     </div>
   );
 }
