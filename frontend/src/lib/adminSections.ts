@@ -3,6 +3,7 @@ import {
   Flag,
   PawPrint,
   Building2,
+  CalendarDays,
   Users,
   MessagesSquare,
   BadgeCheck,
@@ -42,6 +43,12 @@ export const adminSections: AdminSection[] = [
     label: 'Aliados',
     description: 'Veterinarias, refugios y asociaciones',
     icon: Building2,
+  },
+  {
+    to: '/admin/eventos',
+    label: 'Eventos',
+    description: 'Jornadas, ferias y campañas comunitarias',
+    icon: CalendarDays,
   },
   {
     to: '/admin/usuarios',

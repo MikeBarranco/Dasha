@@ -418,6 +418,118 @@ export async function deleteAdminForumPost(id: string): Promise<void> {
   await adminFetch(`/admin/forum/posts/${id}`, { method: 'DELETE' });
 }
 
+// Categorías de eventos comunitarios. Son un conjunto FIJO (desplegable, no texto
+// libre) para que no entren valores basura. El backend guarda `category` como
+// string; enviamos el slug y mostramos la etiqueta. Si llega un valor viejo o
+// desconocido, se muestra tal cual (fallback) para no romper la lista.
+const eventCategoryLabels: Record<string, string> = {
+  esterilizacion: 'Esterilización',
+  vacunacion: 'Vacunación',
+  adopcion: 'Adopción',
+  donacion: 'Colecta / Donación',
+  educacion: 'Educación',
+  otro: 'Otro',
+};
+
+export const eventCategoryOptions: { value: string; label: string }[] = Object.entries(
+  eventCategoryLabels,
+).map(([value, label]) => ({ value, label }));
+
+// Fecha con hora, legible en español (ej. "sáb 12 jul 2026, 9:00 a.m.").
+function formatEventDate(iso: string): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString('es-MX', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+export type AdminEvent = {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  categoryLabel: string;
+  eventDate: string; // ISO crudo, para precargar el formulario al editar
+  eventDateLabel: string;
+  endDate: string; // ISO crudo o ''
+  location: string;
+  address: string;
+  maxParticipants: number | null;
+  imageUrl: string | null;
+  organizationId: string;
+  organizationName: string;
+};
+
+function mapAdminEvent(raw: Raw): AdminEvent {
+  const category = asString(pick(raw, ['category']));
+  const eventDate = asString(pick(raw, ['eventDate', 'event_date', 'startDate', 'start_date']));
+  const endDate = asString(pick(raw, ['endDate', 'end_date']));
+  const maxRaw = pick(raw, ['maxParticipants', 'max_participants']);
+  const orgObj = pick(raw, ['organization', 'org']);
+  const orgNested = orgObj && typeof orgObj === 'object' ? (orgObj as Raw) : null;
+
+  return {
+    id: asString(pick(raw, ['id', '_id'])),
+    title: asString(pick(raw, ['title', 'name'])),
+    description: asString(pick(raw, ['description'])),
+    category,
+    categoryLabel: eventCategoryLabels[category] ?? (category || 'Sin categoría'),
+    eventDate,
+    eventDateLabel: formatEventDate(eventDate),
+    endDate,
+    location: asString(pick(raw, ['location'])),
+    address: asString(pick(raw, ['address'])),
+    maxParticipants:
+      maxRaw === undefined || maxRaw === null || maxRaw === '' ? null : Number(maxRaw),
+    imageUrl: asString(pick(raw, ['imageUrl', 'image_url', 'image'])) || null,
+    organizationId:
+      asString(pick(raw, ['organizationId', 'organization_id'])) ||
+      (orgNested ? asString(orgNested.id) : ''),
+    organizationName: orgNested
+      ? asString(orgNested.name)
+      : asString(pick(raw, ['organizationName'])),
+  };
+}
+
+export type AdminEventInput = {
+  title: string;
+  description: string;
+  category: string;
+  eventDate: string; // ISO
+  endDate?: string; // ISO
+  location: string;
+  address: string;
+  maxParticipants?: number;
+  organizationId: string;
+  imageBase64?: string;
+};
+
+export async function getAdminEvents(): Promise<AdminEvent[]> {
+  const data = await adminFetch<Raw[]>('/admin/events');
+  return (data ?? [])
+    .map(mapAdminEvent)
+    .sort((a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime());
+}
+
+export async function createAdminEvent(input: AdminEventInput): Promise<void> {
+  await adminFetch('/admin/events', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export async function updateAdminEvent(id: string, input: AdminEventInput): Promise<void> {
+  await adminFetch(`/admin/events/${id}`, { method: 'PATCH', body: JSON.stringify(input) });
+}
+
+export async function deleteAdminEvent(id: string): Promise<void> {
+  await adminFetch(`/admin/events/${id}`, { method: 'DELETE' });
+}
+
 const volunteerStatusLabels: Record<string, string> = {
   pending: 'Pendiente',
   approved: 'Aprobado',
