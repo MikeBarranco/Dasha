@@ -1,5 +1,5 @@
 import type { Report, Severity } from '../data/mockReports';
-import type { Animal, AnimalStatus } from '../data/mockAnimals';
+import type { Animal, AnimalStatus, TimelineEvent } from '../data/mockAnimals';
 import type { Ally, AllyType } from '../data/mockAllies';
 import type { LostPet } from '../data/mockLostPets';
 
@@ -484,9 +484,19 @@ type RawAnimal = {
   estimatedCost?: string | number | null;
   totalCostNeeded?: string | number | null;
   totalRaised: string | null;
-  photos: { url: string; orderIndex: number }[] | null;
+  // Cada foto puede traer un caption tipo "Día 1: ...", "Semana 2: ..." con el
+  // que se arma la línea de tiempo de rehabilitación (dato real de Isabel).
+  photos: { url: string; orderIndex: number; caption?: string | null }[] | null;
   organization: { name?: string; address?: string } | null;
+  // Respaldo a futuro: si el backend algún día expone case_actions anidadas, se
+  // leen bajo cualquiera de estos nombres; si no vienen, se usan los captions.
+  timeline?: unknown;
+  caseActions?: unknown;
+  case_actions?: unknown;
+  timelineEvents?: unknown;
 };
+
+type RawAnimalPhoto = { url: string; orderIndex: number; caption?: string | null };
 
 const animalStatusLabels: Record<string, AnimalStatus> = {
   in_treatment: 'En tratamiento',
@@ -495,13 +505,117 @@ const animalStatusLabels: Record<string, AnimalStatus> = {
   looking_for_adoption: 'Buscando hogar',
 };
 
+// Texto legible cuando un evento del timeline no trae descripción propia.
+const actionTypeLabels: Record<string, string> = {
+  created: 'Reporte creado',
+  sighting_added: 'Nuevo avistamiento',
+  accepted: 'Un voluntario tomó el caso',
+  on_the_way: 'Voluntario en camino',
+  sheltered: 'Puesto a resguardo',
+  sent_to_vet: 'Llevado a la veterinaria',
+  record_created: 'Ficha de rehabilitación creada',
+  status_changed: 'Cambio de estado',
+  resource_offered: 'Recurso ofrecido',
+  resource_delivered: 'Recurso entregado',
+  donation_made: 'Donación recibida',
+  donation_approved: 'Donación aprobada',
+  foster_assigned: 'Hogar temporal asignado',
+  adopted: 'Adoptado',
+  flagged: 'Reporte marcado',
+  note: 'Nota',
+};
+
+type RawTimelineEvent = {
+  title?: string | null;
+  description?: string | null;
+  actionType?: string | null;
+  action_type?: string | null;
+  when?: string | null;
+  createdAt?: string | null;
+  created_at?: string | null;
+  eventDate?: string | null;
+  date?: string | null;
+};
+
+// Fecha legible para el timeline: prioriza cercanía (Hoy/Ayer/semanas) y para
+// eventos viejos muestra la fecha corta, que se lee mejor que "hace 540 d".
+function formatTimelineDate(iso: string): string {
+  if (!iso) return '';
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return '';
+  const days = Math.floor((Date.now() - then) / 86400000);
+  if (days <= 0) return 'Hoy';
+  if (days === 1) return 'Ayer';
+  if (days < 7) return `Hace ${days} días`;
+  if (days < 30) {
+    const weeks = Math.floor(days / 7);
+    return weeks === 1 ? 'Hace 1 semana' : `Hace ${weeks} semanas`;
+  }
+  return new Date(then).toLocaleDateString('es-MX', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+// Respaldo a futuro: arma el timeline si el backend expone case_actions anidadas.
+function timelineFromCaseActions(raw: RawAnimal): TimelineEvent[] | undefined {
+  const source = raw.timeline ?? raw.caseActions ?? raw.case_actions ?? raw.timelineEvents;
+  if (!Array.isArray(source) || source.length === 0) return undefined;
+
+  const events = source
+    .map((item) => {
+      const entry = (item ?? {}) as RawTimelineEvent;
+      const type = entry.actionType ?? entry.action_type ?? '';
+      const title = (entry.title ?? entry.description ?? actionTypeLabels[type] ?? '').trim();
+      if (!title) return null;
+      const iso = String(
+        entry.createdAt ?? entry.created_at ?? entry.eventDate ?? entry.date ?? '',
+      );
+      const ms = iso ? new Date(iso).getTime() : Number.NaN;
+      return {
+        title,
+        when: entry.when?.trim() || formatTimelineDate(iso),
+        sortKey: Number.isNaN(ms) ? 0 : ms,
+      };
+    })
+    .filter((event): event is { title: string; when: string; sortKey: number } => event !== null);
+
+  if (events.length === 0) return undefined;
+
+  // Orden cronológico (lo más antiguo primero), como lee una historia.
+  events.sort((a, b) => a.sortKey - b.sortKey);
+  return events.map(({ title, when }) => ({ title, when }));
+}
+
+// Dato real actual: cada foto trae un caption como "Día 1: rescatado en la calle".
+// Lo partimos en el momento (antes de ":") y la descripción (después). Las fotos
+// llegan ya ordenadas por orderIndex, así que el timeline queda cronológico.
+function timelineFromCaptions(photos: RawAnimalPhoto[]): TimelineEvent[] | undefined {
+  const events = photos
+    .map((photo) => (photo.caption ?? '').trim())
+    .filter(Boolean)
+    .map((caption) => {
+      const colon = caption.indexOf(':');
+      if (colon > 0 && colon < caption.length - 1) {
+        return { when: caption.slice(0, colon).trim(), title: caption.slice(colon + 1).trim() };
+      }
+      return { when: '', title: caption };
+    })
+    .filter((event) => event.title.length > 0);
+
+  return events.length > 0 ? events : undefined;
+}
+
+function mapTimeline(raw: RawAnimal, photos: RawAnimalPhoto[]): TimelineEvent[] | undefined {
+  return timelineFromCaseActions(raw) ?? timelineFromCaptions(photos);
+}
+
 export async function getAnimals(): Promise<Animal[]> {
   const data = await requestRaw<RawAnimal[]>('/animals');
   return (data ?? []).map((raw) => {
-    const photos = [...(raw.photos ?? [])]
-      .sort((a, b) => a.orderIndex - b.orderIndex)
-      .map((photo) => photo.url)
-      .filter(Boolean);
+    const sortedPhotos = [...(raw.photos ?? [])].sort((a, b) => a.orderIndex - b.orderIndex);
+    const photos = sortedPhotos.map((photo) => photo.url).filter(Boolean);
     return {
       id: String(raw.id),
       name: raw.name,
@@ -515,6 +629,7 @@ export async function getAnimals(): Promise<Animal[]> {
       totalNeeded: Number(raw.estimatedCost ?? raw.totalCostNeeded ?? 0),
       totalRaised: Number(raw.totalRaised ?? 0),
       status: animalStatusLabels[raw.status] ?? 'En tratamiento',
+      timeline: mapTimeline(raw, sortedPhotos),
     };
   });
 }

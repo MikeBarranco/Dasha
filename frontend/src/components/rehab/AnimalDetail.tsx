@@ -141,16 +141,16 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
             <ProgressBar raised={animal.totalRaised} needed={animal.totalNeeded} />
           </div>
 
-          {animal.timeline && (
+          {animal.timeline && animal.timeline.length > 0 && (
             <div className="mt-6">
-              <p className="mb-3 text-sm font-semibold text-cobalto">Su historia</p>
+              <p className="mb-3 text-sm font-semibold text-cobalto">Seguimiento</p>
               <ol className="space-y-3">
-                {animal.timeline.map((event) => (
-                  <li key={event.title} className="flex gap-3">
+                {animal.timeline.map((event, index) => (
+                  <li key={`${index}-${event.title}`} className="flex gap-3">
                     <span className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full bg-cobalto" />
                     <div>
                       <p className="text-sm font-medium text-neutral-700">{event.title}</p>
-                      <p className="text-xs text-neutral-400">{event.when}</p>
+                      {event.when && <p className="text-xs text-neutral-400">{event.when}</p>}
                     </div>
                   </li>
                 ))}
