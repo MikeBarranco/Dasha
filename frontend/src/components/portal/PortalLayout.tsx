@@ -1,8 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Navigate, Outlet, Link } from 'react-router-dom';
-import { Store, ArrowLeft, Eye } from 'lucide-react';
+import { Navigate, Outlet, Link, NavLink } from 'react-router-dom';
+import { Store, ArrowLeft, Eye, LayoutDashboard, UserRound } from 'lucide-react';
+import { cn } from '../../lib/cn';
 import { useAuth } from '../../lib/useAuth';
 import { getMyOrganization, type AllyContext } from '../../lib/api';
+
+const portalSections = [
+  { to: '/portal', label: 'Inicio', icon: LayoutDashboard, end: true },
+  { to: '/portal/perfil', label: 'Mi perfil', icon: UserRound, end: false },
+];
 
 export function PortalLayout() {
   const { user } = useAuth();
@@ -73,6 +79,26 @@ export function PortalLayout() {
       )}
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 md:px-6 md:py-8">
+        <nav className="mb-5 flex gap-2 overflow-x-auto pb-1">
+          {portalSections.map((section) => (
+            <NavLink
+              key={section.to}
+              to={section.to}
+              end={section.end}
+              className={({ isActive }) =>
+                cn(
+                  'flex flex-shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors',
+                  isActive
+                    ? 'border-cobalto bg-cobalto text-white'
+                    : 'border-neutral-200 bg-white text-neutral-600 hover:border-cobalto/40',
+                )
+              }
+            >
+              <section.icon className="h-4 w-4" />
+              {section.label}
+            </NavLink>
+          ))}
+        </nav>
         <Outlet context={context} />
       </main>
     </div>

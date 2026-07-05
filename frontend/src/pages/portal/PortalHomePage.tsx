@@ -8,6 +8,7 @@ import {
   ExternalLink,
   Clock,
   MapPin,
+  Pencil,
 } from 'lucide-react';
 import { Avatar } from '../../components/ui/Avatar';
 import { getAllies } from '../../lib/api';
@@ -132,9 +133,12 @@ export function PortalHomePage() {
             </p>
           )}
         </div>
-        <p className="mt-3 text-xs text-neutral-400">
-          Pronto podrás editar tu perfil y datos desde aquí.
-        </p>
+        <Link
+          to="/portal/perfil"
+          className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
+        >
+          <Pencil className="h-4 w-4" /> Editar perfil
+        </Link>
       </section>
 
       <section className="rounded-2xl border border-neutral-200 bg-white p-4">

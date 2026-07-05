@@ -27,6 +27,7 @@ import { AdminForumPage } from './pages/admin/AdminForumPage';
 import { AdminVolunteersPage } from './pages/admin/AdminVolunteersPage';
 import { PortalLayout } from './components/portal/PortalLayout';
 import { PortalHomePage } from './pages/portal/PortalHomePage';
+import { PortalPerfilPage } from './pages/portal/PortalPerfilPage';
 
 function App() {
   return (
@@ -62,6 +63,7 @@ function App() {
         </Route>
         <Route path="portal" element={<PortalLayout />}>
           <Route index element={<PortalHomePage />} />
+          <Route path="perfil" element={<PortalPerfilPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
