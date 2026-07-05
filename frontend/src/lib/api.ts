@@ -718,26 +718,43 @@ function mapTimeline(raw: RawAnimal, photos: RawAnimalPhoto[]): TimelineEvent[] 
   return timelineFromCaseActions(raw) ?? timelineFromCaptions(photos);
 }
 
+function mapAnimal(raw: RawAnimal): Animal {
+  const sortedPhotos = [...(raw.photos ?? [])].sort((a, b) => a.orderIndex - b.orderIndex);
+  const photos = sortedPhotos.map((photo) => photo.url).filter(Boolean);
+  return {
+    id: String(raw.id),
+    name: raw.name,
+    species: raw.species === 'cat' || raw.species === 'gato' ? 'gato' : 'perro',
+    size: 'Mediano',
+    zone: raw.organization?.address ?? raw.organization?.name ?? 'Puebla',
+    photos: photos.length > 0 ? photos : ['/placeholder-animal.svg'],
+    story: raw.history ?? raw.story ?? '',
+    diagnosis: raw.diagnosis ?? raw.treatment ?? 'En valoración',
+    vet: raw.organization?.name ?? 'Aliado Dasha',
+    totalNeeded: Number(raw.estimatedCost ?? raw.totalCostNeeded ?? 0),
+    totalRaised: Number(raw.totalRaised ?? 0),
+    status: animalStatusLabels[raw.status] ?? 'En tratamiento',
+    timeline: mapTimeline(raw, sortedPhotos),
+  };
+}
+
 export async function getAnimals(): Promise<Animal[]> {
   const data = await requestRaw<RawAnimal[]>('/animals');
-  return (data ?? []).map((raw) => {
-    const sortedPhotos = [...(raw.photos ?? [])].sort((a, b) => a.orderIndex - b.orderIndex);
-    const photos = sortedPhotos.map((photo) => photo.url).filter(Boolean);
-    return {
-      id: String(raw.id),
-      name: raw.name,
-      species: raw.species === 'cat' || raw.species === 'gato' ? 'gato' : 'perro',
-      size: 'Mediano',
-      zone: raw.organization?.address ?? raw.organization?.name ?? 'Puebla',
-      photos: photos.length > 0 ? photos : ['/placeholder-animal.svg'],
-      story: raw.history ?? raw.story ?? '',
-      diagnosis: raw.diagnosis ?? raw.treatment ?? 'En valoración',
-      vet: raw.organization?.name ?? 'Aliado Dasha',
-      totalNeeded: Number(raw.estimatedCost ?? raw.totalCostNeeded ?? 0),
-      totalRaised: Number(raw.totalRaised ?? 0),
-      status: animalStatusLabels[raw.status] ?? 'En tratamiento',
-      timeline: mapTimeline(raw, sortedPhotos),
-    };
+  return (data ?? []).map(mapAnimal);
+}
+
+// Animales que atiende el propio aliado. Backend: /me/organization/animals
+// (spec en pendientes-isabel.md, 11.5). El cambio de estatus va a
+// PATCH /me/organization/animals/:id { status } con el enum del backend.
+export async function getMyOrgAnimals(): Promise<Animal[]> {
+  const data = await authedRaw<RawAnimal[]>('/me/organization/animals');
+  return (data ?? []).map(mapAnimal);
+}
+
+export async function updateMyOrgAnimalStatus(id: string, status: string): Promise<void> {
+  await authedRaw(`/me/organization/animals/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
   });
 }
 

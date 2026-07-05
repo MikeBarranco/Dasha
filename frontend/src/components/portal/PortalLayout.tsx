@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Outlet, Link, NavLink } from 'react-router-dom';
-import { Store, ArrowLeft, Eye, LayoutDashboard, UserRound, Users } from 'lucide-react';
+import { Store, ArrowLeft, Eye, LayoutDashboard, UserRound, Users, PawPrint } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { useAuth } from '../../lib/useAuth';
 import { getMyOrganization, type AllyContext } from '../../lib/api';
@@ -9,6 +9,7 @@ const portalSections = [
   { to: '/portal', label: 'Inicio', icon: LayoutDashboard, end: true },
   { to: '/portal/perfil', label: 'Mi perfil', icon: UserRound, end: false },
   { to: '/portal/equipo', label: 'Mi equipo', icon: Users, end: false },
+  { to: '/portal/perritos', label: 'Mis perritos', icon: PawPrint, end: false },
 ];
 
 export function PortalLayout() {

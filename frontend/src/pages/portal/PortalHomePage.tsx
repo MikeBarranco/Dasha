@@ -173,7 +173,12 @@ export function PortalHomePage() {
       </section>
 
       <section>
-        <h2 className="mb-3 font-display text-base font-bold text-cobalto">Mis perritos</h2>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h2 className="font-display text-base font-bold text-cobalto">Mis perritos</h2>
+          <Link to="/portal/perritos" className="text-xs font-medium text-cobalto hover:underline">
+            Gestionar
+          </Link>
+        </div>
         {animals.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-neutral-300 bg-white/60 px-6 py-10 text-center">
             <p className="text-sm text-neutral-500">Aún no tienes perritos asignados.</p>
