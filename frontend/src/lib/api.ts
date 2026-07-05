@@ -473,6 +473,26 @@ export async function getMyOrganization(): Promise<AllyContext | null> {
   return null;
 }
 
+// Edición de la ficha del aliado por su propio responsable (scopeada a SU
+// organización). Backend: PATCH /me/organization (spec en pendientes-isabel.md,
+// 11.3). En vista previa no se llama; se refleja en pantalla.
+export type MyOrgInput = {
+  name: string;
+  slogan?: string;
+  description?: string;
+  schedule?: string;
+  address?: string;
+  phone?: string;
+  whatsapp?: string;
+  website?: string;
+  logoBase64?: string;
+  coverBase64?: string;
+};
+
+export async function updateMyOrganization(input: MyOrgInput): Promise<void> {
+  await authedRaw('/me/organization', { method: 'PATCH', body: JSON.stringify(input) });
+}
+
 export async function postVolunteerApplication(data: {
   ineFrontBase64: string;
   ineBackBase64: string;
