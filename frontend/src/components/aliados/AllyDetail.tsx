@@ -211,13 +211,22 @@ export function AllyDetail({ ally, onClose }: AllyDetailProps) {
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={() => navigate(`/mapa?aliado=${ally.id}`)}
-            className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-cobalto py-3 font-semibold text-white transition-opacity hover:opacity-90"
-          >
-            <MapIcon className="h-5 w-5" /> Ver en el mapa
-          </button>
+          <div className="mt-6 space-y-3">
+            <button
+              type="button"
+              onClick={() => navigate(`/aliados/${ally.id}`)}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-cobalto py-3 font-semibold text-white transition-opacity hover:opacity-90"
+            >
+              Ver perfil completo
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate(`/mapa?aliado=${ally.id}`)}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-neutral-200 py-3 font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
+            >
+              <MapIcon className="h-5 w-5" /> Ver en el mapa
+            </button>
+          </div>
         </div>
       </motion.div>
     </div>
