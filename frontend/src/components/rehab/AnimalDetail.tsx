@@ -1,11 +1,24 @@
 import { useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { X, Heart, Gift, Stethoscope, MapPin, ChevronLeft, ChevronRight, Home } from 'lucide-react';
+import {
+  X,
+  Heart,
+  Gift,
+  Stethoscope,
+  MapPin,
+  ChevronLeft,
+  ChevronRight,
+  Home,
+  Bell,
+} from 'lucide-react';
 import { ProgressBar } from '../ui/ProgressBar';
 import { ShareButton } from '../ui/ShareButton';
 import { cn } from '../../lib/cn';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 import { useSheetDismiss } from '../../lib/useSheetDismiss';
+import { useAuth } from '../../lib/useAuth';
+import { useFollowAnimal } from '../../lib/useFollowAnimal';
 import { DonationSheet } from './DonationSheet';
 import type { Animal } from '../../data/mockAnimals';
 
@@ -20,6 +33,17 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
   const [activePhoto, setActivePhoto] = useState(total - 1);
   const [showFull, setShowFull] = useState(false);
   const [donationMode, setDonationMode] = useState<'money' | 'items' | null>(null);
+  const navigate = useNavigate();
+  const { user: account } = useAuth();
+  const { following, toggle: toggleFollow } = useFollowAnimal(animal.id);
+
+  const onFollow = () => {
+    if (!account) {
+      navigate('/login');
+      return;
+    }
+    toggleFollow();
+  };
   const touchStartX = useRef(0);
   const multiTouch = useRef(false);
   const photo = animal.photos[activePhoto];
@@ -161,6 +185,20 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
           )}
 
           <div className="mt-6 space-y-3">
+            <button
+              type="button"
+              onClick={onFollow}
+              aria-pressed={following}
+              className={cn(
+                'flex w-full items-center justify-center gap-2 rounded-xl border py-3 text-sm font-semibold transition-colors',
+                following
+                  ? 'border-cobalto bg-cobalto/10 text-cobalto'
+                  : 'border-neutral-200 text-neutral-700 hover:bg-neutral-50',
+              )}
+            >
+              <Bell className={cn('h-5 w-5', following && 'fill-cobalto')} />
+              {following ? 'Siguiendo · te avisaremos' : `Seguir a ${animal.name}`}
+            </button>
             {animal.status === 'Buscando hogar' && (
               <button
                 type="button"
