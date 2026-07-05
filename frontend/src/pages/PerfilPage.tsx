@@ -9,6 +9,7 @@ import {
   Camera,
   Sparkles,
   ShieldCheck,
+  Store,
   HelpCircle,
   type LucideIcon,
 } from 'lucide-react';
@@ -26,7 +27,7 @@ import { resolveMedals } from '../data/medals';
 import { useAvatar, setStoredAvatar } from '../lib/useAvatar';
 import { useAuth } from '../lib/useAuth';
 import { useVolunteerStatus } from '../lib/useVolunteerStatus';
-import { getMe, updateMe, type MeProfile } from '../lib/api';
+import { getMe, updateMe, getMyOrganization, type MeProfile, type AllyContext } from '../lib/api';
 
 function StatCard({ value, label }: { value: number; label: string }) {
   return (
@@ -75,6 +76,7 @@ export function PerfilPage() {
   const [medalsOpen, setMedalsOpen] = useState(false);
   const [focusMedalId, setFocusMedalId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [allyContext, setAllyContext] = useState<AllyContext | null>(null);
 
   useEffect(() => {
     if (!account) return;
@@ -85,6 +87,19 @@ export function PerfilPage() {
         setMe(data);
         // Sincroniza el avatar elegido en otro dispositivo.
         if (data.avatarUrl) setStoredAvatar(data.id, data.avatarUrl);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [account]);
+
+  useEffect(() => {
+    if (!account) return;
+    let active = true;
+    getMyOrganization()
+      .then((ctx) => {
+        if (active) setAllyContext(ctx);
       })
       .catch(() => {});
     return () => {
@@ -267,6 +282,13 @@ export function PerfilPage() {
             icon={ShieldCheck}
             label="Panel de administración"
             onClick={() => navigate('/admin')}
+          />
+        )}
+        {allyContext && (
+          <RowButton
+            icon={Store}
+            label="Portal de aliado"
+            onClick={() => navigate('/portal')}
           />
         )}
         <RowButton

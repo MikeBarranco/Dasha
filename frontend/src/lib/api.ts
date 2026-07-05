@@ -1,6 +1,7 @@
 import type { Report, Severity } from '../data/mockReports';
 import type { Animal, AnimalStatus, TimelineEvent } from '../data/mockAnimals';
 import type { Ally, AllyType } from '../data/mockAllies';
+import { mockAllies } from '../data/mockAllies';
 import type { LostPet } from '../data/mockLostPets';
 
 export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
@@ -424,6 +425,52 @@ export async function updateMe(data: {
   avatarUrl?: string;
 }): Promise<void> {
   await authedRaw('/me', { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+// Contexto de aliado del usuario actual: a qué organización pertenece y con qué
+// rol. Gatea el portal de aliado. El backend lo expondrá en GET /me/organization
+// (spec en pendientes-isabel.md, 11.1). Mientras no exista, dejamos que un ADMIN
+// lo previsualice con datos de ejemplo (preview) para poder construir y probar.
+export type AllyRole = 'owner' | 'vet';
+
+export type AllyContext = {
+  organizationId: string;
+  organizationName: string;
+  role: AllyRole;
+  preview: boolean;
+};
+
+export async function getMyOrganization(): Promise<AllyContext | null> {
+  try {
+    const raw = await authedRaw<Record<string, unknown>>('/me/organization');
+    const orgObj =
+      raw && typeof raw === 'object'
+        ? ((raw.organization ?? raw) as Record<string, unknown>)
+        : null;
+    const id = orgObj ? String(orgObj.id ?? orgObj._id ?? '') : '';
+    if (id) {
+      const roleRaw = String((raw as Record<string, unknown>).role ?? 'owner');
+      return {
+        organizationId: id,
+        organizationName: String(orgObj?.name ?? 'Mi organización'),
+        role: roleRaw === 'vet' ? 'vet' : 'owner',
+        preview: false,
+      };
+    }
+  } catch {
+    // El endpoint /me/organization aún no existe en el backend.
+  }
+
+  const user = getStoredUser();
+  if (user?.role === 'admin') {
+    return {
+      organizationId: mockAllies[0].id,
+      organizationName: mockAllies[0].name,
+      role: 'owner',
+      preview: true,
+    };
+  }
+  return null;
 }
 
 export async function postVolunteerApplication(data: {

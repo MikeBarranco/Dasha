@@ -25,6 +25,8 @@ import { AdminEventsPage } from './pages/admin/AdminEventsPage';
 import { AdminUsersPage } from './pages/admin/AdminUsersPage';
 import { AdminForumPage } from './pages/admin/AdminForumPage';
 import { AdminVolunteersPage } from './pages/admin/AdminVolunteersPage';
+import { PortalLayout } from './components/portal/PortalLayout';
+import { PortalHomePage } from './pages/portal/PortalHomePage';
 
 function App() {
   return (
@@ -57,6 +59,9 @@ function App() {
           <Route path="usuarios" element={<AdminUsersPage />} />
           <Route path="foro" element={<AdminForumPage />} />
           <Route path="voluntarios" element={<AdminVolunteersPage />} />
+        </Route>
+        <Route path="portal" element={<PortalLayout />}>
+          <Route index element={<PortalHomePage />} />
         </Route>
       </Routes>
     </BrowserRouter>
