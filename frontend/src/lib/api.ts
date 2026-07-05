@@ -758,6 +758,51 @@ export async function updateMyOrgAnimalStatus(id: string, status: string): Promi
   });
 }
 
+// Donaciones/transferencias hacia los animales del aliado. El donante sube su
+// comprobante y el aliado confirma que llegó. Backend: /me/organization/donations
+// (spec en pendientes-isabel.md, 11.6). Lectura tolerante a la forma.
+export type Donation = {
+  id: string;
+  donorName: string;
+  amount: number;
+  animalName: string;
+  proofUrl: string | null;
+  status: 'pending' | 'approved';
+  createdAgo: string;
+};
+
+function mapDonation(raw: Record<string, unknown>): Donation {
+  const donor =
+    raw.donor && typeof raw.donor === 'object' ? (raw.donor as Record<string, unknown>) : null;
+  const animal =
+    raw.animal && typeof raw.animal === 'object' ? (raw.animal as Record<string, unknown>) : null;
+  const statusStr = String(raw.status ?? '');
+  const approved =
+    raw.received === true || statusStr === 'approved' || statusStr === 'received';
+  const proof = raw.proofUrl ?? raw.proof_url ?? raw.receiptUrl ?? raw.receipt_url;
+  return {
+    id: String(raw.id ?? ''),
+    donorName: String(donor?.name ?? raw.donorName ?? 'Anónimo') || 'Anónimo',
+    amount: Number(raw.amount ?? 0),
+    animalName: String(animal?.name ?? raw.animalName ?? ''),
+    proofUrl: typeof proof === 'string' && proof ? proof : null,
+    status: approved ? 'approved' : 'pending',
+    createdAgo: timeAgo(String(raw.createdAt ?? raw.created_at ?? '')),
+  };
+}
+
+export async function getMyOrgDonations(): Promise<Donation[]> {
+  const data = await authedRaw<Record<string, unknown>[]>('/me/organization/donations');
+  return (data ?? []).map(mapDonation);
+}
+
+export async function approveMyOrgDonation(id: string): Promise<void> {
+  await authedRaw(`/me/organization/donations/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ received: true }),
+  });
+}
+
 type RawAlly = {
   id: string;
   name: string;

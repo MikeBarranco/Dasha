@@ -30,6 +30,7 @@ import { PortalHomePage } from './pages/portal/PortalHomePage';
 import { PortalPerfilPage } from './pages/portal/PortalPerfilPage';
 import { PortalEquipoPage } from './pages/portal/PortalEquipoPage';
 import { PortalPerritosPage } from './pages/portal/PortalPerritosPage';
+import { PortalDonacionesPage } from './pages/portal/PortalDonacionesPage';
 
 function App() {
   return (
@@ -68,6 +69,7 @@ function App() {
           <Route path="perfil" element={<PortalPerfilPage />} />
           <Route path="equipo" element={<PortalEquipoPage />} />
           <Route path="perritos" element={<PortalPerritosPage />} />
+          <Route path="donaciones" element={<PortalDonacionesPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
