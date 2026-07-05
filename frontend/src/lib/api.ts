@@ -833,6 +833,16 @@ export async function createDonation(
   });
 }
 
+// Seguir / dejar de seguir un animal para recibir avisos de su avance. Backend:
+// POST/DELETE /animals/:id/follow (spec en pendientes-isabel.md, sección 13).
+export async function followAnimal(animalId: string): Promise<void> {
+  await authedRaw(`/animals/${animalId}/follow`, { method: 'POST' });
+}
+
+export async function unfollowAnimal(animalId: string): Promise<void> {
+  await authedRaw(`/animals/${animalId}/follow`, { method: 'DELETE' });
+}
+
 type RawAlly = {
   id: string;
   name: string;
