@@ -70,7 +70,7 @@ export function PerfilPage() {
   const user = mockUser;
   const { avatar, setAvatar } = useAvatar();
   const { user: account, logout } = useAuth();
-  const { status: volunteerStatus } = useVolunteerStatus();
+  const { status: volunteerStatus, clear: clearVolunteer } = useVolunteerStatus();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [me, setMe] = useState<MeProfile | null>(null);
   const [medalsOpen, setMedalsOpen] = useState(false);
@@ -106,6 +106,15 @@ export function PerfilPage() {
       active = false;
     };
   }, [account]);
+
+  // Reconcilia la bandera local "pendiente" con la realidad: si ya es voluntario/
+  // admin, o el backend dice que la solicitud ya no está pendiente, la limpiamos
+  // para no quedar atorados en "Solicitud en revisión".
+  useEffect(() => {
+    if (!me || volunteerStatus !== 'pending') return;
+    const backendResolved = me.volunteerStatus !== null && me.volunteerStatus !== 'pending';
+    if (me.role !== 'citizen' || backendResolved) clearVolunteer();
+  }, [me, volunteerStatus, clearVolunteer]);
   const level = me?.level ?? user.level;
   const xp = me?.experience ?? user.xp;
   const xpToNext = me ? Math.max(1, me.level * 100) : user.xpToNext;
@@ -148,6 +157,9 @@ export function PerfilPage() {
   const realRole = me?.role ?? account.role;
   const roleLabel =
     realRole === 'admin' ? 'Administrador' : realRole === 'volunteer' ? 'Voluntario' : 'Ciudadano';
+  // El estado real del backend manda; si aún no lo envía, usamos la bandera local.
+  const volunteerPending =
+    me?.volunteerStatus != null ? me.volunteerStatus === 'pending' : volunteerStatus === 'pending';
 
   return (
     <div className="space-y-6">
@@ -195,7 +207,7 @@ export function PerfilPage() {
       </div>
 
       {realRole === 'citizen' &&
-        (volunteerStatus === 'pending' ? (
+        (volunteerPending ? (
           <div className="rounded-2xl border border-purpura/20 bg-purpura/5 p-5">
             <h2 className="font-display text-lg font-bold text-purpura">Solicitud en revisión</h2>
             <p className="mt-1 text-sm text-neutral-600">
