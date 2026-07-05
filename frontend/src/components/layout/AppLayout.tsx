@@ -5,6 +5,8 @@ import { TopBar } from './TopBar';
 import { BottomNav } from './BottomNav';
 import { ReportChooser } from './ReportChooser';
 import { Onboarding } from '../onboarding/Onboarding';
+import { appSteps, volunteerSteps } from '../onboarding/onboardingSteps';
+import { useAuth } from '../../lib/useAuth';
 import {
   hasSeenOnboarding,
   markOnboardingSeen,
@@ -14,19 +16,33 @@ import {
 export function AppLayout() {
   const location = useLocation();
   const outlet = useOutlet();
+  const { user } = useAuth();
   const [chooserOpen, setChooserOpen] = useState(false);
-  // Se muestra la primera vez en este dispositivo; se puede reabrir desde el perfil.
-  const [showOnboarding, setShowOnboarding] = useState(() => !hasSeenOnboarding());
+  // Onboarding general: primera vez en este dispositivo; se reabre desde el perfil.
+  const [showOnboarding, setShowOnboarding] = useState(() => !hasSeenOnboarding('app'));
+  // Onboarding de voluntario: al ser voluntario y no haberlo visto aún.
+  const [showVolunteer, setShowVolunteer] = useState(
+    () => user?.role === 'volunteer' && !hasSeenOnboarding('volunteer'),
+  );
 
   useEffect(() => {
-    const open = () => setShowOnboarding(true);
+    const open = (event: Event) => {
+      const kind = (event as CustomEvent).detail;
+      if (kind === 'volunteer') setShowVolunteer(true);
+      else if (kind === 'app' || kind === undefined) setShowOnboarding(true);
+    };
     window.addEventListener(ONBOARDING_OPEN_EVENT, open);
     return () => window.removeEventListener(ONBOARDING_OPEN_EVENT, open);
   }, []);
 
   const closeOnboarding = () => {
-    markOnboardingSeen();
+    markOnboardingSeen('app');
     setShowOnboarding(false);
+  };
+
+  const closeVolunteer = () => {
+    markOnboardingSeen('volunteer');
+    setShowVolunteer(false);
   };
 
   const openChooser = () => setChooserOpen(true);
@@ -50,7 +66,12 @@ export function AppLayout() {
       <BottomNav onReportClick={openChooser} />
       <ReportChooser open={chooserOpen} onClose={() => setChooserOpen(false)} />
       <AnimatePresence>
-        {showOnboarding && <Onboarding onClose={closeOnboarding} />}
+        {showOnboarding && <Onboarding steps={appSteps} onClose={closeOnboarding} />}
+      </AnimatePresence>
+      <AnimatePresence>
+        {!showOnboarding && showVolunteer && (
+          <Onboarding steps={volunteerSteps} onClose={closeVolunteer} />
+        )}
       </AnimatePresence>
     </div>
   );

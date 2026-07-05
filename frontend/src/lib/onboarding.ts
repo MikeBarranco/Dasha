@@ -1,26 +1,33 @@
-// Estado del onboarding (primera entrada a la app). Se guarda por dispositivo
-// en localStorage para mostrarlo una sola vez; se puede reabrir desde el perfil.
-const KEY = 'dasha-onboarding-seen';
+// Onboarding por tipo (app / aliado / voluntario). Cada uno se muestra una sola
+// vez por dispositivo (localStorage) y se puede reabrir con openOnboarding(kind).
+export type OnboardingKind = 'app' | 'ally' | 'volunteer';
+
 export const ONBOARDING_OPEN_EVENT = 'dasha:open-onboarding';
 
-export function hasSeenOnboarding(): boolean {
+const KEYS: Record<OnboardingKind, string> = {
+  app: 'dasha-onboarding-seen',
+  ally: 'dasha-onboarding-ally-seen',
+  volunteer: 'dasha-onboarding-volunteer-seen',
+};
+
+export function hasSeenOnboarding(kind: OnboardingKind = 'app'): boolean {
   try {
-    return localStorage.getItem(KEY) === '1';
+    return localStorage.getItem(KEYS[kind]) === '1';
   } catch {
     // Si no hay acceso a localStorage, no insistimos con el onboarding.
     return true;
   }
 }
 
-export function markOnboardingSeen(): void {
+export function markOnboardingSeen(kind: OnboardingKind = 'app'): void {
   try {
-    localStorage.setItem(KEY, '1');
+    localStorage.setItem(KEYS[kind], '1');
   } catch {
     // Sin localStorage no pasa nada; solo no se recordará.
   }
 }
 
-// Reabrir el onboarding desde cualquier parte (ej. el perfil).
-export function openOnboarding(): void {
-  window.dispatchEvent(new Event(ONBOARDING_OPEN_EVENT));
+// Reabrir un onboarding desde cualquier parte (ej. el perfil o el portal).
+export function openOnboarding(kind: OnboardingKind = 'app'): void {
+  window.dispatchEvent(new CustomEvent(ONBOARDING_OPEN_EVENT, { detail: kind }));
 }

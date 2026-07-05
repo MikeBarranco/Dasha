@@ -3,46 +3,26 @@ import { AnimatePresence, motion } from 'motion/react';
 import { ArrowRight } from 'lucide-react';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 import { cn } from '../../lib/cn';
+import { appSteps, type OnboardingStep } from './onboardingSteps';
 
-type Step = {
-  image: string;
-  accent: 'cobalto' | 'naranja' | 'purpura';
-  title: string;
-  text: string;
-};
-
-const steps: Step[] = [
-  {
-    image: '/illustrations/ilustracion-paso-reportar.webp',
-    accent: 'cobalto',
-    title: 'Reporta lo que ves',
-    text: 'Encontraste un animal en la calle: repórtalo con una foto y su ubicación en segundos.',
-  },
-  {
-    image: '/illustrations/ilustracion-paso-rescatar.webp',
-    accent: 'naranja',
-    title: 'La comunidad se coordina',
-    text: 'Tu reporte aparece en el mapa. Voluntarios y aliados cercanos se organizan para ayudar.',
-  },
-  {
-    image: '/illustrations/ilustracion-paso-adoptar.webp',
-    accent: 'purpura',
-    title: 'Sigue su historia',
-    text: 'Acompaña su recuperación en Rehabilitación, hasta que encuentra un hogar para siempre.',
-  },
-];
-
-const accentPanel: Record<Step['accent'], string> = {
+const accentPanel: Record<OnboardingStep['accent'], string> = {
   cobalto: 'bg-cobalto/5',
   naranja: 'bg-naranja/5',
   purpura: 'bg-purpura/5',
 };
 
-type OnboardingProps = {
-  onClose: () => void;
+const accentText: Record<OnboardingStep['accent'], string> = {
+  cobalto: 'text-cobalto',
+  naranja: 'text-naranja',
+  purpura: 'text-purpura',
 };
 
-export function Onboarding({ onClose }: OnboardingProps) {
+type OnboardingProps = {
+  onClose: () => void;
+  steps?: OnboardingStep[];
+};
+
+export function Onboarding({ onClose, steps = appSteps }: OnboardingProps) {
   useLockBodyScroll();
   const [index, setIndex] = useState(0);
   const step = steps[index];
@@ -87,14 +67,18 @@ export function Onboarding({ onClose }: OnboardingProps) {
                   accentPanel[step.accent],
                 )}
               >
-                <img
-                  src={step.image}
-                  alt=""
-                  className="h-40 w-40 object-contain"
-                  onError={(event) => {
-                    event.currentTarget.style.visibility = 'hidden';
-                  }}
-                />
+                {step.image ? (
+                  <img
+                    src={step.image}
+                    alt=""
+                    className="h-40 w-40 object-contain"
+                    onError={(event) => {
+                      event.currentTarget.style.visibility = 'hidden';
+                    }}
+                  />
+                ) : step.icon ? (
+                  <step.icon className={cn('h-16 w-16', accentText[step.accent])} />
+                ) : null}
               </div>
               <h2 className="mt-5 font-display text-2xl font-bold text-cobalto">{step.title}</h2>
               <p className="mx-auto mt-2 max-w-xs text-base leading-relaxed text-neutral-600">
