@@ -15,6 +15,13 @@ import {
 import { cn } from '../../lib/cn';
 import { useAuth } from '../../lib/useAuth';
 import { getMyOrganization, type AllyContext } from '../../lib/api';
+import { Onboarding } from '../onboarding/Onboarding';
+import { allySteps } from '../onboarding/onboardingSteps';
+import {
+  hasSeenOnboarding,
+  markOnboardingSeen,
+  ONBOARDING_OPEN_EVENT,
+} from '../../lib/onboarding';
 
 const portalSections = [
   { to: '/portal', label: 'Inicio', icon: LayoutDashboard, end: true },
@@ -30,12 +37,16 @@ export function PortalLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
   // undefined = cargando; null = no es aliado; objeto = contexto de aliado.
   const [context, setContext] = useState<AllyContext | null | undefined>(undefined);
+  const [showAllyOnboarding, setShowAllyOnboarding] = useState(false);
 
   useEffect(() => {
     let active = true;
     getMyOrganization()
       .then((ctx) => {
-        if (active) setContext(ctx);
+        if (!active) return;
+        setContext(ctx);
+        // Al entrar por primera vez a su portal, mostramos el onboarding de aliado.
+        if (ctx && !hasSeenOnboarding('ally')) setShowAllyOnboarding(true);
       })
       .catch(() => {
         if (active) setContext(null);
@@ -44,6 +55,19 @@ export function PortalLayout() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    const open = (event: Event) => {
+      if ((event as CustomEvent).detail === 'ally') setShowAllyOnboarding(true);
+    };
+    window.addEventListener(ONBOARDING_OPEN_EVENT, open);
+    return () => window.removeEventListener(ONBOARDING_OPEN_EVENT, open);
+  }, []);
+
+  const closeAllyOnboarding = () => {
+    markOnboardingSeen('ally');
+    setShowAllyOnboarding(false);
+  };
 
   if (!user) return <Navigate to="/login" replace />;
 
@@ -181,6 +205,10 @@ export function PortalLayout() {
         </nav>
         <Outlet context={context} />
       </main>
+
+      <AnimatePresence>
+        {showAllyOnboarding && <Onboarding steps={allySteps} onClose={closeAllyOnboarding} />}
+      </AnimatePresence>
     </div>
   );
 }
