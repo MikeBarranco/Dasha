@@ -49,7 +49,12 @@ export function AllyProfilePage() {
     );
   }
 
-  const ally = allies.find((item) => item.id === id) ?? null;
+  // Si el aliado real no está (p. ej. vista previa con un aliado de ejemplo),
+  // caemos al mock por id para no mostrar "no encontrado" de más.
+  const ally =
+    allies.find((item) => item.id === id) ??
+    mockAllies.find((item) => item.id === id) ??
+    null;
 
   if (!ally) {
     return (
@@ -93,23 +98,22 @@ export function AllyProfilePage() {
         />
       </div>
 
-      <div className="relative h-40 overflow-hidden rounded-3xl sm:h-56">
-        {ally.coverUrl ? (
-          <img
-            src={ally.coverUrl}
-            alt=""
-            onError={(event) => {
-              event.currentTarget.style.display = 'none';
-            }}
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div className="h-full w-full bg-gradient-to-br from-cobalto via-cobalto to-purpura" />
-        )}
-      </div>
-
-      <div className="px-1">
-        <div className="-mt-10 flex items-end gap-3">
+      <div className="overflow-hidden rounded-3xl border border-neutral-200 bg-white">
+        <div className="h-28 w-full sm:h-36">
+          {ally.coverUrl ? (
+            <img
+              src={ally.coverUrl}
+              alt=""
+              onError={(event) => {
+                event.currentTarget.style.display = 'none';
+              }}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="h-full w-full bg-gradient-to-br from-cobalto via-cobalto to-purpura" />
+          )}
+        </div>
+        <div className="px-4 pb-4">
           <img
             src={ally.logoUrl ?? '/placeholder-logo.svg'}
             alt=""
@@ -117,20 +121,24 @@ export function AllyProfilePage() {
               event.currentTarget.onerror = null;
               event.currentTarget.src = '/placeholder-logo.svg';
             }}
-            className="h-20 w-20 flex-shrink-0 rounded-2xl border-4 border-white bg-white object-cover shadow-sm"
+            className="-mt-9 h-20 w-20 rounded-2xl border-4 border-white bg-white object-cover shadow-sm"
           />
-          <span className="mb-1 inline-block rounded-full bg-cobalto/10 px-2.5 py-0.5 text-xs font-medium text-cobalto">
-            {allyTypeLabels[ally.orgType]}
-          </span>
+          <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+            <h1 className="font-display text-2xl font-bold text-cobalto">{ally.name}</h1>
+            {ally.isVerified && <BadgeCheck className="h-5 w-5 flex-shrink-0 text-info" />}
+            <span className="rounded-full bg-cobalto/10 px-2.5 py-0.5 text-xs font-medium text-cobalto">
+              {allyTypeLabels[ally.orgType]}
+            </span>
+          </div>
+          {ally.slogan && (
+            <p className="mt-1.5 text-sm font-medium text-naranja">{ally.slogan}</p>
+          )}
         </div>
+      </div>
 
-        <div className="mt-3 flex items-center gap-1.5">
-          <h1 className="font-display text-2xl font-bold text-cobalto">{ally.name}</h1>
-          {ally.isVerified && <BadgeCheck className="h-5 w-5 flex-shrink-0 text-info" />}
-        </div>
-        {ally.slogan && <p className="mt-1 text-sm font-medium text-naranja">{ally.slogan}</p>}
+      <div className="px-1">
         {ally.description && (
-          <p className="mt-3 text-sm leading-relaxed text-neutral-600">{ally.description}</p>
+          <p className="mt-4 text-sm leading-relaxed text-neutral-600">{ally.description}</p>
         )}
 
         <div className="mt-4 flex flex-wrap gap-2">

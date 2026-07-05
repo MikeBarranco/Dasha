@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Navigate, Outlet, Link, NavLink } from 'react-router-dom';
+import { Navigate, Outlet, Link, NavLink, useLocation } from 'react-router-dom';
+import { AnimatePresence, motion } from 'motion/react';
 import {
   Store,
   ArrowLeft,
   Eye,
+  ChevronDown,
   LayoutDashboard,
   UserRound,
   Users,
@@ -24,6 +26,8 @@ const portalSections = [
 
 export function PortalLayout() {
   const { user } = useAuth();
+  const location = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
   // undefined = cargando; null = no es aliado; objeto = contexto de aliado.
   const [context, setContext] = useState<AllyContext | null | undefined>(undefined);
 
@@ -54,6 +58,9 @@ export function PortalLayout() {
   // Copiar el link no basta: si no eres aliado, te regresa a la app. La seguridad
   // real la impone el backend (cada /me/organization/* valida rol y organización).
   if (context === null) return <Navigate to="/mapa" replace />;
+
+  const current =
+    portalSections.find((section) => location.pathname === section.to) ?? portalSections[0];
 
   return (
     <div className="flex min-h-screen flex-col bg-lino">
@@ -91,7 +98,68 @@ export function PortalLayout() {
       )}
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 md:px-6 md:py-8">
-        <nav className="mb-5 flex gap-2 overflow-x-auto pb-1">
+        {/* Móvil: menú desplegable (como el panel de admin) */}
+        <div className="relative z-30 mb-5 sm:hidden">
+          <button
+            type="button"
+            onClick={() => setMenuOpen((value) => !value)}
+            className="flex w-full items-center justify-between rounded-2xl border border-neutral-200 bg-white px-4 py-3"
+          >
+            <span className="flex items-center gap-2.5 font-medium text-neutral-800">
+              <current.icon className="h-4 w-4 text-cobalto" />
+              {current.label}
+            </span>
+            <ChevronDown
+              className={cn(
+                'h-4 w-4 text-neutral-400 transition-transform',
+                menuOpen && 'rotate-180',
+              )}
+            />
+          </button>
+
+          <AnimatePresence>
+            {menuOpen && (
+              <>
+                <button
+                  type="button"
+                  aria-label="Cerrar menú"
+                  onClick={() => setMenuOpen(false)}
+                  className="fixed inset-0 z-20 cursor-default"
+                />
+                <motion.div
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.15, ease: 'easeOut' }}
+                  className="absolute inset-x-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-lg"
+                >
+                  {portalSections.map((section) => (
+                    <NavLink
+                      key={section.to}
+                      to={section.to}
+                      end={section.end}
+                      onClick={() => setMenuOpen(false)}
+                      className={({ isActive }) =>
+                        cn(
+                          'flex items-center gap-3 px-4 py-3 text-sm transition-colors',
+                          isActive
+                            ? 'bg-cobalto/10 font-medium text-cobalto'
+                            : 'text-neutral-600 hover:bg-neutral-50',
+                        )
+                      }
+                    >
+                      <section.icon className="h-4 w-4 flex-shrink-0" />
+                      {section.label}
+                    </NavLink>
+                  ))}
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Escritorio: pastillas */}
+        <nav className="mb-5 hidden gap-2 sm:flex">
           {portalSections.map((section) => (
             <NavLink
               key={section.to}
