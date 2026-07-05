@@ -142,7 +142,15 @@ export function PortalHomePage() {
       </section>
 
       <section className="rounded-2xl border border-neutral-200 bg-white p-4">
-        <h2 className="font-display text-base font-bold text-cobalto">Mi equipo</h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="font-display text-base font-bold text-cobalto">Mi equipo</h2>
+          <Link
+            to="/portal/equipo"
+            className="text-xs font-medium text-cobalto hover:underline"
+          >
+            Gestionar
+          </Link>
+        </div>
         {team.length === 0 ? (
           <p className="mt-2 text-sm text-neutral-500">Aún no tienes veterinarios en tu equipo.</p>
         ) : (

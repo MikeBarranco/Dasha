@@ -493,6 +493,46 @@ export async function updateMyOrganization(input: MyOrgInput): Promise<void> {
   await authedRaw('/me/organization', { method: 'PATCH', body: JSON.stringify(input) });
 }
 
+// Equipo (veterinarios) del propio aliado. Backend: /me/organization/team
+// (spec en pendientes-isabel.md, 11.1). Lectura tolerante a la forma.
+export type TeamMember = {
+  userId: string;
+  name: string;
+  email: string;
+  role: 'owner' | 'vet';
+  title: string;
+  photoUrl: string | null;
+};
+
+function mapTeamMember(raw: Record<string, unknown>): TeamMember {
+  const user =
+    raw.user && typeof raw.user === 'object' ? (raw.user as Record<string, unknown>) : null;
+  const src = user ?? raw;
+  const roleRaw = String(raw.role ?? 'vet');
+  const photo = src.photoUrl ?? src.photo_url ?? src.avatarUrl ?? src.avatar_url;
+  return {
+    userId: String(raw.userId ?? raw.user_id ?? user?.id ?? raw.id ?? ''),
+    name: String(src.name ?? 'Sin nombre'),
+    email: String(src.email ?? ''),
+    role: roleRaw === 'owner' ? 'owner' : 'vet',
+    title: String(raw.title ?? ''),
+    photoUrl: typeof photo === 'string' && photo ? photo : null,
+  };
+}
+
+export async function getMyOrgTeam(): Promise<TeamMember[]> {
+  const data = await authedRaw<Record<string, unknown>[]>('/me/organization/team');
+  return (data ?? []).map(mapTeamMember);
+}
+
+export async function addMyOrgTeamMember(email: string): Promise<void> {
+  await authedRaw('/me/organization/team', { method: 'POST', body: JSON.stringify({ email }) });
+}
+
+export async function removeMyOrgTeamMember(userId: string): Promise<void> {
+  await authedRaw(`/me/organization/team/${userId}`, { method: 'DELETE' });
+}
+
 export async function postVolunteerApplication(data: {
   ineFrontBase64: string;
   ineBackBase64: string;
