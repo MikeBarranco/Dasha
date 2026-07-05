@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
-import { Plus, Pencil, Trash2, AlertCircle, RefreshCw, BadgeCheck, Building2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, AlertCircle, RefreshCw, BadgeCheck, Building2, Users } from 'lucide-react';
 import { OrgFormSheet } from '../../components/admin/OrgFormSheet';
+import { OrgTeamSheet } from '../../components/admin/OrgTeamSheet';
 import {
   getAdminOrganizations,
   deleteAdminOrganization,
@@ -15,6 +16,7 @@ export function AdminOrganizationsPage() {
   const [editing, setEditing] = useState<AdminOrg | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [teamOrg, setTeamOrg] = useState<AdminOrg | null>(null);
 
   const fetchOrgs = (reset: boolean) => {
     if (reset) {
@@ -172,6 +174,14 @@ export function AdminOrganizationsPage() {
                 <div className="flex flex-shrink-0 items-center gap-1">
                   <button
                     type="button"
+                    onClick={() => setTeamOrg(org)}
+                    aria-label="Equipo de veterinarios"
+                    className="rounded-lg p-2 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-cobalto"
+                  >
+                    <Users className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => openEdit(org)}
                     aria-label="Editar"
                     className="rounded-lg p-2 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-cobalto"
@@ -201,6 +211,10 @@ export function AdminOrganizationsPage() {
             onSaved={() => fetchOrgs(false)}
           />
         )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {teamOrg && <OrgTeamSheet org={teamOrg} onClose={() => setTeamOrg(null)} />}
       </AnimatePresence>
     </div>
   );
