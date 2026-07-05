@@ -91,7 +91,7 @@ export const mockAllies: Ally[] = [
     ],
     animals: [
       { id: 'a1', name: 'Charlie', photo: '/seed/charlie-recuperado.jpg', status: 'Buscando hogar' },
-      { id: 'a3', name: 'Canela', photo: '/seed/charlie-tratamiento.jpg', status: 'En tratamiento' },
+      { id: 'a2', name: 'Balú', photo: '/seed/perrito1.jpg', status: 'En tratamiento' },
     ],
     events: [
       { title: 'Jornada de esterilización', date: '12 jul 2026', place: 'En clínica' },
@@ -124,8 +124,8 @@ export const mockAllies: Ally[] = [
       },
     ],
     animals: [
-      { id: 'a2', name: 'Balú', photo: '/seed/charlie-recuperado.jpg', status: 'Buscando hogar' },
-      { id: 'a4', name: 'Nube', photo: '/seed/adopcion.jpg', status: 'Recuperándose' },
+      { id: 'a3', name: 'Luna', photo: '/seed/gatito9.jpg', status: 'Buscando hogar' },
+      { id: 'a4', name: 'Rocky', photo: '/seed/perrito5.jpg', status: 'En tratamiento' },
     ],
     events: [{ title: 'Feria de adopción', date: '20 jul 2026', place: 'Parque Juárez' }],
     badges: [{ label: 'Aliado verificado' }, { label: 'Adopciones' }],
