@@ -654,3 +654,135 @@ export async function updateVolunteerStatus(
     body: JSON.stringify({ status }),
   });
 }
+
+// AVISOS (notificaciones manuales). El admin escribe un aviso y elige a quién le
+// llega; el backend crea la notificación para ese público y dispara el push (el
+// service worker y las suscripciones VAPID ya existen en el frontend). Así Isabel
+// puede probar el push de punta a punta. Spec del endpoint en pendientes-isabel.md
+// (sección de Avisos): POST /admin/notifications { audience, title, body, link? };
+// GET /admin/notifications devuelve el historial de avisos enviados (opcional).
+const notificationAudienceLabels: Record<string, string> = {
+  all: 'Todos',
+  citizens: 'Ciudadanos',
+  volunteers: 'Voluntarios',
+  allies: 'Aliados',
+};
+
+export const notificationAudienceOptions: { value: string; label: string }[] = [
+  { value: 'all', label: 'Todos' },
+  { value: 'citizens', label: 'Ciudadanos' },
+  { value: 'volunteers', label: 'Voluntarios' },
+  { value: 'allies', label: 'Aliados' },
+];
+
+export type AdminNotification = {
+  id: string;
+  title: string;
+  body: string;
+  audience: string;
+  audienceLabel: string;
+  link: string;
+  sentCount: number | null;
+  sentAgo: string;
+};
+
+function mapAdminNotification(raw: Raw): AdminNotification {
+  const audienceRaw = asString(pick(raw, ['audience', 'target', 'segment']), 'all');
+  const countRaw = pick(raw, ['sentCount', 'sent_count', 'recipients', 'delivered']);
+  return {
+    id: asString(pick(raw, ['id', '_id'])),
+    title: asString(pick(raw, ['title'])),
+    body: asString(pick(raw, ['body', 'message', 'description'])),
+    audience: audienceRaw,
+    audienceLabel: notificationAudienceLabels[audienceRaw] ?? audienceRaw,
+    link: asString(pick(raw, ['link', 'url'])),
+    sentCount: countRaw === undefined || countRaw === null ? null : Number(countRaw),
+    sentAgo: timeAgo(asString(pick(raw, ['createdAt', 'created_at', 'sentAt', 'sent_at']))),
+  };
+}
+
+export type AdminNotificationInput = {
+  audience: string;
+  title: string;
+  body: string;
+  link?: string;
+};
+
+export async function getAdminNotifications(): Promise<AdminNotification[]> {
+  const data = await adminFetch<Raw[]>('/admin/notifications');
+  return (data ?? []).map(mapAdminNotification);
+}
+
+export async function sendAdminNotification(input: AdminNotificationInput): Promise<void> {
+  await adminFetch('/admin/notifications', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+// NOVEDADES (changelog). Hoy la página pública de Novedades es estática
+// (data/novedades.ts). Estas funciones permiten administrarlas DESDE EL PANEL sin
+// tocar código. Spec para Isabel (pendientes-isabel.md, sección de Novedades):
+// público GET /novedades (lista, más nueva primero); admin GET/POST/PATCH/DELETE
+// /admin/novedades con body { version, title, date (ISO), changes: string[] }.
+// El front lee tolerante y, mientras el endpoint no exista, la página pública usa
+// la lista estática como respaldo (ver getNovedades en api.ts).
+export type AdminNovedad = {
+  id: string;
+  version: string;
+  title: string;
+  date: string; // ISO/crudo, para precargar el input al editar
+  dateLabel: string;
+  changes: string[];
+};
+
+function asStringList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map((item) => asString(item)).filter((item) => item.trim().length > 0);
+  }
+  if (typeof value === 'string') {
+    return value
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+function mapAdminNovedad(raw: Raw): AdminNovedad {
+  const date = asString(pick(raw, ['date', 'releasedAt', 'released_at', 'createdAt', 'created_at']));
+  return {
+    id: asString(pick(raw, ['id', '_id'])),
+    version: asString(pick(raw, ['version'])),
+    title: asString(pick(raw, ['title'])),
+    date,
+    dateLabel: formatDate(date) || date,
+    changes: asStringList(pick(raw, ['changes', 'items', 'notes'])),
+  };
+}
+
+export type AdminNovedadInput = {
+  version: string;
+  title: string;
+  date: string; // ISO
+  changes: string[];
+};
+
+export async function getAdminNovedades(): Promise<AdminNovedad[]> {
+  const data = await adminFetch<Raw[]>('/admin/novedades');
+  return (data ?? [])
+    .map(mapAdminNovedad)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+}
+
+export async function createAdminNovedad(input: AdminNovedadInput): Promise<void> {
+  await adminFetch('/admin/novedades', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export async function updateAdminNovedad(id: string, input: AdminNovedadInput): Promise<void> {
+  await adminFetch(`/admin/novedades/${id}`, { method: 'PATCH', body: JSON.stringify(input) });
+}
+
+export async function deleteAdminNovedad(id: string): Promise<void> {
+  await adminFetch(`/admin/novedades/${id}`, { method: 'DELETE' });
+}

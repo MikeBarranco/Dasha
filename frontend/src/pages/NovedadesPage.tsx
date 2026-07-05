@@ -1,10 +1,28 @@
+import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Sparkles, Heart } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { cn } from '../lib/cn';
 import { releaseNotes, originStory } from '../data/novedades';
+import { getNovedades } from '../lib/api';
 
 export function NovedadesPage() {
+  // Arranca con la lista estática (nunca en blanco) y, si Isabel ya expone
+  // /novedades, la reemplaza con la versión administrada desde el panel.
+  const [releases, setReleases] = useState(releaseNotes);
+
+  useEffect(() => {
+    let active = true;
+    getNovedades()
+      .then((data) => {
+        if (active && data.length > 0) setReleases(data);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
   return (
     <div>
       <PageHeader
@@ -20,7 +38,7 @@ export function NovedadesPage() {
         />
 
         <div className="space-y-5">
-          {releaseNotes.map((release, index) => {
+          {releases.map((release, index) => {
             const latest = index === 0;
             return (
               <motion.div

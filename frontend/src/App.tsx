@@ -22,6 +22,8 @@ import { AdminReportsPage } from './pages/admin/AdminReportsPage';
 import { AdminAnimalsPage } from './pages/admin/AdminAnimalsPage';
 import { AdminOrganizationsPage } from './pages/admin/AdminOrganizationsPage';
 import { AdminEventsPage } from './pages/admin/AdminEventsPage';
+import { AdminAvisosPage } from './pages/admin/AdminAvisosPage';
+import { AdminNovedadesPage } from './pages/admin/AdminNovedadesPage';
 import { AdminUsersPage } from './pages/admin/AdminUsersPage';
 import { AdminForumPage } from './pages/admin/AdminForumPage';
 import { AdminVolunteersPage } from './pages/admin/AdminVolunteersPage';
@@ -60,6 +62,8 @@ function App() {
           <Route path="animales" element={<AdminAnimalsPage />} />
           <Route path="aliados" element={<AdminOrganizationsPage />} />
           <Route path="eventos" element={<AdminEventsPage />} />
+          <Route path="avisos" element={<AdminAvisosPage />} />
+          <Route path="novedades" element={<AdminNovedadesPage />} />
           <Route path="usuarios" element={<AdminUsersPage />} />
           <Route path="foro" element={<AdminForumPage />} />
           <Route path="voluntarios" element={<AdminVolunteersPage />} />

@@ -4,6 +4,8 @@ import {
   PawPrint,
   Building2,
   CalendarDays,
+  Megaphone,
+  Sparkles,
   Users,
   MessagesSquare,
   BadgeCheck,
@@ -49,6 +51,18 @@ export const adminSections: AdminSection[] = [
     label: 'Eventos',
     description: 'Jornadas, ferias y campañas comunitarias',
     icon: CalendarDays,
+  },
+  {
+    to: '/admin/avisos',
+    label: 'Avisos',
+    description: 'Envía notificaciones a la comunidad',
+    icon: Megaphone,
+  },
+  {
+    to: '/admin/novedades',
+    label: 'Novedades',
+    description: 'Publica el changelog que ve la comunidad',
+    icon: Sparkles,
   },
   {
     to: '/admin/usuarios',
