@@ -12,6 +12,7 @@ import { PerfilPage } from './pages/PerfilPage';
 import { NovedadesPage } from './pages/NovedadesPage';
 import { SerVoluntarioPage } from './pages/SerVoluntarioPage';
 import { AliadosPage } from './pages/AliadosPage';
+import { AllyProfilePage } from './pages/AllyProfilePage';
 import { LoginPage } from './pages/LoginPage';
 import { RegistroPage } from './pages/RegistroPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
@@ -45,6 +46,7 @@ function App() {
           <Route path="novedades" element={<NovedadesPage />} />
           <Route path="ser-voluntario" element={<SerVoluntarioPage />} />
           <Route path="aliados" element={<AliadosPage />} />
+          <Route path="aliados/:id" element={<AllyProfilePage />} />
         </Route>
         <Route path="admin" element={<AdminLayout />}>
           <Route index element={<AdminHomePage />} />

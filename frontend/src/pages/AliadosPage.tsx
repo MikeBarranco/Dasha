@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { AnimatePresence, motion } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'motion/react';
 import { MapPin, BadgeCheck, ChevronRight } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
-import { AllyDetail } from '../components/aliados/AllyDetail';
 import { cn } from '../lib/cn';
 import { getAllies } from '../lib/api';
 import { mockAllies, allyTypeLabels, type Ally, type AllyType } from '../data/mockAllies';
@@ -55,7 +54,7 @@ function AllyCard({ ally, onOpen }: { ally: Ally; onOpen: () => void }) {
         </p>
       )}
 
-      <span className="mt-3 text-xs font-medium text-cobalto">Ver detalle</span>
+      <span className="mt-3 text-xs font-medium text-cobalto">Ver perfil</span>
     </button>
   );
 }
@@ -63,7 +62,7 @@ function AllyCard({ ally, onOpen }: { ally: Ally; onOpen: () => void }) {
 export function AliadosPage() {
   const [allies, setAllies] = useState<Ally[] | null>(null);
   const [filter, setFilter] = useState<AllyType | 'todos'>('todos');
-  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   useEffect(() => {
     let active = true;
@@ -84,13 +83,7 @@ export function AliadosPage() {
     [allies, filter],
   );
 
-  const selectedId = searchParams.get('aliado');
-  const selectedAlly = selectedId
-    ? ((allies ?? []).find((ally) => ally.id === selectedId) ?? null)
-    : null;
-
-  const openAlly = (ally: Ally) => setSearchParams({ aliado: ally.id });
-  const closeAlly = () => setSearchParams({});
+  const openAlly = (ally: Ally) => navigate(`/aliados/${ally.id}`);
 
   return (
     <div>
@@ -141,10 +134,6 @@ export function AliadosPage() {
           ))}
         </div>
       )}
-
-      <AnimatePresence>
-        {selectedAlly && <AllyDetail ally={selectedAlly} onClose={closeAlly} />}
-      </AnimatePresence>
     </div>
   );
 }

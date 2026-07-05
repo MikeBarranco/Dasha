@@ -10,6 +10,24 @@ export type AllyBadge = {
   label: string;
 };
 
+// Miembro del equipo del aliado (veterinario/colaborador). En producción cada vet
+// tendrá su cuenta y el aliado lo vincula por correo; aquí es dato de ejemplo.
+export type AllyMember = {
+  name: string;
+  title: string;
+  photoUrl?: string | null;
+  bio?: string;
+};
+
+// Animal que atiende/atendió el aliado, en versión ligera para la ficha. Cuando
+// Isabel devuelva `animals` anidados en GET /allies/:id, se mapea a esto.
+export type AllyAnimal = {
+  id: string;
+  name: string;
+  photo: string;
+  status: string;
+};
+
 export type Ally = {
   id: string;
   name: string;
@@ -24,6 +42,10 @@ export type Ally = {
   lat: number;
   lng: number;
   schedule?: string;
+  slogan?: string;
+  coverUrl?: string | null;
+  team?: AllyMember[];
+  animals?: AllyAnimal[];
   gallery?: string[];
   events?: AllyEvent[];
   badges?: AllyBadge[];
@@ -51,6 +73,26 @@ export const mockAllies: Ally[] = [
     lat: 19.0414,
     lng: -98.2063,
     schedule: 'Lun a Sáb 9:00 a 20:00',
+    slogan: 'Cuidamos a cada patita como si fuera nuestra.',
+    coverUrl: null,
+    team: [
+      {
+        name: 'Dra. Ana Sofía Rivera',
+        title: 'Médico veterinario · Cirugía',
+        photoUrl: null,
+        bio: 'Especialista en cirugía y urgencias. Ha atendido a más de 200 animales rescatados.',
+      },
+      {
+        name: 'MVZ Luis Ortega',
+        title: 'Medicina preventiva',
+        photoUrl: null,
+        bio: 'A cargo de vacunación y campañas de esterilización.',
+      },
+    ],
+    animals: [
+      { id: 'a1', name: 'Charlie', photo: '/seed/charlie-recuperado.jpg', status: 'Buscando hogar' },
+      { id: 'a3', name: 'Canela', photo: '/seed/charlie-tratamiento.jpg', status: 'En tratamiento' },
+    ],
     events: [
       { title: 'Jornada de esterilización', date: '12 jul 2026', place: 'En clínica' },
       { title: 'Vacunación antirrábica gratuita', date: '3 ago 2026', place: 'En clínica' },
@@ -71,6 +113,20 @@ export const mockAllies: Ally[] = [
     lat: 19.0185,
     lng: -98.2042,
     schedule: 'Todos los días 10:00 a 18:00',
+    slogan: 'Un hogar temporal para quien más lo necesita.',
+    coverUrl: null,
+    team: [
+      {
+        name: 'Marisol Vega',
+        title: 'Fundadora · Coordinación de rescate',
+        photoUrl: null,
+        bio: 'Fundó el refugio en 2019. Ha coordinado más de 300 rescates en Puebla.',
+      },
+    ],
+    animals: [
+      { id: 'a2', name: 'Balú', photo: '/seed/charlie-recuperado.jpg', status: 'Buscando hogar' },
+      { id: 'a4', name: 'Nube', photo: '/seed/adopcion.jpg', status: 'Recuperándose' },
+    ],
     events: [{ title: 'Feria de adopción', date: '20 jul 2026', place: 'Parque Juárez' }],
     badges: [{ label: 'Aliado verificado' }, { label: 'Adopciones' }],
   },
@@ -88,6 +144,16 @@ export const mockAllies: Ally[] = [
     lat: 19.0445,
     lng: -98.1986,
     schedule: 'Lun a Vie 9:00 a 15:00',
+    slogan: 'Bienestar animal para toda la comunidad.',
+    coverUrl: null,
+    team: [
+      {
+        name: 'Roberto Cano',
+        title: 'Presidente de la asociación',
+        photoUrl: null,
+        bio: 'Organiza jornadas de vacunación y esterilización en colonias de Puebla.',
+      },
+    ],
     badges: [{ label: 'Jornadas comunitarias' }],
   },
 ];
