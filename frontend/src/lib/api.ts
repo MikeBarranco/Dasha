@@ -3,6 +3,7 @@ import type { Animal, AnimalStatus, TimelineEvent } from '../data/mockAnimals';
 import type { Ally, AllyType } from '../data/mockAllies';
 import { mockAllies } from '../data/mockAllies';
 import type { LostPet } from '../data/mockLostPets';
+import { releaseNotes, type ReleaseNote } from '../data/novedades';
 
 export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
 const TOKEN_KEY = 'dasha-token';
@@ -241,6 +242,41 @@ export type Stats = {
 
 export async function getStats(): Promise<Stats> {
   return requestRaw<Stats>('/stats');
+}
+
+// Novedades (changelog) público. Cuando Isabel exponga GET /novedades, la página
+// de Novedades se alimenta desde el panel sin tocar código. Mientras no exista (o
+// si falla / viene vacío), se usa la lista estática de data/novedades.ts como
+// respaldo, para que el escaparate nunca se quede en blanco. Tolerante a nombres
+// de campo y al formato de fecha (ISO o texto ya legible).
+function formatNovedadDate(raw: string): string {
+  if (!raw) return '';
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return raw;
+  return date.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+export async function getNovedades(): Promise<ReleaseNote[]> {
+  try {
+    const data = await requestRaw<Record<string, unknown>[]>('/novedades');
+    if (!Array.isArray(data) || data.length === 0) return releaseNotes;
+    return data.map((raw) => {
+      const changesRaw = raw.changes ?? raw.items ?? raw.notes;
+      const changes = Array.isArray(changesRaw)
+        ? changesRaw.map((item) => String(item)).filter((item) => item.trim().length > 0)
+        : typeof changesRaw === 'string'
+          ? changesRaw.split('\n').map((line) => line.trim()).filter(Boolean)
+          : [];
+      return {
+        version: String(raw.version ?? ''),
+        date: formatNovedadDate(String(raw.date ?? raw.releasedAt ?? raw.createdAt ?? '')),
+        title: String(raw.title ?? ''),
+        changes,
+      };
+    });
+  } catch {
+    return releaseNotes;
+  }
 }
 
 // Lista pública de mascotas perdidas para el modo Perdidos del mapa y el conteo
