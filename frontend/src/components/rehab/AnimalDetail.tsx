@@ -6,6 +6,7 @@ import { ShareButton } from '../ui/ShareButton';
 import { cn } from '../../lib/cn';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 import { useSheetDismiss } from '../../lib/useSheetDismiss';
+import { DonationSheet } from './DonationSheet';
 import type { Animal } from '../../data/mockAnimals';
 
 type AnimalDetailProps = {
@@ -18,6 +19,7 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
   const total = animal.photos.length;
   const [activePhoto, setActivePhoto] = useState(total - 1);
   const [showFull, setShowFull] = useState(false);
+  const [donationMode, setDonationMode] = useState<'money' | 'items' | null>(null);
   const touchStartX = useRef(0);
   const multiTouch = useRef(false);
   const photo = animal.photos[activePhoto];
@@ -170,12 +172,14 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
+                onClick={() => setDonationMode('money')}
                 className="flex items-center justify-center gap-2 rounded-xl bg-purpura py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
               >
                 <Heart className="h-5 w-5" /> Apadrinar
               </button>
               <button
                 type="button"
+                onClick={() => setDonationMode('items')}
                 className="flex items-center justify-center gap-2 rounded-xl border border-neutral-200 py-3 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
               >
                 <Gift className="h-5 w-5" /> Donar cosas
@@ -188,6 +192,16 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
           </div>
         </div>
       </motion.div>
+
+      <AnimatePresence>
+        {donationMode && (
+          <DonationSheet
+            animal={animal}
+            initialMode={donationMode}
+            onClose={() => setDonationMode(null)}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showFull && (

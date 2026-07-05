@@ -812,6 +812,27 @@ export async function approveMyOrgDonation(id: string): Promise<void> {
   });
 }
 
+// Donación de un ciudadano a un animal. Dasha NO procesa pagos: el donante
+// transfiere por fuera y sube su comprobante; la donación queda pendiente hasta
+// que el aliado la confirme. Backend: POST /animals/:id/donations
+// (spec en pendientes-isabel.md, 11.6).
+export type CreateDonationInput = {
+  type: 'money' | 'items';
+  amount?: number;
+  itemsDescription?: string;
+  proofBase64?: string;
+};
+
+export async function createDonation(
+  animalId: string,
+  input: CreateDonationInput,
+): Promise<void> {
+  await authedRaw(`/animals/${animalId}/donations`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
 type RawAlly = {
   id: string;
   name: string;
