@@ -215,14 +215,21 @@ export function PortalHomePage() {
       </section>
 
       <section className="rounded-2xl border border-neutral-200 bg-white p-4">
-        <h2 className="flex items-center gap-2 font-display text-base font-bold text-cobalto">
-          <HeartHandshake className="h-4 w-4" /> Donaciones y transferencias
-        </h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="flex items-center gap-2 font-display text-base font-bold text-cobalto">
+            <HeartHandshake className="h-4 w-4" /> Donaciones y transferencias
+          </h2>
+          <Link
+            to="/portal/donaciones"
+            className="text-xs font-medium text-cobalto hover:underline"
+          >
+            Ver
+          </Link>
+        </div>
         <p className="mt-2 text-sm text-neutral-600">
-          Aquí verás los comprobantes de donación de tus perritos y podrás aprobarlos cuando
-          confirmes que llegó la transferencia.
+          Revisa los comprobantes de donación de tus perritos y confírmalos cuando llegue la
+          transferencia.
         </p>
-        <p className="mt-2 text-xs text-neutral-400">Disponible próximamente.</p>
       </section>
     </div>
   );
