@@ -228,22 +228,36 @@ export function AdminVolunteersPage() {
     <div>
       <h1 className="font-display text-2xl font-bold text-cobalto">Voluntarios</h1>
 
-      <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-        {filters.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            onClick={() => setFilter(option.value)}
-            className={cn(
-              'flex-shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors',
-              filter === option.value
-                ? 'border-cobalto bg-cobalto text-white'
-                : 'border-neutral-200 bg-white text-neutral-600 hover:border-cobalto/40',
-            )}
-          >
-            {option.label}
-          </button>
-        ))}
+      {/* Filtro: desplegable en móvil, pastillas en escritorio */}
+      <div className="mt-4">
+        <select
+          value={filter}
+          onChange={(event) => setFilter(event.target.value)}
+          className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm font-medium text-neutral-700 outline-none focus:ring-2 focus:ring-cobalto/30 sm:hidden"
+        >
+          {filters.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <div className="hidden gap-2 sm:flex">
+          {filters.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setFilter(option.value)}
+              className={cn(
+                'flex-shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors',
+                filter === option.value
+                  ? 'border-cobalto bg-cobalto text-white'
+                  : 'border-neutral-200 bg-white text-neutral-600 hover:border-cobalto/40',
+              )}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {volunteers === null && (

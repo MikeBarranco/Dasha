@@ -316,6 +316,63 @@ export async function deleteAdminOrganization(id: string): Promise<void> {
   await adminFetch(`/admin/organizations/${id}`, { method: 'DELETE' });
 }
 
+// Equipo (veterinarios) de un aliado. Cada vet tiene su cuenta y el aliado lo
+// vincula por correo. El endpoint lo hará Isabel (spec en pendientes-isabel.md,
+// sección 11.1); el cliente ya está listo y es tolerante a la forma de respuesta.
+const orgMemberRoleLabels: Record<string, string> = {
+  owner: 'Responsable',
+  vet: 'Veterinario',
+  admin: 'Administrador',
+};
+
+export type AdminOrgMember = {
+  userId: string;
+  name: string;
+  email: string;
+  role: string;
+  roleLabel: string;
+  title: string;
+  photoUrl: string | null;
+  status: string;
+};
+
+function mapOrgMember(raw: Raw): AdminOrgMember {
+  const roleRaw = asString(pick(raw, ['role']), 'vet');
+  const userObj = pick(raw, ['user']);
+  const nested = userObj && typeof userObj === 'object' ? (userObj as Raw) : null;
+  const source = nested ?? raw;
+  const userId =
+    asString(pick(raw, ['userId', 'user_id'])) ||
+    (nested ? asString(pick(nested, ['id'])) : '') ||
+    asString(pick(raw, ['id', '_id']));
+  return {
+    userId,
+    name: asString(pick(source, ['name']), 'Sin nombre'),
+    email: asString(pick(source, ['email'])),
+    role: roleRaw,
+    roleLabel: orgMemberRoleLabels[roleRaw] ?? roleRaw,
+    title: asString(pick(raw, ['title'])),
+    photoUrl: asString(pick(source, ['photoUrl', 'photo_url', 'avatarUrl', 'avatar_url'])) || null,
+    status: asString(pick(raw, ['status']), 'active'),
+  };
+}
+
+export async function getAdminOrgTeam(orgId: string): Promise<AdminOrgMember[]> {
+  const data = await adminFetch<Raw[]>(`/admin/organizations/${orgId}/team`);
+  return (data ?? []).map(mapOrgMember);
+}
+
+export async function addAdminOrgTeamMember(orgId: string, email: string): Promise<void> {
+  await adminFetch(`/admin/organizations/${orgId}/team`, {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function removeAdminOrgTeamMember(orgId: string, userId: string): Promise<void> {
+  await adminFetch(`/admin/organizations/${orgId}/team/${userId}`, { method: 'DELETE' });
+}
+
 const roleLabels: Record<string, string> = {
   citizen: 'Ciudadano',
   volunteer: 'Voluntario',
