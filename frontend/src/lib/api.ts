@@ -380,6 +380,9 @@ export type MeProfile = {
   reportsCount: number;
   rescuesCount: number;
   achievements: Achievement[];
+  // Estado real de la solicitud de voluntario: 'none' | 'pending' | 'approved' |
+  // 'rejected'. null = el backend aún no lo envía (usamos la bandera local).
+  volunteerStatus: string | null;
 };
 
 export async function getMe(): Promise<MeProfile> {
@@ -416,6 +419,12 @@ export async function getMe(): Promise<MeProfile> {
     reportsCount: Number(raw.reportsCount ?? count.reports ?? 0),
     rescuesCount: Number(raw.rescuesCount ?? count.rescueAssignments ?? 0),
     achievements,
+    volunteerStatus:
+      typeof raw.volunteerStatus === 'string'
+        ? raw.volunteerStatus
+        : typeof raw.volunteer_status === 'string'
+          ? raw.volunteer_status
+          : null,
   };
 }
 

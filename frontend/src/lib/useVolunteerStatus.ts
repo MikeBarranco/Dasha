@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { getStoredUser } from './api';
 
 type VolunteerStatus = 'none' | 'pending';
@@ -31,12 +31,21 @@ export function useVolunteerStatus() {
     };
   }, []);
 
-  const apply = () => {
+  const apply = useCallback(() => {
     const key = storageKey();
     if (!key) return;
     window.localStorage.setItem(key, 'pending');
     window.dispatchEvent(new Event(CHANGE_EVENT));
-  };
+  }, []);
 
-  return { status, apply };
+  // Limpia la bandera local "pendiente" (p. ej. cuando ya se aprobó/rechazó o se
+  // degradó el rol) para no quedar atorados mostrando "en revisión".
+  const clear = useCallback(() => {
+    const key = storageKey();
+    if (!key) return;
+    window.localStorage.removeItem(key);
+    window.dispatchEvent(new Event(CHANGE_EVENT));
+  }, []);
+
+  return { status, apply, clear };
 }
