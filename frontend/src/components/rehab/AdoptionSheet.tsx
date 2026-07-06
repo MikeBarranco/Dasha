@@ -91,7 +91,7 @@ export function AdoptionSheet({ animal, onClose }: AdoptionSheetProps) {
       />
 
       <motion.div
-        className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-white shadow-xl sm:rounded-3xl"
+        className="relative max-h-[90vh] w-full max-w-md overflow-y-auto overscroll-none rounded-t-3xl bg-white shadow-xl sm:rounded-3xl"
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
@@ -136,10 +136,10 @@ export function AdoptionSheet({ animal, onClose }: AdoptionSheetProps) {
             <div className="flex items-start gap-2 rounded-xl bg-naranja/5 p-3 text-xs text-neutral-600">
               <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-naranja" />
               <span>
-                El proceso de adopción lo lleva {animal.vet}. Cada refugio define sus requisitos y,
-                en algunos casos, una <span className="font-medium">cuota de recuperación</span>{' '}
-                para cubrir vacunas, esterilización y atención. Eso no depende de Dasha; aquí solo
-                te conectamos.
+                El proceso de adopción lo lleva {animal.vet}: ellos definen los requisitos y, en
+                algunos casos, una <span className="font-medium">cuota de recuperación</span>{' '}
+                para vacunas, esterilización y atención. Nosotros estamos para acompañarte y
+                acercarte a {animal.name}.
               </span>
             </div>
 

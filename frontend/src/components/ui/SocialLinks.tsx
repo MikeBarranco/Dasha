@@ -5,7 +5,7 @@ import { InstagramIcon, FacebookIcon } from './BrandIcons';
 const links = [
   {
     label: 'Instagram',
-    href: 'https://www.instagram.com/dashaapp.mx/',
+    href: 'https://www.instagram.com/dashamx.me/',
     icon: InstagramIcon,
   },
   {
