@@ -34,12 +34,51 @@ async function getModel(): Promise<CocoModel> {
   return modelPromise;
 }
 
+// Precarga el modelo en segundo plano (idealmente al entrar a la pantalla de
+// reporte) y hace un "warmup": una inferencia en un lienzo pequeño para compilar
+// todo, de modo que la PRIMERA detección real ya no congele la interfaz.
+let warmed = false;
+export async function preloadAnimalModel(): Promise<void> {
+  try {
+    const model = await getModel();
+    if (!warmed) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 96;
+      canvas.height = 96;
+      await model.detect(canvas);
+      warmed = true;
+    }
+  } catch {
+    // Sin red o sin soporte: la detección simplemente no estará disponible.
+  }
+}
+
+// Reduce la imagen antes de analizarla: COCO-SSD no necesita alta resolución y
+// una imagen grande hace la inferencia más pesada (bloquea más el hilo).
+function toDetectionInput(
+  image: HTMLImageElement | HTMLCanvasElement,
+): HTMLImageElement | HTMLCanvasElement {
+  const sourceW = (image as HTMLImageElement).naturalWidth || image.width;
+  const sourceH = (image as HTMLImageElement).naturalHeight || image.height;
+  if (!sourceW || !sourceH) return image;
+  const max = 640;
+  const scale = Math.min(1, max / Math.max(sourceW, sourceH));
+  if (scale === 1) return image;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(sourceW * scale);
+  canvas.height = Math.round(sourceH * scale);
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return image;
+  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return canvas;
+}
+
 export async function detectAnimal(
   image: HTMLImageElement | HTMLCanvasElement,
 ): Promise<AnimalDetection> {
   try {
     const model = await getModel();
-    const predictions = await model.detect(image);
+    const predictions = await model.detect(toDetectionInput(image));
     const animals = predictions
       .filter((item) => (item.class === 'dog' || item.class === 'cat') && item.score >= 0.5)
       .sort((a, b) => b.score - a.score);
