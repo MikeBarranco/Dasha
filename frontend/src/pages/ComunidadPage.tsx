@@ -1,7 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { CalendarDays, MapPin, Heart, MessageCircle, ImagePlus, Send, X, Check } from 'lucide-react';
+import {
+  CalendarDays,
+  MapPin,
+  Heart,
+  MessageCircle,
+  ImagePlus,
+  Send,
+  X,
+  Check,
+  Flag,
+} from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Avatar } from '../components/ui/Avatar';
 import { cn } from '../lib/cn';
@@ -13,10 +23,13 @@ import {
   getForumPosts,
   createForumPost,
   likeForumPost,
+  reportForumPost,
 } from '../lib/api';
 import type { CommunityEvent, ForumPost } from '../data/mockComunidad';
 
 type Tab = 'eventos' | 'foro';
+
+const reportReasons = ['Contenido ofensivo', 'Spam o publicidad', 'Información falsa', 'Otro'];
 
 export function ComunidadPage() {
   const navigate = useNavigate();
@@ -31,6 +44,10 @@ export function ComunidadPage() {
   const [text, setText] = useState('');
   const [photo, setPhoto] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
+
+  const [reportingId, setReportingId] = useState<string | null>(null);
+  const [reportReason, setReportReason] = useState(reportReasons[0]);
+  const [reportedIds, setReportedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let active = true;
@@ -69,6 +86,23 @@ export function ComunidadPage() {
       list ? list.map((p) => (p.id === id ? { ...p, likes: p.likes + 1 } : p)) : list,
     );
     likeForumPost(id).catch(() => {});
+  };
+
+  const openReport = (id: string) => {
+    if (!account) {
+      navigate('/login');
+      return;
+    }
+    setReportReason(reportReasons[0]);
+    setReportingId(id);
+  };
+
+  const submitReport = () => {
+    const id = reportingId;
+    if (!id) return;
+    setReportedIds((current) => new Set(current).add(id));
+    reportForumPost(id, reportReason).catch(() => {});
+    setReportingId(null);
   };
 
   const pickPhoto = async (files: FileList | null) => {
@@ -329,10 +363,75 @@ export function ComunidadPage() {
                   <span className="flex items-center gap-1.5">
                     <MessageCircle className="h-4 w-4" /> {post.comments}
                   </span>
+                  {reportedIds.has(post.id) ? (
+                    <span className="ml-auto flex items-center gap-1.5 text-xs text-neutral-400">
+                      <Flag className="h-4 w-4" /> Reportado
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => openReport(post.id)}
+                      aria-label="Reportar publicación"
+                      className="ml-auto text-neutral-400 transition-colors hover:text-alerta"
+                    >
+                      <Flag className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               </motion.article>
             );
           })}
+        </div>
+      )}
+
+      {reportingId && (
+        <div className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setReportingId(null)}
+            aria-hidden="true"
+          />
+          <div className="relative w-full max-w-sm rounded-t-3xl bg-white p-5 shadow-xl sm:rounded-3xl">
+            <div className="flex items-center justify-between">
+              <h3 className="font-display text-lg font-bold text-cobalto">Reportar publicación</h3>
+              <button
+                type="button"
+                onClick={() => setReportingId(null)}
+                aria-label="Cerrar"
+                className="rounded-full p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="mt-1 text-sm text-neutral-500">
+              Cuéntanos por qué. Un administrador la revisará.
+            </p>
+            <div className="mt-3 space-y-2">
+              {reportReasons.map((reason) => (
+                <button
+                  key={reason}
+                  type="button"
+                  onClick={() => setReportReason(reason)}
+                  className={cn(
+                    'flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-sm transition-colors',
+                    reportReason === reason
+                      ? 'border-cobalto bg-cobalto/5 font-medium text-cobalto'
+                      : 'border-neutral-200 text-neutral-600 hover:border-cobalto/40',
+                  )}
+                >
+                  {reason}
+                  {reportReason === reason && <Check className="h-4 w-4" />}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={submitReport}
+              className="mt-4 w-full rounded-xl bg-alerta py-3 font-semibold text-white transition-opacity hover:opacity-90"
+            >
+              Enviar reporte
+            </button>
+          </div>
         </div>
       )}
     </div>

@@ -475,6 +475,53 @@ export async function deleteAdminForumPost(id: string): Promise<void> {
   await adminFetch(`/admin/forum/posts/${id}`, { method: 'DELETE' });
 }
 
+// Denuncias de publicaciones del foro. El usuario reporta con un motivo y el admin
+// las revisa aquí (borra la publicación o descarta la denuncia). Backend:
+// GET /admin/forum/reports (spec en pendientes-isabel.md, sección de Comunidad).
+export type AdminForumReport = {
+  id: string;
+  reason: string;
+  reporter: string;
+  reportedAgo: string;
+  postId: string;
+  postAuthor: string;
+  postContent: string;
+};
+
+function mapForumReport(raw: Raw): AdminForumReport {
+  const postObj = pick(raw, ['post']);
+  const post = postObj && typeof postObj === 'object' ? (postObj as Raw) : raw;
+  const postAuthorObj = pick(post, ['author', 'user']);
+  const postAuthor =
+    postAuthorObj && typeof postAuthorObj === 'object'
+      ? asString((postAuthorObj as Raw).name)
+      : asString(pick(post, ['authorName']));
+  const reporterObj = pick(raw, ['reporter', 'reportedBy', 'user']);
+  const reporter =
+    reporterObj && typeof reporterObj === 'object'
+      ? asString((reporterObj as Raw).name)
+      : asString(pick(raw, ['reporterName']));
+
+  return {
+    id: asString(pick(raw, ['id', '_id'])),
+    reason: asString(pick(raw, ['reason', 'motivo', 'description'])),
+    reporter: reporter || 'Anónimo',
+    reportedAgo: timeAgo(asString(pick(raw, ['createdAt', 'created_at']))),
+    postId: asString(pick(post, ['id', '_id'])),
+    postAuthor: postAuthor || 'Anónimo',
+    postContent: asString(pick(post, ['content', 'text', 'body', 'message'])),
+  };
+}
+
+export async function getAdminForumReports(): Promise<AdminForumReport[]> {
+  const data = await adminFetch<Raw[]>('/admin/forum/reports');
+  return (data ?? []).map(mapForumReport);
+}
+
+export async function dismissAdminForumReport(id: string): Promise<void> {
+  await adminFetch(`/admin/forum/reports/${id}`, { method: 'DELETE' });
+}
+
 // Categorías de eventos comunitarios. Son un conjunto FIJO (desplegable, no texto
 // libre) para que no entren valores basura. El backend guarda `category` como
 // string; enviamos el slug y mostramos la etiqueta. Si llega un valor viejo o

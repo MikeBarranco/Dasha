@@ -8,6 +8,7 @@ import {
   Sparkles,
   Users,
   MessagesSquare,
+  Flag as FlagIcon,
   BadgeCheck,
   type LucideIcon,
 } from 'lucide-react';
@@ -75,6 +76,12 @@ export const adminSections: AdminSection[] = [
     label: 'Foro',
     description: 'Modera las publicaciones de la comunidad',
     icon: MessagesSquare,
+  },
+  {
+    to: '/admin/denuncias',
+    label: 'Denuncias',
+    description: 'Publicaciones reportadas por la comunidad',
+    icon: FlagIcon,
   },
   {
     to: '/admin/voluntarios',
