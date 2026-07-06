@@ -5,18 +5,28 @@ type CameraCaptureProps = {
   // Devuelve la foto capturada como File (para comprimir/enviar) y como dataURL
   // (para previsualizar al instante).
   onCapture: (file: File, dataUrl: string) => void;
+  // Marco-guía opcional para encuadrar: 'card' (identificación) o 'face' (selfie).
+  frame?: 'card' | 'face';
+  initialFacing?: 'environment' | 'user';
+  // Si true, ocupa el alto del contenedor (para usarlo en un modal); si no, alto fijo.
+  fill?: boolean;
 };
 
 type CamStatus = 'loading' | 'ready' | 'error';
 
 // Captura en vivo desde la cámara del dispositivo. A propósito NO usa un <input
 // type="file">: así no se puede subir desde la galería (ni en celular, ni en
-// laptop, ni en tablet); el reporte se toma en el momento.
-export function CameraCapture({ onCapture }: CameraCaptureProps) {
+// laptop, ni en tablet); la foto se toma en el momento.
+export function CameraCapture({
+  onCapture,
+  frame,
+  initialFacing = 'environment',
+  fill = false,
+}: CameraCaptureProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [status, setStatus] = useState<CamStatus>('loading');
-  const [facing, setFacing] = useState<'environment' | 'user'>('environment');
+  const [facing, setFacing] = useState<'environment' | 'user'>(initialFacing);
 
   useEffect(() => {
     let active = true;
@@ -83,13 +93,33 @@ export function CameraCapture({ onCapture }: CameraCaptureProps) {
   };
 
   return (
-    <div className="relative h-64 w-full overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-900">
+    <div
+      className={
+        (fill ? 'h-full' : 'h-64') +
+        ' relative w-full overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-900'
+      }
+    >
       <video
         ref={videoRef}
         playsInline
         muted
         className="h-full w-full object-cover"
       />
+
+      {status === 'ready' && frame && (
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 px-6">
+          {frame === 'card' ? (
+            <div className="aspect-[1.586] w-full max-w-xs rounded-xl border-2 border-dashed border-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]" />
+          ) : (
+            <div className="h-56 w-44 rounded-[50%] border-2 border-dashed border-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]" />
+          )}
+          <p className="rounded-full bg-black/50 px-3 py-1 text-center text-xs text-white">
+            {frame === 'card'
+              ? 'Encuadra tu identificación dentro del marco'
+              : 'Coloca tu rostro dentro del marco'}
+          </p>
+        </div>
+      )}
 
       {status === 'loading' && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-neutral-900 text-neutral-300">
