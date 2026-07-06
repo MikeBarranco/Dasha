@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Camera, Dog, Cat, ArrowLeft, Check } from 'lucide-react';
@@ -7,6 +7,8 @@ import { cn } from '../lib/cn';
 import { createReport, type CreateReportInput } from '../lib/api';
 import { compressImage } from '../lib/image';
 import { useAuth } from '../lib/useAuth';
+import { CameraCapture } from '../components/map/CameraCapture';
+import { detectAnimal, type AnimalDetection } from '../lib/detectAnimal';
 
 const LocationPicker = lazy(() =>
   import('../components/map/LocationPicker').then((module) => ({ default: module.LocationPicker })),
@@ -102,13 +104,14 @@ function ToggleRow({ label, value, onChange }: ToggleRowProps) {
 export function ReportarPage() {
   const navigate = useNavigate();
   const { user: account } = useAuth();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState(1);
   const [done, setDone] = useState(false);
   const [newReportId, setNewReportId] = useState<string | null>(null);
 
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [photoBase64, setPhotoBase64] = useState<string | null>(null);
+  const [detecting, setDetecting] = useState(false);
+  const [detection, setDetection] = useState<AnimalDetection | null>(null);
   const [species, setSpecies] = useState<'perro' | 'gato' | null>(null);
   const [conditions, setConditions] = useState<string[]>([]);
   const [size, setSize] = useState<string | null>(null);
@@ -161,17 +164,42 @@ export function ReportarPage() {
     );
   }
 
-  const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    // Preview original instantáneo
-    setPhotoUrl(URL.createObjectURL(file));
+  const handleCapture = (file: File, dataUrl: string) => {
+    // Preview instantáneo con la foto ya capturada.
+    setPhotoUrl(dataUrl);
 
     // Comprimir antes de enviar (peso ligero, evita el error 413).
     compressImage(file)
       .then(setPhotoBase64)
       .catch(() => setPhotoBase64(null));
+
+    // La IA (perro/gato) preselecciona la especie. No bloquea: si no detecta,
+    // el usuario la elige a mano en el paso 2.
+    runDetection(dataUrl);
+  };
+
+  const runDetection = (dataUrl: string) => {
+    setDetecting(true);
+    setDetection(null);
+    const img = new Image();
+    img.onload = () => {
+      detectAnimal(img)
+        .then((result) => {
+          setDetection(result);
+          if (result.species) setSpecies(result.species);
+        })
+        .catch(() => setDetection(null))
+        .finally(() => setDetecting(false));
+    };
+    img.onerror = () => setDetecting(false);
+    img.src = dataUrl;
+  };
+
+  const retakePhoto = () => {
+    setPhotoUrl(null);
+    setPhotoBase64(null);
+    setDetection(null);
+    setDetecting(false);
   };
 
   const toggleCondition = (value: string) => {
@@ -185,6 +213,8 @@ export function ReportarPage() {
     setDone(false);
     setNewReportId(null);
     setPhotoUrl(null);
+    setDetection(null);
+    setDetecting(false);
     setSpecies(null);
     setConditions([]);
     setSize(null);
@@ -293,39 +323,42 @@ export function ReportarPage() {
 
       {step === 1 && (
         <div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={handlePhotoChange}
-            className="hidden"
-          />
           {photoUrl ? (
-            <div className="overflow-hidden rounded-2xl border border-neutral-200">
-              <img src={photoUrl} alt="Foto del reporte" className="h-64 w-full object-cover" />
-            </div>
+            <>
+              <div className="overflow-hidden rounded-2xl border border-neutral-200">
+                <img src={photoUrl} alt="Foto del reporte" className="h-64 w-full object-cover" />
+              </div>
+              {detecting && (
+                <p className="mt-2 text-xs text-neutral-400">Analizando la foto…</p>
+              )}
+              {!detecting && detection && (
+                detection.detected ? (
+                  <p className="mt-2 text-xs font-medium text-exito">
+                    Detectamos un {detection.species}. Ya lo seleccionamos en el siguiente paso.
+                  </p>
+                ) : (
+                  <p className="mt-2 text-xs text-naranja">
+                    No detectamos un animal con claridad. Puedes continuar, pero revisa que la foto
+                    se vea bien.
+                  </p>
+                )
+              )}
+              <button
+                type="button"
+                onClick={retakePhoto}
+                className="mt-3 text-sm font-medium text-cobalto"
+              >
+                Retomar foto
+              </button>
+            </>
           ) : (
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="flex h-64 w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-neutral-300 text-neutral-500 transition-colors hover:border-cobalto hover:text-cobalto"
-            >
-              <Camera className="h-10 w-10" />
-              <span className="text-sm font-medium">Tomar foto</span>
-              <span className="text-xs text-neutral-400">
-                Usa la cámara para reportar en el momento
-              </span>
-            </button>
-          )}
-          {photoUrl && (
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="mt-3 text-sm font-medium text-cobalto"
-            >
-              Retomar foto
-            </button>
+            <>
+              <CameraCapture onCapture={handleCapture} />
+              <p className="mt-2 text-xs text-neutral-400">
+                El reporte se toma en el momento con la cámara. Encuadra al animalito y toca el
+                botón.
+              </p>
+            </>
           )}
         </div>
       )}
