@@ -7,6 +7,29 @@ export type TimelineEvent = {
   when: string;
 };
 
+export type MedicalEntryType =
+  | 'vacuna'
+  | 'desparasitacion'
+  | 'tratamiento'
+  | 'cirugia'
+  | 'peso'
+  | 'otro';
+
+export type MedicalEntry = {
+  id: string;
+  type: MedicalEntryType;
+  title: string;
+  date: string;
+  notes?: string;
+};
+
+// Cartilla médica del animal: si está esterilizado y su historial clínico
+// (vacunas, tratamientos, cirugías, etc.). La llena el aliado desde su portal.
+export type MedicalRecord = {
+  sterilized: boolean;
+  entries: MedicalEntry[];
+};
+
 export type Animal = {
   id: string;
   name: string;
@@ -21,6 +44,7 @@ export type Animal = {
   totalRaised: number;
   status: AnimalStatus;
   timeline?: TimelineEvent[];
+  medical?: MedicalRecord;
 };
 
 export const mockAnimals: Animal[] = [
@@ -49,6 +73,26 @@ export const mockAnimals: Animal[] = [
       { title: 'En tratamiento veterinario', when: 'Hace 2 semanas' },
       { title: 'Recuperado, esperando adopción', when: 'Hoy' },
     ],
+    medical: {
+      sterilized: true,
+      entries: [
+        {
+          id: 'm1',
+          type: 'cirugia',
+          title: 'Curación de la pata',
+          date: 'Hace 3 semanas',
+          notes: 'Herida limpiada y suturada.',
+        },
+        { id: 'm2', type: 'desparasitacion', title: 'Desparasitación interna', date: 'Hace 2 semanas' },
+        {
+          id: 'm3',
+          type: 'vacuna',
+          title: 'Vacuna antirrábica',
+          date: 'Hace 2 semanas',
+          notes: 'Aplicada por el veterinario aliado.',
+        },
+      ],
+    },
   },
   {
     id: 'a2',
@@ -64,6 +108,13 @@ export const mockAnimals: Animal[] = [
     totalNeeded: 1500,
     totalRaised: 900,
     status: 'En tratamiento',
+    medical: {
+      sterilized: false,
+      entries: [
+        { id: 'm4', type: 'tratamiento', title: 'Inmovilización de la fractura', date: 'Hace 1 semana' },
+        { id: 'm5', type: 'peso', title: 'Peso: 18 kg', date: 'Hoy' },
+      ],
+    },
   },
   {
     id: 'a3',

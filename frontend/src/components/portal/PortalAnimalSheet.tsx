@@ -1,9 +1,15 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { X, Stethoscope, Check } from 'lucide-react';
+import { X, Stethoscope, Check, Plus, Trash2 } from 'lucide-react';
+import { cn } from '../../lib/cn';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
-import { updateMyOrgAnimalStatus } from '../../lib/api';
-import type { Animal, AnimalStatus } from '../../data/mockAnimals';
+import {
+  updateMyOrgAnimalStatus,
+  setMyOrgAnimalSterilized,
+  addMyOrgMedicalEntry,
+  removeMyOrgMedicalEntry,
+} from '../../lib/api';
+import type { Animal, AnimalStatus, MedicalEntry, MedicalEntryType } from '../../data/mockAnimals';
 
 const statusOptions: AnimalStatus[] = ['En tratamiento', 'Recuperándose', 'Buscando hogar'];
 
@@ -13,6 +19,23 @@ const statusToSlug: Record<AnimalStatus, string> = {
   Recuperándose: 'recovering',
   'Buscando hogar': 'looking_for_adoption',
 };
+
+const medTypeLabel: Record<MedicalEntryType, string> = {
+  vacuna: 'Vacuna',
+  desparasitacion: 'Desparasitación',
+  tratamiento: 'Tratamiento',
+  cirugia: 'Cirugía',
+  peso: 'Peso',
+  otro: 'Otro',
+};
+
+const medTypeOptions = (Object.keys(medTypeLabel) as MedicalEntryType[]).map((value) => ({
+  value,
+  label: medTypeLabel[value],
+}));
+
+const medInput =
+  'w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-700 outline-none focus:ring-2 focus:ring-cobalto/30';
 
 type PortalAnimalSheetProps = {
   animal: Animal;
@@ -34,6 +57,51 @@ export function PortalAnimalSheet({
   const [error, setError] = useState<string | null>(null);
   const timeline = animal.timeline ?? [];
   const changed = status !== animal.status;
+
+  // Cartilla médica editable.
+  const [sterilized, setSterilized] = useState(animal.medical?.sterilized ?? false);
+  const [entries, setEntries] = useState<MedicalEntry[]>(animal.medical?.entries ?? []);
+  const [adding, setAdding] = useState(false);
+  const [newType, setNewType] = useState<MedicalEntryType>('vacuna');
+  const [newTitle, setNewTitle] = useState('');
+  const [newDate, setNewDate] = useState('');
+  const [newNotes, setNewNotes] = useState('');
+
+  const changeSterilized = (value: boolean) => {
+    setSterilized(value);
+    if (!preview) setMyOrgAnimalSterilized(animal.id, value).catch(() => {});
+  };
+
+  const addEntry = () => {
+    const title = newTitle.trim();
+    if (!title) return;
+    const entry: MedicalEntry = {
+      id: `local-${Date.now()}`,
+      type: newType,
+      title,
+      date: newDate.trim() || 'Hoy',
+      notes: newNotes.trim() || undefined,
+    };
+    setEntries((current) => [entry, ...current]);
+    setNewType('vacuna');
+    setNewTitle('');
+    setNewDate('');
+    setNewNotes('');
+    setAdding(false);
+    if (!preview) {
+      addMyOrgMedicalEntry(animal.id, {
+        type: entry.type,
+        title: entry.title,
+        date: entry.date,
+        notes: entry.notes,
+      }).catch(() => {});
+    }
+  };
+
+  const removeEntry = (id: string) => {
+    setEntries((current) => current.filter((item) => item.id !== id));
+    if (!preview) removeMyOrgMedicalEntry(animal.id, id).catch(() => {});
+  };
 
   const save = async () => {
     setError(null);
@@ -157,9 +225,133 @@ export function PortalAnimalSheet({
             </div>
           )}
 
-          <p className="mt-6 text-center text-xs text-neutral-400">
-            La cartilla (vacunas y tratamientos) llegará pronto.
-          </p>
+          <div className="mt-6">
+            <p className="text-sm font-semibold text-cobalto">Cartilla médica</p>
+
+            <div className="mt-3 flex items-center justify-between rounded-xl border border-neutral-200 px-3 py-2.5">
+              <span className="text-sm text-neutral-700">Esterilizado</span>
+              <div className="flex gap-1.5">
+                {[
+                  { value: true, label: 'Sí' },
+                  { value: false, label: 'No' },
+                ].map((option) => (
+                  <button
+                    key={option.label}
+                    type="button"
+                    onClick={() => changeSterilized(option.value)}
+                    className={cn(
+                      'rounded-lg px-3 py-1 text-sm font-medium transition-colors',
+                      sterilized === option.value
+                        ? 'bg-cobalto text-white'
+                        : 'bg-neutral-100 text-neutral-500',
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <ul className="mt-3 space-y-2">
+              {entries.map((entry) => (
+                <li
+                  key={entry.id}
+                  className="flex items-start gap-2 rounded-xl border border-neutral-200 p-3"
+                >
+                  <span className="mt-0.5 flex-shrink-0 rounded-full bg-cobalto/10 px-2 py-0.5 text-[11px] font-medium text-cobalto">
+                    {medTypeLabel[entry.type]}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-neutral-800">{entry.title}</p>
+                    {entry.date && <p className="text-xs text-neutral-400">{entry.date}</p>}
+                    {entry.notes && <p className="mt-0.5 text-xs text-neutral-500">{entry.notes}</p>}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeEntry(entry.id)}
+                    aria-label="Quitar registro"
+                    className="rounded-lg p-1.5 text-neutral-400 transition-colors hover:bg-alerta/5 hover:text-alerta"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </li>
+              ))}
+              {entries.length === 0 && (
+                <li className="rounded-xl border border-dashed border-neutral-200 px-3 py-4 text-center text-xs text-neutral-400">
+                  Aún no hay registros en la cartilla.
+                </li>
+              )}
+            </ul>
+
+            {adding ? (
+              <div className="mt-3 space-y-2 rounded-xl border border-neutral-200 p-3">
+                <select
+                  value={newType}
+                  onChange={(event) => setNewType(event.target.value as MedicalEntryType)}
+                  className={medInput}
+                >
+                  {medTypeOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  value={newTitle}
+                  onChange={(event) => setNewTitle(event.target.value)}
+                  maxLength={80}
+                  placeholder="Ej. Vacuna antirrábica"
+                  className={medInput}
+                />
+                <input
+                  value={newDate}
+                  onChange={(event) => setNewDate(event.target.value)}
+                  maxLength={40}
+                  placeholder="Fecha (ej. Hoy, 12 jul)"
+                  className={medInput}
+                />
+                <textarea
+                  value={newNotes}
+                  onChange={(event) => setNewNotes(event.target.value)}
+                  maxLength={160}
+                  rows={2}
+                  placeholder="Notas (opcional)"
+                  className={cn(medInput, 'resize-none')}
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAdding(false)}
+                    className="flex-1 rounded-lg border border-neutral-200 py-2 text-sm font-medium text-neutral-600 transition-colors hover:bg-neutral-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={addEntry}
+                    disabled={!newTitle.trim()}
+                    className="flex-1 rounded-lg bg-cobalto py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                  >
+                    Guardar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setAdding(true)}
+                className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-cobalto/40 py-2.5 text-sm font-medium text-cobalto transition-colors hover:bg-cobalto/5"
+              >
+                <Plus className="h-4 w-4" /> Agregar registro
+              </button>
+            )}
+
+            {preview && (
+              <p className="mt-2 text-center text-xs text-neutral-400">
+                En vista previa los cambios no se guardan de verdad.
+              </p>
+            )}
+          </div>
         </div>
       </motion.div>
     </div>

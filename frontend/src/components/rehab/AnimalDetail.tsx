@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Home,
   Bell,
+  ShieldCheck,
 } from 'lucide-react';
 import { ProgressBar } from '../ui/ProgressBar';
 import { ShareButton } from '../ui/ShareButton';
@@ -22,6 +23,15 @@ import { useFollowAnimal } from '../../lib/useFollowAnimal';
 import { DonationSheet } from './DonationSheet';
 import { AdoptionSheet } from './AdoptionSheet';
 import type { Animal } from '../../data/mockAnimals';
+
+const medLabel: Record<string, string> = {
+  vacuna: 'Vacuna',
+  desparasitacion: 'Desparasitación',
+  tratamiento: 'Tratamiento',
+  cirugia: 'Cirugía',
+  peso: 'Peso',
+  otro: 'Otro',
+};
 
 type AnimalDetailProps = {
   animal: Animal;
@@ -193,6 +203,39 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
               </ol>
             </div>
           )}
+
+          {animal.medical &&
+            (animal.medical.sterilized || animal.medical.entries.length > 0) && (
+              <div className="mt-6">
+                <p className="mb-3 text-sm font-semibold text-cobalto">Cartilla médica</p>
+                {animal.medical.sterilized && (
+                  <span className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-exito/10 px-3 py-1 text-xs font-medium text-exito">
+                    <ShieldCheck className="h-3.5 w-3.5" /> Esterilizado
+                  </span>
+                )}
+                {animal.medical.entries.length > 0 && (
+                  <ul className="space-y-2">
+                    {animal.medical.entries.map((entry) => (
+                      <li
+                        key={entry.id}
+                        className="flex items-start gap-2 rounded-xl border border-neutral-200 p-3"
+                      >
+                        <span className="mt-0.5 flex-shrink-0 rounded-full bg-cobalto/10 px-2 py-0.5 text-[11px] font-medium text-cobalto">
+                          {medLabel[entry.type] ?? 'Otro'}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-neutral-700">{entry.title}</p>
+                          {entry.date && <p className="text-xs text-neutral-400">{entry.date}</p>}
+                          {entry.notes && (
+                            <p className="mt-0.5 text-xs text-neutral-500">{entry.notes}</p>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
 
           <div className="mt-6 space-y-3">
             <button

@@ -1,5 +1,12 @@
 import type { Report, Severity } from '../data/mockReports';
-import type { Animal, AnimalStatus, TimelineEvent } from '../data/mockAnimals';
+import type {
+  Animal,
+  AnimalStatus,
+  TimelineEvent,
+  MedicalRecord,
+  MedicalEntry,
+  MedicalEntryType,
+} from '../data/mockAnimals';
 import type { Ally, AllyType } from '../data/mockAllies';
 import { mockAllies } from '../data/mockAllies';
 import type { LostPet } from '../data/mockLostPets';
@@ -646,6 +653,10 @@ type RawAnimal = {
   caseActions?: unknown;
   case_actions?: unknown;
   timelineEvents?: unknown;
+  // Cartilla médica (Isabel la expondrá; se lee tolerante).
+  medicalRecord?: unknown;
+  medical?: unknown;
+  isSterilized?: boolean | null;
 };
 
 type RawAnimalPhoto = { url: string; orderIndex: number; caption?: string | null };
@@ -763,6 +774,60 @@ function mapTimeline(raw: RawAnimal, photos: RawAnimalPhoto[]): TimelineEvent[] 
   return timelineFromCaseActions(raw) ?? timelineFromCaptions(photos);
 }
 
+const medEntryTypeMap: Record<string, MedicalEntryType> = {
+  vacuna: 'vacuna',
+  vaccine: 'vacuna',
+  vaccination: 'vacuna',
+  desparasitacion: 'desparasitacion',
+  deworming: 'desparasitacion',
+  tratamiento: 'tratamiento',
+  treatment: 'tratamiento',
+  cirugia: 'cirugia',
+  surgery: 'cirugia',
+  peso: 'peso',
+  weight: 'peso',
+};
+
+function normalizeMedType(value: string): MedicalEntryType {
+  return medEntryTypeMap[value.toLowerCase()] ?? 'otro';
+}
+
+// Lee la cartilla médica tolerante a la forma del backend. Devuelve undefined si
+// no hay datos (para no pintar una sección vacía).
+function mapMedical(raw: RawAnimal): MedicalRecord | undefined {
+  const source = raw.medicalRecord ?? raw.medical;
+  const obj = source && typeof source === 'object' ? (source as Record<string, unknown>) : null;
+
+  const rawEntries = obj
+    ? Array.isArray(obj.entries)
+      ? obj.entries
+      : Array.isArray(obj.items)
+        ? obj.items
+        : []
+    : [];
+
+  const entries: MedicalEntry[] = (rawEntries as Record<string, unknown>[])
+    .map((item, index) => ({
+      id: String(item.id ?? item._id ?? index),
+      type: normalizeMedType(String(item.type ?? 'otro')),
+      title: String(item.title ?? item.name ?? ''),
+      date: String(item.date ?? item.createdAt ?? item.created_at ?? ''),
+      notes: item.notes
+        ? String(item.notes)
+        : item.description
+          ? String(item.description)
+          : undefined,
+    }))
+    .filter((entry) => entry.title);
+
+  const sterilized = Boolean(
+    (obj?.sterilized ?? obj?.isSterilized ?? obj?.esterilizado ?? raw.isSterilized) as unknown,
+  );
+
+  if (!obj && !raw.isSterilized) return undefined;
+  return { sterilized, entries };
+}
+
 function mapAnimal(raw: RawAnimal): Animal {
   const sortedPhotos = [...(raw.photos ?? [])].sort((a, b) => a.orderIndex - b.orderIndex);
   const photos = sortedPhotos.map((photo) => photo.url).filter(Boolean);
@@ -780,6 +845,7 @@ function mapAnimal(raw: RawAnimal): Animal {
     totalRaised: Number(raw.totalRaised ?? 0),
     status: animalStatusLabels[raw.status] ?? 'En tratamiento',
     timeline: mapTimeline(raw, sortedPhotos),
+    medical: mapMedical(raw),
   };
 }
 
@@ -800,6 +866,40 @@ export async function updateMyOrgAnimalStatus(id: string, status: string): Promi
   await authedRaw(`/me/organization/animals/${id}`, {
     method: 'PATCH',
     body: JSON.stringify({ status }),
+  });
+}
+
+// Cartilla médica del animal (esterilización + registros clínicos). El aliado la
+// edita desde su portal. Backend: /me/organization/animals/:id/medical (spec en
+// pendientes-isabel.md, cartilla médica). Se usa best-effort; si el endpoint aún
+// no existe, la UI trabaja en local y no se bloquea.
+export type MedicalEntryInput = {
+  type: MedicalEntryType;
+  title: string;
+  date?: string;
+  notes?: string;
+};
+
+export async function setMyOrgAnimalSterilized(id: string, sterilized: boolean): Promise<void> {
+  await authedRaw(`/me/organization/animals/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ sterilized }),
+  });
+}
+
+export async function addMyOrgMedicalEntry(
+  animalId: string,
+  input: MedicalEntryInput,
+): Promise<void> {
+  await authedRaw(`/me/organization/animals/${animalId}/medical`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function removeMyOrgMedicalEntry(animalId: string, entryId: string): Promise<void> {
+  await authedRaw(`/me/organization/animals/${animalId}/medical/${entryId}`, {
+    method: 'DELETE',
   });
 }
 
