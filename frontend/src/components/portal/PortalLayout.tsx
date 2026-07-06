@@ -11,6 +11,7 @@ import {
   Users,
   PawPrint,
   HeartHandshake,
+  Home,
 } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { useAuth } from '../../lib/useAuth';
@@ -28,6 +29,7 @@ const portalSections = [
   { to: '/portal/perfil', label: 'Mi perfil', icon: UserRound, end: false },
   { to: '/portal/equipo', label: 'Mi equipo', icon: Users, end: false },
   { to: '/portal/perritos', label: 'Mis perritos', icon: PawPrint, end: false },
+  { to: '/portal/adopciones', label: 'Adopciones', icon: Home, end: false },
   { to: '/portal/donaciones', label: 'Donaciones', icon: HeartHandshake, end: false },
 ];
 

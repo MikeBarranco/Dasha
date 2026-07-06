@@ -869,6 +869,106 @@ export async function createDonation(
   });
 }
 
+// Solicitud de adopción de un animal "Buscando hogar". El interesado llena una
+// ficha y el aliado la revisa/contacta. El proceso final (requisitos, cuota de
+// recuperación, entrega) lo define cada refugio, no Dasha. Backend:
+// POST /animals/:id/adoption-requests (spec en pendientes-isabel.md, sección de
+// adopción). El aliado las verá en su portal (getMyOrgAdoptionRequests).
+export type HousingType = 'casa_patio' | 'casa_sin_patio' | 'departamento';
+
+export const housingOptions: { value: HousingType; label: string }[] = [
+  { value: 'casa_patio', label: 'Casa con patio' },
+  { value: 'casa_sin_patio', label: 'Casa sin patio' },
+  { value: 'departamento', label: 'Departamento' },
+];
+
+export type AdoptionRequestInput = {
+  applicantName: string;
+  whatsapp: string;
+  housingType: HousingType;
+  hasHadPets: boolean;
+  otherPets: string;
+  reason: string;
+};
+
+export async function createAdoptionRequest(
+  animalId: string,
+  input: AdoptionRequestInput,
+): Promise<void> {
+  await authedRaw(`/animals/${animalId}/adoption-requests`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+// Solicitudes de adopción que le llegan al aliado (las de sus animales). Las
+// revisa y contacta al interesado; puede marcarlas aceptada/rechazada. Backend:
+// /me/organization/adoption-requests (spec en pendientes-isabel.md, adopción).
+const housingLabels: Record<string, string> = {
+  casa_patio: 'Casa con patio',
+  casa_sin_patio: 'Casa sin patio',
+  departamento: 'Departamento',
+};
+
+export type AdoptionStatus = 'pending' | 'accepted' | 'rejected';
+
+export type AdoptionRequest = {
+  id: string;
+  applicantName: string;
+  whatsapp: string;
+  animalName: string;
+  housingLabel: string;
+  hasHadPets: boolean;
+  otherPets: string;
+  reason: string;
+  status: AdoptionStatus;
+  createdAgo: string;
+};
+
+function mapAdoptionRequest(raw: Record<string, unknown>): AdoptionRequest {
+  const applicant =
+    raw.applicant && typeof raw.applicant === 'object'
+      ? (raw.applicant as Record<string, unknown>)
+      : null;
+  const animal =
+    raw.animal && typeof raw.animal === 'object' ? (raw.animal as Record<string, unknown>) : null;
+  const statusStr = String(raw.status ?? 'pending');
+  const status: AdoptionStatus =
+    statusStr === 'accepted' || statusStr === 'approved'
+      ? 'accepted'
+      : statusStr === 'rejected'
+        ? 'rejected'
+        : 'pending';
+  const housingRaw = String(raw.housingType ?? raw.housing_type ?? '');
+  return {
+    id: String(raw.id ?? raw._id ?? ''),
+    applicantName: String(applicant?.name ?? raw.applicantName ?? raw.name ?? 'Interesado'),
+    whatsapp: String(raw.whatsapp ?? raw.phone ?? applicant?.phone ?? ''),
+    animalName: String(animal?.name ?? raw.animalName ?? ''),
+    housingLabel: housingLabels[housingRaw] ?? housingRaw,
+    hasHadPets: Boolean(raw.hasHadPets ?? raw.has_had_pets),
+    otherPets: String(raw.otherPets ?? raw.other_pets ?? ''),
+    reason: String(raw.reason ?? raw.motivation ?? ''),
+    status,
+    createdAgo: timeAgo(String(raw.createdAt ?? raw.created_at ?? '')),
+  };
+}
+
+export async function getMyOrgAdoptionRequests(): Promise<AdoptionRequest[]> {
+  const data = await authedRaw<Record<string, unknown>[]>('/me/organization/adoption-requests');
+  return (data ?? []).map(mapAdoptionRequest);
+}
+
+export async function updateMyOrgAdoptionRequest(
+  id: string,
+  status: 'accepted' | 'rejected',
+): Promise<void> {
+  await authedRaw(`/me/organization/adoption-requests/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+}
+
 // Seguir / dejar de seguir un animal para recibir avisos de su avance. Backend:
 // POST/DELETE /animals/:id/follow (spec en pendientes-isabel.md, sección 13).
 export async function followAnimal(animalId: string): Promise<void> {
