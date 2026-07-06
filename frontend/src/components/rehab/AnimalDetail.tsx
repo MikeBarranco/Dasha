@@ -20,6 +20,7 @@ import { useSheetDismiss } from '../../lib/useSheetDismiss';
 import { useAuth } from '../../lib/useAuth';
 import { useFollowAnimal } from '../../lib/useFollowAnimal';
 import { DonationSheet } from './DonationSheet';
+import { AdoptionSheet } from './AdoptionSheet';
 import type { Animal } from '../../data/mockAnimals';
 
 type AnimalDetailProps = {
@@ -33,6 +34,7 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
   const [activePhoto, setActivePhoto] = useState(total - 1);
   const [showFull, setShowFull] = useState(false);
   const [donationMode, setDonationMode] = useState<'money' | 'items' | null>(null);
+  const [showAdoption, setShowAdoption] = useState(false);
   const navigate = useNavigate();
   const { user: account } = useAuth();
   const { following, toggle: toggleFollow } = useFollowAnimal(animal.id);
@@ -43,6 +45,14 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
       return;
     }
     toggleFollow();
+  };
+
+  const onAdopt = () => {
+    if (!account) {
+      navigate('/login');
+      return;
+    }
+    setShowAdoption(true);
   };
   const touchStartX = useRef(0);
   const multiTouch = useRef(false);
@@ -202,6 +212,7 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
             {animal.status === 'Buscando hogar' && (
               <button
                 type="button"
+                onClick={onAdopt}
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-exito py-3 font-semibold text-white transition-opacity hover:opacity-90"
               >
                 <Home className="h-5 w-5" /> Quiero adoptar a {animal.name}
@@ -238,6 +249,12 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
             initialMode={donationMode}
             onClose={() => setDonationMode(null)}
           />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showAdoption && (
+          <AdoptionSheet animal={animal} onClose={() => setShowAdoption(false)} />
         )}
       </AnimatePresence>
 
