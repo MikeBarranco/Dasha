@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Store,
   HelpCircle,
+  Download,
   type LucideIcon,
 } from 'lucide-react';
 import { Avatar } from '../components/ui/Avatar';
@@ -20,6 +21,8 @@ import { PushToggle } from '../components/perfil/PushToggle';
 import { MedalsSheet } from '../components/perfil/MedalsSheet';
 import { AccountSettingsSheet } from '../components/perfil/AccountSettingsSheet';
 import { openOnboarding } from '../lib/onboarding';
+import { useInstallPrompt } from '../lib/useInstallPrompt';
+import { InstallInstructions } from '../components/pwa/InstallInstructions';
 import { SocialLinks } from '../components/ui/SocialLinks';
 import { cn } from '../lib/cn';
 import { mockUser } from '../data/mockUser';
@@ -77,6 +80,16 @@ export function PerfilPage() {
   const [focusMedalId, setFocusMedalId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [allyContext, setAllyContext] = useState<AllyContext | null>(null);
+  const [showInstallHelp, setShowInstallHelp] = useState(false);
+  const { canPrompt, isIOS, isStandalone, promptInstall } = useInstallPrompt();
+
+  const handleInstall = () => {
+    if (canPrompt && !isIOS) {
+      promptInstall();
+      return;
+    }
+    setShowInstallHelp(true);
+  };
 
   useEffect(() => {
     if (!account) return;
@@ -313,6 +326,9 @@ export function PerfilPage() {
           label="Novedades"
           onClick={() => navigate('/novedades')}
         />
+        {!isStandalone && (
+          <RowButton icon={Download} label="Instalar app" onClick={handleInstall} />
+        )}
         <RowButton
           icon={HelpCircle}
           label="¿Cómo funciona Dasha?"
@@ -333,6 +349,10 @@ export function PerfilPage() {
         <p className="mb-3 text-xs text-neutral-400">Síguenos en redes</p>
         <SocialLinks />
       </div>
+
+      <AnimatePresence>
+        {showInstallHelp && <InstallInstructions onClose={() => setShowInstallHelp(false)} />}
+      </AnimatePresence>
 
       <AnimatePresence>
         {pickerOpen && (

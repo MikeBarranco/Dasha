@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { TopBar } from './TopBar';
 import { BottomNav } from './BottomNav';
 import { ReportChooser } from './ReportChooser';
+import { InstallBanner } from '../pwa/InstallBanner';
 import { Onboarding } from '../onboarding/Onboarding';
 import { appSteps, volunteerSteps } from '../onboarding/onboardingSteps';
 import { useAuth } from '../../lib/useAuth';
@@ -65,6 +66,7 @@ export function AppLayout() {
       </main>
       <BottomNav onReportClick={openChooser} />
       <ReportChooser open={chooserOpen} onClose={() => setChooserOpen(false)} />
+      <InstallBanner />
       <AnimatePresence>
         {showOnboarding && <Onboarding steps={appSteps} onClose={closeOnboarding} />}
       </AnimatePresence>
