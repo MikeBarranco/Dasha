@@ -1,12 +1,13 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, HeartHandshake, ImagePlus, X } from 'lucide-react';
+import { Camera, Check, HeartHandshake, X } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { cn } from '../lib/cn';
 import { useAuth } from '../lib/useAuth';
 import { useVolunteerStatus } from '../lib/useVolunteerStatus';
 import { postVolunteerApplication, updateMe } from '../lib/api';
 import { compressImage } from '../lib/image';
+import { CameraCapture } from '../components/map/CameraCapture';
 
 const ayudaOptions = ['Rescate', 'Transporte', 'Hogar temporal', 'Difusión', 'Apoyo veterinario'];
 const dispoOptions = ['Entre semana', 'Fines de semana', 'Mañanas', 'Tardes', 'Noches'];
@@ -39,23 +40,33 @@ function Chip({
   );
 }
 
-function PhotoField({
+function CaptureField({
   label,
   hint,
   value,
+  frame,
+  facing,
   onChange,
 }: {
   label: string;
   hint: string;
   value: string | null;
+  frame: 'card' | 'face';
+  facing: 'environment' | 'user';
   onChange: (value: string | null) => void;
 }) {
-  const read = async (files: FileList | null) => {
-    if (!files || !files[0]) return;
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const handleCapture = async (file: File) => {
+    setBusy(true);
     try {
-      onChange(await compressImage(files[0]));
+      onChange(await compressImage(file));
     } catch {
       onChange(null);
+    } finally {
+      setBusy(false);
+      setOpen(false);
     }
   };
 
@@ -75,16 +86,39 @@ function PhotoField({
           </button>
         </div>
       ) : (
-        <label className="flex h-32 w-full cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-neutral-300 text-neutral-400 transition-colors hover:border-cobalto/40 hover:text-cobalto">
-          <ImagePlus className="h-6 w-6" />
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="flex h-32 w-full flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-neutral-300 text-neutral-400 transition-colors hover:border-cobalto/40 hover:text-cobalto"
+        >
+          <Camera className="h-6 w-6" />
           <span className="text-xs">{hint}</span>
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(event) => read(event.target.files)}
-          />
-        </label>
+        </button>
+      )}
+
+      {open && (
+        <div className="fixed inset-0 z-[70] flex flex-col bg-black">
+          <div className="flex items-center justify-between px-4 py-3">
+            <p className="text-sm font-semibold text-white">{label}</p>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              aria-label="Cerrar"
+              className="rounded-full bg-white/10 p-2 text-white"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="flex-1 p-4">
+            <CameraCapture
+              fill
+              frame={frame}
+              initialFacing={facing}
+              onCapture={(file) => handleCapture(file)}
+            />
+          </div>
+          {busy && <p className="pb-4 text-center text-sm text-white/80">Procesando…</p>}
+        </div>
       )}
     </div>
   );
@@ -304,22 +338,34 @@ export function SerVoluntarioPage() {
         <div className="rounded-2xl border border-neutral-200 p-4">
           <p className="text-sm font-semibold text-neutral-800">Verificación de identidad</p>
           <p className="mt-0.5 text-xs text-neutral-500">
-            Sube tu INE (frente y reverso) y una selfie. Las usamos solo para validar tu identidad.
+            Toma la foto con la cámara y encuádrala en el marco. Las usamos solo para validar tu
+            identidad.
           </p>
           <div className="mt-3 space-y-3">
-            <PhotoField
+            <CaptureField
               label="INE (frente)"
-              hint="Subir foto"
+              hint="Tomar foto"
               value={ineFront}
+              frame="card"
+              facing="environment"
               onChange={setIneFront}
             />
-            <PhotoField
+            <CaptureField
               label="INE (reverso)"
-              hint="Subir foto"
+              hint="Tomar foto"
               value={ineBack}
+              frame="card"
+              facing="environment"
               onChange={setIneBack}
             />
-            <PhotoField label="Selfie" hint="Subir selfie" value={selfie} onChange={setSelfie} />
+            <CaptureField
+              label="Selfie"
+              hint="Tomar selfie"
+              value={selfie}
+              frame="face"
+              facing="user"
+              onChange={setSelfie}
+            />
           </div>
         </div>
 
