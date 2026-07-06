@@ -11,6 +11,12 @@ import type { Ally, AllyType } from '../data/mockAllies';
 import { mockAllies } from '../data/mockAllies';
 import type { LostPet } from '../data/mockLostPets';
 import { releaseNotes, type ReleaseNote } from '../data/novedades';
+import {
+  communityEvents,
+  forumPosts,
+  type CommunityEvent,
+  type ForumPost,
+} from '../data/mockComunidad';
 
 export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
 const TOKEN_KEY = 'dasha-token';
@@ -1077,6 +1083,143 @@ export async function followAnimal(animalId: string): Promise<void> {
 
 export async function unfollowAnimal(animalId: string): Promise<void> {
   await authedRaw(`/animals/${animalId}/follow`, { method: 'DELETE' });
+}
+
+// Comunidad: eventos públicos y foro. Frontend-first con respaldo al mock (hoy los
+// endpoints públicos dan 404). Lectura tolerante; enciende cuando Isabel los
+// exponga (spec en pendientes-isabel.md, sección de Comunidad).
+function nestedCount(raw: Record<string, unknown>, key: string): number | undefined {
+  const count = raw._count;
+  if (count && typeof count === 'object') {
+    const value = (count as Record<string, unknown>)[key];
+    if (value !== undefined && value !== null) return Number(value);
+  }
+  return undefined;
+}
+
+function relativeTime(iso: string): string {
+  if (!iso) return '';
+  const diff = Date.now() - new Date(iso).getTime();
+  if (Number.isNaN(diff)) return '';
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return 'hace un momento';
+  if (minutes < 60) return `hace ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `hace ${hours} h`;
+  const days = Math.floor(hours / 24);
+  return days === 1 ? 'ayer' : `hace ${days} d`;
+}
+
+const eventCategoryPublicLabels: Record<string, string> = {
+  esterilizacion: 'Esterilización',
+  vacunacion: 'Vacunación',
+  adopcion: 'Adopción',
+  donacion: 'Colecta',
+  educacion: 'Educación',
+  otro: 'Evento',
+};
+
+function formatEventWhen(iso: string): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleString('es-MX', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function mapEvent(raw: Record<string, unknown>): CommunityEvent {
+  const category = String(raw.category ?? '');
+  const org =
+    raw.organization && typeof raw.organization === 'object'
+      ? (raw.organization as Record<string, unknown>)
+      : null;
+  const image = String(raw.imageUrl ?? raw.image_url ?? raw.image ?? '');
+  return {
+    id: String(raw.id ?? raw._id ?? ''),
+    title: String(raw.title ?? raw.name ?? 'Evento'),
+    type: eventCategoryPublicLabels[category] ?? (category || 'Evento'),
+    date: formatEventWhen(String(raw.eventDate ?? raw.event_date ?? raw.date ?? '')),
+    place: String(raw.location ?? raw.place ?? org?.name ?? ''),
+    image: image || '/placeholder-animal.svg',
+    description: String(raw.description ?? ''),
+    interested: Number(raw.interestedCount ?? raw.interested ?? nestedCount(raw, 'interested') ?? 0),
+  };
+}
+
+export async function getEvents(): Promise<CommunityEvent[]> {
+  try {
+    const data = await requestRaw<Record<string, unknown>[]>('/events');
+    if (!Array.isArray(data) || data.length === 0) return communityEvents;
+    return data.map(mapEvent);
+  } catch {
+    return communityEvents;
+  }
+}
+
+export async function rsvpEvent(id: string): Promise<void> {
+  await authedRaw(`/events/${id}/interested`, { method: 'POST' });
+}
+
+const forumRoleLabels: Record<string, string> = {
+  citizen: 'Vecino',
+  volunteer: 'Voluntario',
+  admin: 'Administrador',
+  owner: 'Aliado',
+  vet: 'Veterinario',
+};
+
+function mapForumPost(raw: Record<string, unknown>): ForumPost {
+  const user =
+    raw.author && typeof raw.author === 'object'
+      ? (raw.author as Record<string, unknown>)
+      : raw.user && typeof raw.user === 'object'
+        ? (raw.user as Record<string, unknown>)
+        : null;
+  const roleRaw = String(user?.role ?? raw.role ?? '');
+  const photo = raw.imageUrl ?? raw.image_url ?? raw.image;
+  return {
+    id: String(raw.id ?? raw._id ?? ''),
+    author: String(user?.name ?? raw.authorName ?? 'Anónimo') || 'Anónimo',
+    role: forumRoleLabels[roleRaw] ?? (roleRaw || 'Vecino'),
+    timeAgo: relativeTime(String(raw.createdAt ?? raw.created_at ?? '')),
+    text: String(raw.content ?? raw.text ?? raw.body ?? ''),
+    image: typeof photo === 'string' && photo ? photo : undefined,
+    likes: Number(raw.likes ?? raw.likesCount ?? nestedCount(raw, 'likes') ?? 0),
+    comments: Number(raw.comments ?? raw.commentsCount ?? nestedCount(raw, 'replies') ?? 0),
+  };
+}
+
+export async function getForumPosts(): Promise<ForumPost[]> {
+  try {
+    const data = await requestRaw<Record<string, unknown>[]>('/forum/posts');
+    if (!Array.isArray(data) || data.length === 0) return forumPosts;
+    return data.map(mapForumPost);
+  } catch {
+    return forumPosts;
+  }
+}
+
+export async function createForumPost(input: {
+  text: string;
+  imageBase64?: string;
+}): Promise<void> {
+  await authedRaw('/forum/posts', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export async function likeForumPost(id: string): Promise<void> {
+  await authedRaw(`/forum/posts/${id}/like`, { method: 'POST' });
+}
+
+export async function reportForumPost(id: string, reason: string): Promise<void> {
+  await authedRaw(`/forum/posts/${id}/report`, {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  });
 }
 
 type RawAlly = {

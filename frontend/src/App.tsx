@@ -26,6 +26,7 @@ import { AdminAvisosPage } from './pages/admin/AdminAvisosPage';
 import { AdminNovedadesPage } from './pages/admin/AdminNovedadesPage';
 import { AdminUsersPage } from './pages/admin/AdminUsersPage';
 import { AdminForumPage } from './pages/admin/AdminForumPage';
+import { AdminDenunciasPage } from './pages/admin/AdminDenunciasPage';
 import { AdminVolunteersPage } from './pages/admin/AdminVolunteersPage';
 import { PortalLayout } from './components/portal/PortalLayout';
 import { PortalHomePage } from './pages/portal/PortalHomePage';
@@ -67,6 +68,7 @@ function App() {
           <Route path="novedades" element={<AdminNovedadesPage />} />
           <Route path="usuarios" element={<AdminUsersPage />} />
           <Route path="foro" element={<AdminForumPage />} />
+          <Route path="denuncias" element={<AdminDenunciasPage />} />
           <Route path="voluntarios" element={<AdminVolunteersPage />} />
         </Route>
         <Route path="portal" element={<PortalLayout />}>
