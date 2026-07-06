@@ -86,7 +86,7 @@ export function DonationSheet({ animal, initialMode = 'money', onClose }: Donati
       />
 
       <motion.div
-        className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-3xl bg-white shadow-xl sm:rounded-3xl"
+        className="relative max-h-[90vh] w-full max-w-md overflow-y-auto overscroll-none rounded-t-3xl bg-white shadow-xl sm:rounded-3xl"
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
