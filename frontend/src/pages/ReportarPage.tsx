@@ -119,6 +119,7 @@ export function ReportarPage() {
 
   const [lat, setLat] = useState(19.04);
   const [lng, setLng] = useState(-98.2);
+  const [locationReady, setLocationReady] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const urgency = computeUrgency(conditions);
@@ -196,6 +197,10 @@ export function ReportarPage() {
   const handleSubmit = async () => {
     if (!photoBase64) {
       alert('Espera un momento a que la foto termine de procesarse.');
+      return;
+    }
+    if (!locationReady) {
+      alert('Necesitamos tu ubicación para publicar el reporte. Activa el permiso e inténtalo.');
       return;
     }
     setIsSubmitting(true);
@@ -444,12 +449,19 @@ export function ReportarPage() {
       {step === 3 && (
         <div>
           <p className="mb-3 text-sm text-neutral-600">
-            Mueve el mapa para ubicar al animalito. El pin marca el lugar.
+            Usamos tu ubicación por GPS para marcar el lugar. Puedes ajustar el pin unos metros si
+            hace falta.
           </p>
           <Suspense
             fallback={<div className="h-72 w-full animate-pulse rounded-2xl bg-neutral-100" />}
           >
-            <LocationPicker onChange={(newLat, newLng) => { setLat(newLat); setLng(newLng); }} />
+            <LocationPicker
+              onChange={(newLat, newLng) => {
+                setLat(newLat);
+                setLng(newLng);
+              }}
+              onStatusChange={setLocationReady}
+            />
           </Suspense>
         </div>
       )}
@@ -480,10 +492,10 @@ export function ReportarPage() {
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={isSubmitting}
+            disabled={isSubmitting || !locationReady}
             className={cn(
-              "flex-1 rounded-xl py-3 font-semibold text-white transition-opacity hover:opacity-90",
-              isSubmitting ? 'bg-neutral-400 cursor-not-allowed' : 'bg-naranja'
+              'flex-1 rounded-xl py-3 font-semibold text-white transition-opacity hover:opacity-90',
+              isSubmitting || !locationReady ? 'cursor-not-allowed bg-neutral-300' : 'bg-naranja',
             )}
           >
             {isSubmitting ? 'Publicando...' : 'Publicar reporte'}
