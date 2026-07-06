@@ -8,7 +8,7 @@ import { createReport, type CreateReportInput } from '../lib/api';
 import { compressImage } from '../lib/image';
 import { useAuth } from '../lib/useAuth';
 import { CameraCapture } from '../components/map/CameraCapture';
-import { detectAnimal, type AnimalDetection } from '../lib/detectAnimal';
+import { detectAnimal, preloadAnimalModel, type AnimalDetection } from '../lib/detectAnimal';
 
 const LocationPicker = lazy(() =>
   import('../components/map/LocationPicker').then((module) => ({ default: module.LocationPicker })),
@@ -130,6 +130,15 @@ export function ReportarPage() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [step]);
+
+  // Precarga la IA en segundo plano al entrar a Reportar, para que la primera
+  // detección (al tomar la foto) no congele la interfaz.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void preloadAnimalModel();
+    }, 600);
+    return () => clearTimeout(timer);
+  }, []);
 
   if (!account) {
     return (
