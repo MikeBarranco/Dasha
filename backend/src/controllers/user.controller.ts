@@ -24,6 +24,7 @@ export class UserController {
           experiencePoints: true,
           reputationScore: true,
           avatarUrl: true,
+          volunteerStatus: true,
           _count: {
             select: {
               reports: true,
