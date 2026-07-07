@@ -24,4 +24,7 @@ router.post('/:id/follow', requireAuth, AnimalController.followAnimal);
 // DELETE /api/v1/animals/:id/follow (Protegida, dejar de seguir)
 router.delete('/:id/follow', requireAuth, AnimalController.unfollowAnimal);
 
+// POST /api/v1/animals/:id/adopt (Protegida, solicitar adopción)
+router.post('/:id/adopt', requireAuth, AnimalController.requestAdoption);
+
 export default router;

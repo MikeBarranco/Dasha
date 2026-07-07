@@ -20,6 +20,10 @@ router.post('/portal/animals', requireAuth, OrganizationController.createPortalA
 router.post('/portal/animals/:animalId/records', requireAuth, OrganizationController.addPortalAnimalRecord);
 router.post('/portal/animals/:animalId/timeline', requireAuth, OrganizationController.addPortalTimelineEvent);
 
+router.get('/portal/adoptions', requireAuth, OrganizationController.getPortalAdoptions);
+router.patch('/portal/adoptions/:applicationId/approve', requireAuth, OrganizationController.approvePortalAdoption);
+router.patch('/portal/adoptions/:applicationId/reject', requireAuth, OrganizationController.rejectPortalAdoption);
+
 router.get('/portal/donations', requireAuth, OrganizationController.getPortalDonations);
 router.patch('/portal/donations/:donationId/approve', requireAuth, OrganizationController.approvePortalDonation);
 router.patch('/portal/donations/:donationId/reject', requireAuth, OrganizationController.rejectPortalDonation);

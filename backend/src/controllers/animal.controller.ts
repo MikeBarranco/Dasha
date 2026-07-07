@@ -154,4 +154,58 @@ export class AnimalController {
       next(error);
     }
   }
+
+  static async requestAdoption(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      const animalId = req.params.id as string;
+      const { message } = req.body;
+
+      if (!userId) {
+        res.status(401).json({ error: 'No autorizado' });
+        return;
+      }
+
+      const animal = await prisma.animalProfile.findUnique({ where: { id: animalId } });
+      if (!animal) {
+        res.status(404).json({ error: 'Animal no encontrado' });
+        return;
+      }
+
+      if (animal.status === 'adopted') {
+        res.status(400).json({ error: 'Este animal ya ha sido adoptado' });
+        return;
+      }
+
+      // Check if user already applied
+      const existingApplication = await prisma.adoptionApplication.findFirst({
+        where: {
+          animalId,
+          applicantId: userId,
+          status: { in: ['pending', 'approved'] }
+        }
+      });
+
+      if (existingApplication) {
+        res.status(400).json({ error: 'Ya tienes una solicitud activa para este animal' });
+        return;
+      }
+
+      const application = await prisma.adoptionApplication.create({
+        data: {
+          animalId,
+          applicantId: userId,
+          message: message || ''
+        }
+      });
+
+      res.status(201).json({
+        status: 'success',
+        message: 'Solicitud de adopción enviada exitosamente',
+        data: application
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

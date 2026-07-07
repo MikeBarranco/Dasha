@@ -654,6 +654,161 @@ export class OrganizationController {
   }
 
   // ==========================================
+  // PORTAL DE ALIADOS (ADOPCIONES)
+  // ==========================================
+
+  static async getPortalAdoptions(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      
+      const myEmployee = await prisma.organizationEmployee.findFirst({
+        where: { userId }
+      });
+
+      if (!myEmployee) {
+        res.status(403).json({ error: 'No perteneces a ninguna organización' });
+        return;
+      }
+
+      const applications = await prisma.adoptionApplication.findMany({
+        where: {
+          animal: { organizationId: myEmployee.organizationId }
+        },
+        include: {
+          applicant: { select: { name: true, email: true, phone: true } },
+          animal: { select: { id: true, name: true, status: true } }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      res.status(200).json(applications);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async approvePortalAdoption(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      const applicationId = req.params.applicationId as string;
+
+      const myEmployee = await prisma.organizationEmployee.findFirst({
+        where: { userId }
+      });
+
+      if (!myEmployee || (myEmployee.roleInOrg !== 'admin' && myEmployee.roleInOrg !== 'veterinarian')) {
+        res.status(403).json({ error: 'No tienes permisos para aprobar adopciones' });
+        return;
+      }
+
+      const application = await prisma.adoptionApplication.findUnique({
+        where: { id: applicationId },
+        include: { animal: true }
+      });
+
+      if (!application || application.animal.organizationId !== myEmployee.organizationId) {
+        res.status(404).json({ error: 'Solicitud no encontrada' });
+        return;
+      }
+
+      if (application.status !== 'pending') {
+        res.status(400).json({ error: 'Esta solicitud ya fue procesada' });
+        return;
+      }
+
+      // Update application and animal in a transaction
+      const updatedApplication = await prisma.$transaction(async (tx) => {
+        // 1. Mark application as approved
+        const app = await tx.adoptionApplication.update({
+          where: { id: applicationId },
+          data: {
+            status: 'approved',
+            reviewedBy: userId
+          }
+        });
+
+        // 2. Mark animal as adopted and link to new owner
+        await tx.animalProfile.update({
+          where: { id: application.animalId },
+          data: {
+            status: 'adopted',
+            adoptedByUserId: application.applicantId,
+            adoptedAt: new Date()
+          }
+        });
+
+        // 3. Mark all other pending applications for this animal as rejected
+        await tx.adoptionApplication.updateMany({
+          where: { 
+            animalId: application.animalId,
+            id: { not: applicationId },
+            status: 'pending'
+          },
+          data: {
+            status: 'rejected',
+            reviewedBy: userId
+          }
+        });
+
+        // 4. Send notification to the approved user
+        await NotificationService.sendNotification({
+          userId: application.applicantId,
+          title: `🎉 ¡Solicitud Aprobada!`,
+          body: `¡Felicidades! Tu solicitud de adopción para ${application.animal.name} ha sido aprobada. La clínica se pondrá en contacto contigo pronto.`,
+          type: 'system',
+          referenceId: application.animalId,
+          referenceType: 'animal_profile',
+          link: `/animals/${application.animalId}`
+        });
+
+        return app;
+      });
+
+      res.status(200).json({ message: 'Solicitud aprobada exitosamente', application: updatedApplication });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async rejectPortalAdoption(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      const applicationId = req.params.applicationId as string;
+
+      const myEmployee = await prisma.organizationEmployee.findFirst({
+        where: { userId }
+      });
+
+      if (!myEmployee || (myEmployee.roleInOrg !== 'admin' && myEmployee.roleInOrg !== 'veterinarian')) {
+        res.status(403).json({ error: 'No tienes permisos para rechazar adopciones' });
+        return;
+      }
+
+      const application = await prisma.adoptionApplication.findUnique({
+        where: { id: applicationId },
+        include: { animal: true }
+      });
+
+      if (!application || application.animal.organizationId !== myEmployee.organizationId) {
+        res.status(404).json({ error: 'Solicitud no encontrada' });
+        return;
+      }
+
+      const updatedApplication = await prisma.adoptionApplication.update({
+        where: { id: applicationId },
+        data: {
+          status: 'rejected',
+          reviewedBy: userId
+        }
+      });
+
+      res.status(200).json({ message: 'Solicitud rechazada', application: updatedApplication });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ==========================================
   // PORTAL DE ALIADOS (DONACIONES)
   // ==========================================
 
