@@ -956,4 +956,191 @@ export class OrganizationController {
       next(error);
     }
   }
+
+  // ==========================================
+  // CARTILLA MEDICA (Rutas Frontend Específicas: /me/organization/animals)
+  // ==========================================
+
+  /**
+   * Helper function: Maps frontend entry type to Prisma RecordType
+   */
+  private static mapToPrismaRecordType(type: string): 'vaccination' | 'surgery' | 'checkup' | 'other' {
+    const t = type.toLowerCase();
+    if (t === 'vacuna' || t === 'vaccine' || t === 'vaccination') return 'vaccination';
+    if (t === 'cirugia' || t === 'surgery') return 'surgery';
+    if (t === 'peso' || t === 'weight' || t === 'tratamiento' || t === 'treatment' || t === 'desparasitacion' || t === 'deworming' || t === 'checkup') return 'checkup';
+    return 'other';
+  }
+
+  /**
+   * GET /api/v1/me/organization/animals
+   */
+  static async getOrganizationAnimals(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      
+      const myEmployee = await prisma.organizationEmployee.findFirst({
+        where: { userId }
+      });
+
+      if (!myEmployee) {
+        res.status(403).json({ error: 'No perteneces a ninguna organización' });
+        return;
+      }
+
+      const animals = await prisma.animalProfile.findMany({
+        where: { organizationId: myEmployee.organizationId },
+        include: {
+          medicalRecords: { orderBy: { createdAt: 'desc' } }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      // Map to frontend expected structure
+      const mappedAnimals = animals.map(animal => {
+        return {
+          ...animal,
+          medicalRecord: {
+            sterilized: animal.isNeutered,
+            entries: animal.medicalRecords.map(r => ({
+              id: r.id,
+              type: r.recordType,
+              title: r.description,
+              date: r.createdAt,
+              notes: r.prescription || r.diagnosis || ''
+            }))
+          }
+        };
+      });
+
+      res.status(200).json(mappedAnimals);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * PATCH /api/v1/me/organization/animals/:id
+   */
+  static async updateAnimalSterilized(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      const animalId = req.params.id as string;
+      const { sterilized } = req.body;
+
+      const myEmployee = await prisma.organizationEmployee.findFirst({
+        where: { userId }
+      });
+
+      if (!myEmployee) {
+        res.status(403).json({ error: 'No tienes permisos' });
+        return;
+      }
+
+      const animal = await prisma.animalProfile.findUnique({ where: { id: animalId } });
+      if (!animal || animal.organizationId !== myEmployee.organizationId) {
+        res.status(404).json({ error: 'Animal no encontrado en tu organización' });
+        return;
+      }
+
+      if (typeof sterilized === 'boolean') {
+        const updated = await prisma.animalProfile.update({
+          where: { id: animalId },
+          data: { isNeutered: sterilized }
+        });
+        res.status(200).json(updated);
+      } else {
+        res.status(400).json({ error: 'Valor inválido para sterilized' });
+      }
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /api/v1/me/organization/animals/:id/medical
+   */
+  static async addAnimalMedicalEntry(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      const animalId = req.params.id as string;
+      const { type, title, date, notes } = req.body;
+
+      const myEmployee = await prisma.organizationEmployee.findFirst({
+        where: { userId }
+      });
+
+      if (!myEmployee) {
+        res.status(403).json({ error: 'No tienes permisos' });
+        return;
+      }
+
+      const animal = await prisma.animalProfile.findUnique({ where: { id: animalId } });
+      if (!animal || animal.organizationId !== myEmployee.organizationId) {
+        res.status(404).json({ error: 'Animal no encontrado en tu organización' });
+        return;
+      }
+
+      const mappedType = OrganizationController.mapToPrismaRecordType(type || 'other');
+
+      const record = await prisma.medicalRecord.create({
+        data: {
+          animalId,
+          veterinarianId: userId,
+          recordType: mappedType as any,
+          description: title || 'Sin título',
+          prescription: notes || null,
+          createdAt: date ? new Date(date) : new Date()
+        }
+      });
+
+      res.status(201).json({
+        id: record.id,
+        type: record.recordType,
+        title: record.description,
+        date: record.createdAt,
+        notes: record.prescription || ''
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * DELETE /api/v1/me/organization/animals/:id/medical/:entryId
+   */
+  static async deleteAnimalMedicalEntry(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      const animalId = req.params.id as string;
+      const entryId = req.params.entryId as string;
+
+      const myEmployee = await prisma.organizationEmployee.findFirst({
+        where: { userId }
+      });
+
+      if (!myEmployee) {
+        res.status(403).json({ error: 'No tienes permisos' });
+        return;
+      }
+
+      const animal = await prisma.animalProfile.findUnique({ where: { id: animalId } });
+      if (!animal || animal.organizationId !== myEmployee.organizationId) {
+        res.status(404).json({ error: 'Animal no encontrado en tu organización' });
+        return;
+      }
+
+      const record = await prisma.medicalRecord.findUnique({ where: { id: entryId } });
+      if (!record || record.animalId !== animalId) {
+        res.status(404).json({ error: 'Registro médico no encontrado' });
+        return;
+      }
+
+      await prisma.medicalRecord.delete({ where: { id: entryId } });
+
+      res.status(200).json({ message: 'Registro médico eliminado exitosamente' });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { UserController } from '../controllers/user.controller';
+import { OrganizationController } from '../controllers/organization.controller';
 import { requireAuth } from '../middlewares/auth.middleware';
 import { validate } from '../middlewares/validate';
 import { updateAvailabilitySchema } from '../schemas/user.schema';
@@ -23,6 +24,22 @@ router.post('/volunteer-application', requireAuth, UserController.applyForVolunt
 
 // GET /api/v1/me/notifications (Protegida, mis notificaciones)
 router.get('/notifications', requireAuth, UserController.getMyNotifications);
+
+// ==========================================
+// CARTILLA MÉDICA Y PORTAL DE ANIMALES (Frontend specific)
+// ==========================================
+
+// GET /api/v1/me/organization/animals
+router.get('/organization/animals', requireAuth, OrganizationController.getOrganizationAnimals);
+
+// PATCH /api/v1/me/organization/animals/:id (esterilizado)
+router.patch('/organization/animals/:id', requireAuth, OrganizationController.updateAnimalSterilized);
+
+// POST /api/v1/me/organization/animals/:id/medical (agregar registro)
+router.post('/organization/animals/:id/medical', requireAuth, OrganizationController.addAnimalMedicalEntry);
+
+// DELETE /api/v1/me/organization/animals/:id/medical/:entryId (borrar registro)
+router.delete('/organization/animals/:id/medical/:entryId', requireAuth, OrganizationController.deleteAnimalMedicalEntry);
 
 // PATCH /api/v1/me/notifications/:id (Protegida, marcar como leída)
 router.patch('/notifications/:id', requireAuth, UserController.updateNotification);
