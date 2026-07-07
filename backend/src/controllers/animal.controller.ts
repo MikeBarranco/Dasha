@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { v2 as cloudinary } from 'cloudinary';
+import { prisma } from '../config/db';
 import { AnimalService } from '../services/animal.service';
 
 export class AnimalController {
@@ -97,6 +98,58 @@ export class AnimalController {
       }
       
       res.status(200).json(animal);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async followAnimal(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      const animalId = req.params.id as string;
+
+      if (!userId) {
+        res.status(401).json({ error: 'No autorizado' });
+        return;
+      }
+
+      const animal = await prisma.animalProfile.findUnique({ where: { id: animalId } });
+      if (!animal) {
+        res.status(404).json({ error: 'Animal no encontrado' });
+        return;
+      }
+
+      await prisma.animalFollower.upsert({
+        where: { userId_animalId: { userId, animalId } },
+        update: {},
+        create: { userId, animalId }
+      });
+
+      res.status(200).json({ message: 'Ahora sigues a este animal' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async unfollowAnimal(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      const animalId = req.params.id as string;
+
+      if (!userId) {
+        res.status(401).json({ error: 'No autorizado' });
+        return;
+      }
+
+      try {
+        await prisma.animalFollower.delete({
+          where: { userId_animalId: { userId, animalId } }
+        });
+      } catch (e) {
+        // Ignorar si no existía
+      }
+
+      res.status(200).json({ message: 'Dejaste de seguir a este animal' });
     } catch (error) {
       next(error);
     }
