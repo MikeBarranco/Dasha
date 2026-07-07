@@ -80,19 +80,24 @@ export class ForumController {
   static async createPost(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = (req as any).user?.id;
-      const { title, content, category } = req.body;
+      const { title, content, category, text } = req.body;
+      
+      const postContent = content || text;
 
-      if (!title || !content || !category) {
-        res.status(400).json({ error: 'Faltan campos requeridos' });
+      if (!postContent) {
+        res.status(400).json({ error: 'Faltan campos requeridos: content/text' });
         return;
       }
+
+      const postTitle = title || (postContent.length > 30 ? postContent.substring(0, 30) + '...' : postContent);
+      const postCategory = category || 'general';
 
       const post = await prisma.forumPost.create({
         data: {
           userId,
-          title,
-          content,
-          category: category as ForumCategory
+          title: postTitle,
+          content: postContent,
+          category: postCategory as any
         }
       });
 
@@ -107,9 +112,10 @@ export class ForumController {
     try {
       const userId = (req as any).user?.id;
       const postId = req.params.id as string;
-      const { content } = req.body;
+      const { content, text } = req.body;
+      const replyContent = content || text;
 
-      if (!content) {
+      if (!replyContent) {
         res.status(400).json({ error: 'El contenido es requerido' });
         return;
       }
