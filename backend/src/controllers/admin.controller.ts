@@ -910,7 +910,7 @@ export class AdminController {
         return;
       }
 
-      let whereClause: any = { isActive: true };
+      const whereClause: any = { isActive: true };
       if (audience === 'citizens') {
         whereClause.role = 'citizen';
       } else if (audience === 'volunteers') {
