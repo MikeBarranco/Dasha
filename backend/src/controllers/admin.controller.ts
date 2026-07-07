@@ -361,7 +361,8 @@ export class AdminController {
         orderBy: { createdAt: 'desc' },
         include: {
           photos: true,
-          organization: { select: { name: true } }
+          organization: { select: { name: true } },
+          timeline: { orderBy: { date: 'desc' } }
         }
       });
       res.status(200).json(animals);

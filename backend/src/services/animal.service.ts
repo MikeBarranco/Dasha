@@ -109,6 +109,9 @@ export class AnimalService {
         },
         organization: {
           select: { name: true, address: true }
+        },
+        timeline: {
+          orderBy: { date: 'desc' }
         }
       },
       orderBy: { createdAt: 'desc' }
