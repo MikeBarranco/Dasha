@@ -52,24 +52,62 @@ export class AdminController {
 
       // Para evitar errores de llaves foráneas, borramos en transacción todo lo que le pertenece
       await prisma.$transaction(async (tx) => {
-        // 1. Obtener los IDs de los reportes del usuario
+        // FASE 1: Obtener los IDs de los reportes del usuario y limpiar sus dependencias
         const userReports = await tx.report.findMany({ where: { userId: id }, select: { id: true } });
         const reportIds = userReports.map(r => r.id);
 
         if (reportIds.length > 0) {
-          // Borrar dependencias de los reportes (fotos tienen cascade en schema)
+          // Mascotas perdidas vinculadas a los reportes
+          const lostPets = await tx.lostPet.findMany({ where: { reportId: { in: reportIds } }, select: { id: true } });
+          const lostPetIds = lostPets.map(lp => lp.id);
+          if (lostPetIds.length > 0) {
+            await tx.lostPetMatch.deleteMany({ where: { lostPetId: { in: lostPetIds } } });
+            await tx.lostPet.deleteMany({ where: { id: { in: lostPetIds } } });
+          }
+
+          // Dependencias estándar de los reportes
+          await tx.lostPetMatch.deleteMany({ where: { matchedReportId: { in: reportIds } } });
           await tx.reportStatusHistory.deleteMany({ where: { reportId: { in: reportIds } } });
           await tx.caseAction.deleteMany({ where: { reportId: { in: reportIds } } });
           await tx.rescueAssignment.deleteMany({ where: { reportId: { in: reportIds } } });
           await tx.resource.deleteMany({ where: { reportId: { in: reportIds } } });
-          await tx.lostPetMatch.deleteMany({ where: { matchedReportId: { in: reportIds } } });
           await tx.reportFlag.deleteMany({ where: { reportId: { in: reportIds } } });
+          await tx.reportPhoto.deleteMany({ where: { reportId: { in: reportIds } } });
           
           // Finalmente, borrar los reportes
           await tx.report.deleteMany({ where: { userId: id } });
         }
 
-        // 2. Borrar dependencias directas del usuario
+        // FASE 2: Limpiar acciones del Usuario como "Actor" en cosas ajenas
+        await tx.reportPhoto.deleteMany({ where: { uploadedBy: id } });
+        await tx.reportStatusHistory.deleteMany({ where: { changedBy: id } });
+        await tx.caseAction.deleteMany({ where: { actorId: id } });
+        await tx.rescueAssignment.deleteMany({ where: { volunteerId: id } });
+        await tx.resource.deleteMany({ where: { providerId: id } });
+        await tx.donation.deleteMany({ where: { userId: id } });
+        await tx.forumVote.deleteMany({ where: { userId: id } });
+        await tx.forumReply.deleteMany({ where: { userId: id } });
+        await tx.forumPost.deleteMany({ where: { userId: id } });
+        await tx.auditLog.deleteMany({ where: { adminId: id } });
+        await tx.discountCode.deleteMany({ where: { userId: id } });
+        await tx.lostPet.deleteMany({ where: { ownerId: id } });
+        await tx.reportFlag.deleteMany({ where: { flaggedBy: id } });
+
+        // FASE 3: Desvincular de relaciones opcionales (poner en NULL)
+        await tx.report.updateMany({ where: { volunteerId: id }, data: { volunteerId: null } });
+        await tx.animalProfile.updateMany({ where: { currentFosterId: id }, data: { currentFosterId: null } });
+        await tx.animalProfile.updateMany({ where: { adoptedByUserId: id }, data: { adoptedByUserId: null } });
+        await tx.resource.updateMany({ where: { acceptedBy: id }, data: { acceptedBy: null } });
+        await tx.donation.updateMany({ where: { approvedBy: id }, data: { approvedBy: null } });
+        await tx.adoptionApplication.updateMany({ where: { reviewedBy: id }, data: { reviewedBy: null } });
+        await tx.reportFlag.updateMany({ where: { reviewedBy: id }, data: { reviewedBy: null } });
+
+        // FASE 4: Borrar dependencias directas de pertenencia (1 a N fuerte)
+        await tx.medicalRecord.deleteMany({ where: { veterinarianId: id } });
+        await tx.vaccination.deleteMany({ where: { veterinarianId: id } });
+        await tx.organizationEmployee.deleteMany({ where: { userId: id } });
+        await tx.fosterAssignment.deleteMany({ where: { fosterId: id } });
+        await tx.adoptionApplication.deleteMany({ where: { applicantId: id } });
         await tx.authProvider.deleteMany({ where: { userId: id } });
         await tx.userAvatar.deleteMany({ where: { userId: id } });
         await tx.pushSubscription.deleteMany({ where: { userId: id } });
@@ -77,16 +115,8 @@ export class AdminController {
         await tx.eventReminder.deleteMany({ where: { userId: id } });
         await tx.userAchievement.deleteMany({ where: { userId: id } });
         await tx.reputationEvent.deleteMany({ where: { userId: id } });
-        await tx.forumVote.deleteMany({ where: { userId: id } });
-        await tx.forumReply.deleteMany({ where: { userId: id } });
-        await tx.forumPost.deleteMany({ where: { userId: id } });
-        
-        // 3. Desvincular de relaciones opcionales (voluntario, adoptante, etc.)
-        await tx.report.updateMany({ where: { volunteerId: id }, data: { volunteerId: null } });
-        await tx.animalProfile.updateMany({ where: { currentFosterId: id }, data: { currentFosterId: null } });
-        await tx.animalProfile.updateMany({ where: { adoptedByUserId: id }, data: { adoptedByUserId: null } });
 
-        // 4. Borrar al usuario
+        // Finalmente, borrar al usuario
         await tx.user.delete({ where: { id } });
       });
 
