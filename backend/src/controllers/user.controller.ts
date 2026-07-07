@@ -179,30 +179,29 @@ export class UserController {
       }
 
       const { 
-        ineFrontBase64, ineBackBase64, selfieBase64, 
+        idDocBase64, idSelfieBase64, 
         isFoster, fosterCapacity, 
         phone, zone, availability, helpType, motivation 
       } = req.body;
 
-      if (!ineFrontBase64 || !ineBackBase64 || !selfieBase64) {
-        res.status(400).json({ error: 'Debes proporcionar las fotos del INE (frente y reverso) y la selfie' });
+      if (!idDocBase64 || !idSelfieBase64) {
+        res.status(400).json({ error: 'Debes proporcionar tu identificación y una selfie' });
         return;
       }
 
       // Subir a Cloudinary
       const uploadOpts = { folder: 'dasha/volunteers' };
-      const [frontRes, backRes, selfieRes] = await Promise.all([
-        cloudinary.uploader.upload(ineFrontBase64, uploadOpts),
-        cloudinary.uploader.upload(ineBackBase64, uploadOpts),
-        cloudinary.uploader.upload(selfieBase64, uploadOpts)
+      const [docRes, selfieRes] = await Promise.all([
+        cloudinary.uploader.upload(idDocBase64, uploadOpts),
+        cloudinary.uploader.upload(idSelfieBase64, uploadOpts)
       ]);
 
       const updatedUser = await prisma.user.update({
         where: { id: userId },
         data: {
           volunteerStatus: 'pending',
-          ineFrontUrl: frontRes.secure_url,
-          ineBackUrl: backRes.secure_url,
+          ineFrontUrl: docRes.secure_url,
+          ineBackUrl: null, // Ya no se pide reverso por separado
           selfieUrl: selfieRes.secure_url,
           isFoster: isFoster || false,
           fosterCapacity: fosterCapacity || 0,

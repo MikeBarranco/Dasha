@@ -609,7 +609,6 @@ export class AdminController {
           email: true,
           volunteerStatus: true,
           ineFrontUrl: true,
-          ineBackUrl: true,
           selfieUrl: true,
           isFoster: true,
           fosterCapacity: true,
@@ -619,7 +618,16 @@ export class AdminController {
         },
         orderBy: { createdAt: 'desc' }
       });
-      res.status(200).json(applications);
+      
+      const formatted = applications.map(app => ({
+        ...app,
+        idDocUrl: app.ineFrontUrl,
+        idSelfieUrl: app.selfieUrl,
+        ineFrontUrl: undefined,
+        selfieUrl: undefined
+      }));
+
+      res.status(200).json(formatted);
     } catch (error) {
       next(error);
     }
@@ -660,12 +668,11 @@ export class AdminController {
       };
 
       if (user.ineFrontUrl) await cloudinary.uploader.destroy(extractPublicId(user.ineFrontUrl)).catch(() => {});
-      if (user.ineBackUrl) await cloudinary.uploader.destroy(extractPublicId(user.ineBackUrl)).catch(() => {});
       if (user.selfieUrl) await cloudinary.uploader.destroy(extractPublicId(user.selfieUrl)).catch(() => {});
 
       // Limpiamos las URLs de la BD para ahorrar espacio visual y por seguridad
       dataToUpdate.ineFrontUrl = null;
-      dataToUpdate.ineBackUrl = null;
+      dataToUpdate.ineBackUrl = null; // En caso de que queden usuarios viejos con reverso
       dataToUpdate.selfieUrl = null;
 
       const updatedUser = await prisma.user.update({
