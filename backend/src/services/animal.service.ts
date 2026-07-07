@@ -96,7 +96,7 @@ export class AnimalService {
    * Obtiene todos los animales públicos en rehabilitación o adopción
    */
   static async getPublicAnimals() {
-    return await prisma.animalProfile.findMany({
+    const animals = await prisma.animalProfile.findMany({
       where: {
         isPublic: true,
         status: {
@@ -112,17 +112,34 @@ export class AnimalService {
         },
         timeline: {
           orderBy: { date: 'desc' }
+        },
+        medicalRecords: {
+          orderBy: { createdAt: 'desc' }
         }
       },
       orderBy: { createdAt: 'desc' }
     });
+
+    return animals.map(animal => ({
+      ...animal,
+      medicalRecord: {
+        sterilized: animal.isNeutered,
+        entries: animal.medicalRecords.map(r => ({
+          id: r.id,
+          type: r.recordType,
+          title: r.description,
+          date: r.createdAt,
+          notes: r.prescription || r.diagnosis || ''
+        }))
+      }
+    }));
   }
 
   /**
    * Obtiene un animal por ID con todo su historial médico
    */
   static async getAnimalById(id: string) {
-    return await prisma.animalProfile.findUnique({
+    const animal = await prisma.animalProfile.findUnique({
       where: { id },
       include: {
         photos: { orderBy: { orderIndex: 'asc' } },
@@ -137,5 +154,21 @@ export class AnimalService {
         timeline: { orderBy: { date: 'asc' } }
       }
     });
+
+    if (!animal) return null;
+
+    return {
+      ...animal,
+      medicalRecord: {
+        sterilized: animal.isNeutered,
+        entries: animal.medicalRecords.map(r => ({
+          id: r.id,
+          type: r.recordType,
+          title: r.description,
+          date: r.createdAt,
+          notes: r.prescription || r.diagnosis || ''
+        }))
+      }
+    };
   }
 }
