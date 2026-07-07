@@ -333,6 +333,7 @@ model User {
   notifications        Notification[]
   discountCodes        DiscountCode[]
   auditLogs            AuditLog[]
+  followedAnimals      AnimalFollower[]
 
   @@map("users")
 }
@@ -559,6 +560,7 @@ model AnimalProfile {
   fosterAssignments    FosterAssignment[]
   adoptionApplications AdoptionApplication[]
   timeline             AnimalTimelineEvent[]
+  followers            AnimalFollower[]
 
   @@map("animal_profiles")
 }
@@ -1009,4 +1011,17 @@ model ChangelogEntry {
   updatedAt   DateTime @default(now()) @map("updated_at") @db.Timestamptz
 
   @@map("changelog_entries")
+}
+
+model AnimalFollower {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  animalId  String   @map("animal_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  animal AnimalProfile @relation(fields: [animalId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, animalId])
+  @@map("animal_followers")
 }

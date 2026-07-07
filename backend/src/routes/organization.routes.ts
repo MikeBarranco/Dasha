@@ -18,6 +18,7 @@ router.post('/portal/reports/:reportId/rescue', requireAuth, OrganizationControl
 
 router.post('/portal/animals', requireAuth, OrganizationController.createPortalAnimal);
 router.post('/portal/animals/:animalId/records', requireAuth, OrganizationController.addPortalAnimalRecord);
+router.post('/portal/animals/:animalId/timeline', requireAuth, OrganizationController.addPortalTimelineEvent);
 
 router.get('/portal/donations', requireAuth, OrganizationController.getPortalDonations);
 router.patch('/portal/donations/:donationId/approve', requireAuth, OrganizationController.approvePortalDonation);

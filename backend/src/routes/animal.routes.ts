@@ -18,4 +18,10 @@ router.post('/', requireAuth, validate(createAnimalSchema), AnimalController.cre
 // POST /api/v1/animals/:id/records (Protegida, añadir récord médico con fotos)
 router.post('/:id/records', requireAuth, validate(addMedicalRecordSchema), AnimalController.addRecord);
 
+// POST /api/v1/animals/:id/follow (Protegida, seguir a un animal)
+router.post('/:id/follow', requireAuth, AnimalController.followAnimal);
+
+// DELETE /api/v1/animals/:id/follow (Protegida, dejar de seguir)
+router.delete('/:id/follow', requireAuth, AnimalController.unfollowAnimal);
+
 export default router;

@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { v2 as cloudinary } from 'cloudinary';
 import { AnimalService } from './../services/animal.service';
+import { NotificationService } from '../services/notification.service';
 
 export class OrganizationController {
   /**
@@ -578,6 +579,74 @@ export class OrganizationController {
         status: 'success',
         message: 'Nota médica agregada exitosamente',
         data: record
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Añade un evento a la línea de tiempo del animal y notifica a los seguidores
+   */
+  static async addPortalTimelineEvent(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      const animalId = req.params.animalId as string;
+      const { title, description, type } = req.body;
+
+      if (!title || !type) {
+        res.status(400).json({ error: 'Título y tipo son obligatorios' });
+        return;
+      }
+
+      const myEmployee = await prisma.organizationEmployee.findFirst({
+        where: { userId }
+      });
+
+      if (!myEmployee || (myEmployee.roleInOrg !== 'admin' && myEmployee.roleInOrg !== 'veterinarian')) {
+        res.status(403).json({ error: 'Solo veterinarios o administradores pueden publicar avances' });
+        return;
+      }
+
+      const animal = await prisma.animalProfile.findUnique({
+        where: { id: animalId },
+        include: { followers: true }
+      });
+      
+      if (!animal || animal.organizationId !== myEmployee.organizationId) {
+        res.status(404).json({ error: 'Este animal no se encuentra en tu organización' });
+        return;
+      }
+
+      const timelineEvent = await prisma.animalTimelineEvent.create({
+        data: {
+          animalId,
+          title,
+          description,
+          type,
+          date: new Date()
+        }
+      });
+
+      // Notificar a todos los seguidores
+      if (animal.followers && animal.followers.length > 0) {
+        for (const follower of animal.followers) {
+          await NotificationService.sendNotification({
+            userId: follower.userId,
+            title: `🐾 ¡Nuevas noticias de ${animal.name}!`,
+            body: title,
+            type: 'system', // or define a new NotifType 'animal_update'
+            referenceId: animalId,
+            referenceType: 'animal_profile',
+            link: `/animals/${animalId}`
+          });
+        }
+      }
+
+      res.status(201).json({
+        status: 'success',
+        message: 'Avance publicado exitosamente',
+        data: timelineEvent
       });
     } catch (error) {
       next(error);
