@@ -131,11 +131,6 @@ export class AdminController {
         return;
       }
 
-      if (targetUser.role === 'admin' && role !== 'admin') {
-        res.status(403).json({ error: 'No se puede degradar a un administrador desde el panel.' });
-        return;
-      }
-
       const updated = await prisma.user.update({
         where: { id },
         data: { role }
