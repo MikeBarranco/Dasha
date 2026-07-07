@@ -10,6 +10,8 @@ import colonyRoutes from './colony.routes';
 import adminRoutes from './admin.routes';
 import lostPetRoutes from './lost-pet.routes';
 import changelogRoutes from './changelog.routes';
+import eventRoutes from './event.routes';
+import forumRoutes from './forum.routes';
 
 const router = Router();
 
@@ -24,6 +26,8 @@ router.use('/colonies', colonyRoutes);
 router.use('/admin', adminRoutes);
 router.use('/lost-pets', lostPetRoutes);
 router.use('/novedades', changelogRoutes);
+router.use('/events', eventRoutes);
+router.use('/forum', forumRoutes);
 
 router.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
