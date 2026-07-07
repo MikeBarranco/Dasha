@@ -6,7 +6,14 @@ export class ChangelogController {
     try {
       const entries = await prisma.changelogEntry.findMany({
         where: { isPublished: true },
-        orderBy: { createdAt: 'desc' }
+        select: {
+          id: true,
+          version: true,
+          title: true,
+          date: true,
+          changes: true
+        },
+        orderBy: { date: 'desc' }
       });
       res.status(200).json(entries);
     } catch (error) {

@@ -23,7 +23,7 @@ router.use('/animals', animalRoutes);
 router.use('/colonies', colonyRoutes);
 router.use('/admin', adminRoutes);
 router.use('/lost-pets', lostPetRoutes);
-router.use('/changelog', changelogRoutes);
+router.use('/novedades', changelogRoutes);
 
 router.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

@@ -67,8 +67,9 @@ router.delete('/events/:id', AdminController.deleteEvent);
 // ==========================================
 // NOVEDADES (CHANGELOG)
 // ==========================================
-router.post('/changelog', AdminController.createChangelogEntry);
-router.patch('/changelog/:id', AdminController.updateChangelogEntry);
-router.delete('/changelog/:id', AdminController.deleteChangelogEntry);
+router.get('/novedades', AdminController.getAllChangelogEntries);
+router.post('/novedades', AdminController.createChangelogEntry);
+router.patch('/novedades/:id', AdminController.updateChangelogEntry);
+router.delete('/novedades/:id', AdminController.deleteChangelogEntry);
 
 export default router;
