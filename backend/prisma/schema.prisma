@@ -998,9 +998,11 @@ model AuditLog {
 
 model ChangelogEntry {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  version     String?  @db.VarChar(50)
   title       String   @db.VarChar(200)
-  content     String
-  type        String   @db.VarChar(50)
+  changes     String[]
+  date        DateTime @default(now()) @db.Timestamptz
+  type        String?  @db.VarChar(50)
   imageUrl    String?  @map("image_url")
   isPublished Boolean  @default(false) @map("is_published")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz

@@ -794,18 +794,36 @@ export class AdminController {
   // ==========================================
   // NOVEDADES (CHANGELOG)
   // ==========================================
+  static async getAllChangelogEntries(req: Request, res: Response, next: NextFunction) {
+    try {
+      const entries = await prisma.changelogEntry.findMany({
+        orderBy: { date: 'desc' }
+      });
+      res.status(200).json(entries);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async createChangelogEntry(req: Request, res: Response, next: NextFunction) {
     try {
-      const { title, content, type, imageBase64, isPublished } = req.body;
+      const { version, title, date, changes, isPublished } = req.body;
       
-      let imageUrl = null;
-      if (imageBase64 && imageBase64.startsWith('data:image')) {
-        const uploadRes = await cloudinary.uploader.upload(imageBase64, { folder: 'dasha/changelog' });
-        imageUrl = uploadRes.secure_url;
+      let parsedChanges: string[] = [];
+      if (Array.isArray(changes)) {
+        parsedChanges = changes;
+      } else if (typeof changes === 'string') {
+        parsedChanges = changes.split('\n').filter(line => line.trim() !== '');
       }
 
       const entry = await prisma.changelogEntry.create({
-        data: { title, content, type, imageUrl, isPublished: isPublished || false }
+        data: { 
+          version, 
+          title, 
+          changes: parsedChanges, 
+          date: date ? new Date(date) : new Date(), 
+          isPublished: isPublished || false 
+        }
       });
 
       // Notificación masiva si se publica
@@ -835,17 +853,20 @@ export class AdminController {
   static async updateChangelogEntry(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
-      const { title, content, type, imageBase64, isPublished } = req.body;
+      const { version, title, date, changes, isPublished } = req.body;
       
       const updateData: any = {};
+      if (version !== undefined) updateData.version = version;
       if (title) updateData.title = title;
-      if (content) updateData.content = content;
-      if (type) updateData.type = type;
+      if (date) updateData.date = new Date(date);
       if (isPublished !== undefined) updateData.isPublished = isPublished;
 
-      if (imageBase64 && imageBase64.startsWith('data:image')) {
-        const uploadRes = await cloudinary.uploader.upload(imageBase64, { folder: 'dasha/changelog' });
-        updateData.imageUrl = uploadRes.secure_url;
+      if (changes !== undefined) {
+        if (Array.isArray(changes)) {
+          updateData.changes = changes;
+        } else if (typeof changes === 'string') {
+          updateData.changes = changes.split('\n').filter((line: string) => line.trim() !== '');
+        }
       }
 
       // Evitar notificación masiva duplicada si ya estaba publicado
