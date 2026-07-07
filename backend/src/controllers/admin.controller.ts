@@ -892,4 +892,86 @@ export class AdminController {
       next(error);
     }
   }
+
+  // ==========================================
+  // NOTIFICACIONES MANUALES (AVISOS)
+  // ==========================================
+  static async sendManualNotification(req: Request, res: Response, next: NextFunction) {
+    try {
+      const adminId = (req as any).user?.id;
+      const { audience, title, body, link } = req.body;
+      
+      if (!['all', 'citizens', 'volunteers', 'allies'].includes(audience)) {
+        res.status(400).json({ error: 'Audiencia no válida' });
+        return;
+      }
+      if (!title || !body) {
+        res.status(400).json({ error: 'Título y cuerpo son requeridos' });
+        return;
+      }
+
+      const whereClause: any = { isActive: true };
+      if (audience === 'citizens') {
+        whereClause.role = 'citizen';
+      } else if (audience === 'volunteers') {
+        whereClause.role = 'volunteer';
+      } else if (audience === 'allies') {
+        whereClause.role = { in: ['ally_admin', 'ally_staff', 'ally_vet'] };
+      }
+
+      const targetUsers = await prisma.user.findMany({ where: whereClause, select: { id: true } });
+      const { NotificationService } = await import('../services/notification.service.js');
+
+      for (const u of targetUsers) {
+        await NotificationService.sendNotification({
+          userId: u.id,
+          title,
+          body,
+          type: 'announcement',
+          link
+        });
+      }
+
+      // Guardar el historial en AuditLog
+      const auditLog = await prisma.auditLog.create({
+        data: {
+          adminId,
+          action: 'send_manual_notification',
+          targetType: audience,
+          metadata: { title, body, link, sentCount: targetUsers.length }
+        }
+      });
+
+      res.status(200).json({ message: 'Notificaciones enviadas', sentCount: targetUsers.length });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getManualNotificationsHistory(req: Request, res: Response, next: NextFunction) {
+    try {
+      const history = await prisma.auditLog.findMany({
+        where: { action: 'send_manual_notification' },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, targetType: true, metadata: true, createdAt: true }
+      });
+
+      const formatted = history.map(h => {
+        const meta: any = h.metadata || {};
+        return {
+          id: h.id,
+          title: meta.title || 'Aviso',
+          body: meta.body || '',
+          audience: h.targetType,
+          link: meta.link,
+          sentCount: meta.sentCount || 0,
+          createdAt: h.createdAt
+        };
+      });
+
+      res.status(200).json(formatted);
+    } catch (error) {
+      next(error);
+    }
+  }
 }

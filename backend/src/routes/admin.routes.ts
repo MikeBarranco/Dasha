@@ -71,5 +71,10 @@ router.get('/novedades', AdminController.getAllChangelogEntries);
 router.post('/novedades', AdminController.createChangelogEntry);
 router.patch('/novedades/:id', AdminController.updateChangelogEntry);
 router.delete('/novedades/:id', AdminController.deleteChangelogEntry);
+// ==========================================
+// NOTIFICACIONES MANUALES (AVISOS)
+// ==========================================
+router.post('/notifications', AdminController.sendManualNotification);
+router.get('/notifications', AdminController.getManualNotificationsHistory);
 
 export default router;

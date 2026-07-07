@@ -46,7 +46,8 @@ export class NotificationService {
     body,
     type,
     referenceId,
-    referenceType
+    referenceType,
+    link
   }: {
     userId: string;
     title: string;
@@ -54,6 +55,7 @@ export class NotificationService {
     type: any; // Using any for NotifType since enum comes from prisma
     referenceId?: string;
     referenceType?: string;
+    link?: string;
   }) {
     // 1. Create in-app notification in DB
     const notif = await prisma.notification.create({
@@ -73,10 +75,15 @@ export class NotificationService {
         where: { userId }
       });
 
+      let targetUrl = link;
+      if (!targetUrl) {
+        targetUrl = referenceType === 'report' ? `/reports/${referenceId}` : '/';
+      }
+
       const pushPayload = JSON.stringify({
         title,
         body,
-        url: referenceType === 'report' ? `/reports/${referenceId}` : '/'
+        url: targetUrl
       });
 
       const pushPromises = subscriptions.map(async (sub) => {
