@@ -76,5 +76,11 @@ router.delete('/novedades/:id', AdminController.deleteChangelogEntry);
 // ==========================================
 router.post('/notifications', AdminController.sendManualNotification);
 router.get('/notifications', AdminController.getManualNotificationsHistory);
+// ==========================================
+// DENUNCIAS (FLAGS) Y MEDALLAS
+// ==========================================
+router.get('/flags', AdminController.getAllFlags);
+router.delete('/flags/:id', AdminController.deleteFlag);
+router.delete('/users/:userId/achievements/:achievementId', AdminController.revokeUserAchievement);
 
 export default router;

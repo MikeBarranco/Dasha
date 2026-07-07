@@ -1011,4 +1011,52 @@ export class AdminController {
       next(error);
     }
   }
+
+  // ==========================================
+  // DENUNCIAS (FLAGS) Y MEDALLAS
+  // ==========================================
+  static async getAllFlags(req: Request, res: Response, next: NextFunction) {
+    try {
+      const flags = await prisma.reportFlag.findMany({
+        include: {
+          flagger: { select: { name: true, email: true } },
+          report: { select: { species: true, condition: true } }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+      res.status(200).json(flags);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async deleteFlag(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      await prisma.reportFlag.delete({ where: { id } });
+      res.status(200).json({ message: 'Denuncia eliminada correctamente' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async revokeUserAchievement(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = req.params.userId as string;
+      const achievementId = req.params.achievementId as string;
+      
+      const deleted = await prisma.userAchievement.deleteMany({
+        where: { userId, achievementId }
+      });
+
+      if (deleted.count === 0) {
+        res.status(404).json({ error: 'El usuario no tiene esta medalla asignada' });
+        return;
+      }
+
+      res.status(200).json({ message: 'Medalla revocada correctamente' });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
