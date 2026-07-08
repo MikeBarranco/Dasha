@@ -13,33 +13,42 @@ import {
   Award,
   PawPrint,
   Map as MapIcon,
+  Landmark,
+  Copy,
+  Check,
+  HeartHandshake,
 } from 'lucide-react';
 import { ShareButton } from '../components/ui/ShareButton';
 import { Avatar } from '../components/ui/Avatar';
-import { getAllies } from '../lib/api';
+import { getAlly } from '../lib/api';
 import { mockAllies, allyTypeLabels, type Ally } from '../data/mockAllies';
 import { whatsappUrl } from '../lib/whatsapp';
 
 export function AllyProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [allies, setAllies] = useState<Ally[] | null>(null);
+  // undefined = cargando; null = no encontrado; objeto = aliado.
+  const [ally, setAlly] = useState<Ally | null | undefined>(() => (id ? undefined : null));
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    if (!id) return;
     let active = true;
-    getAllies()
+    getAlly(id)
+      // Si el backend no lo trae (p. ej. vista previa con un aliado de ejemplo),
+      // caemos al mock por id para no mostrar "no encontrado" de más.
       .then((data) => {
-        if (active) setAllies(data.length > 0 ? data : mockAllies);
+        if (active) setAlly(data ?? mockAllies.find((item) => item.id === id) ?? null);
       })
       .catch(() => {
-        if (active) setAllies(mockAllies);
+        if (active) setAlly(mockAllies.find((item) => item.id === id) ?? null);
       });
     return () => {
       active = false;
     };
-  }, []);
+  }, [id]);
 
-  if (allies === null) {
+  if (ally === undefined) {
     return (
       <div className="mx-auto max-w-2xl">
         <div className="h-44 animate-pulse rounded-3xl bg-neutral-100" />
@@ -48,13 +57,6 @@ export function AllyProfilePage() {
       </div>
     );
   }
-
-  // Si el aliado real no está (p. ej. vista previa con un aliado de ejemplo),
-  // caemos al mock por id para no mostrar "no encontrado" de más.
-  const ally =
-    allies.find((item) => item.id === id) ??
-    mockAllies.find((item) => item.id === id) ??
-    null;
 
   if (!ally) {
     return (
@@ -75,7 +77,20 @@ export function AllyProfilePage() {
   const animals = ally.animals ?? [];
   const events = ally.events ?? [];
   const badges = ally.badges ?? [];
+  const payment = ally.paymentInfo ?? null;
+  const hasPayment = Boolean(payment && (payment.bank || payment.accountHolder || payment.clabe));
   const waLink = whatsappUrl(ally.whatsapp, `Hola ${ally.name}, los contacto desde la app Dasha.`);
+
+  const copyClabe = async () => {
+    if (!payment?.clabe) return;
+    try {
+      await navigator.clipboard.writeText(payment.clabe);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // El navegador puede bloquear el portapapeles; no es crítico.
+    }
+  };
 
   return (
     <motion.div
@@ -187,6 +202,52 @@ export function AllyProfilePage() {
               </p>
             )}
           </div>
+        )}
+
+        {hasPayment && payment && (
+          <section className="mt-4 rounded-2xl border border-neutral-200 bg-white p-4">
+            <h2 className="flex items-center gap-2 font-display text-base font-bold text-cobalto">
+              <HeartHandshake className="h-4 w-4" /> Cómo donar
+            </h2>
+            <p className="mt-1 text-xs text-neutral-500">
+              Transfiere directo a la cuenta del aliado. Dasha no cobra comisiones.
+            </p>
+            <dl className="mt-3 space-y-2.5 text-sm">
+              {payment.bank && (
+                <div className="flex items-center gap-2 text-neutral-700">
+                  <Landmark className="h-4 w-4 flex-shrink-0 text-cobalto" />
+                  <dt className="sr-only">Banco</dt>
+                  <dd className="font-medium">{payment.bank}</dd>
+                </div>
+              )}
+              {payment.accountHolder && (
+                <div>
+                  <dt className="text-xs text-neutral-400">Titular</dt>
+                  <dd className="font-medium text-neutral-700">{payment.accountHolder}</dd>
+                </div>
+              )}
+              {payment.clabe && (
+                <div>
+                  <dt className="text-xs text-neutral-400">CLABE</dt>
+                  <dd className="mt-0.5 flex flex-wrap items-center gap-2">
+                    <span className="font-mono tracking-wide text-neutral-800">{payment.clabe}</span>
+                    <button
+                      type="button"
+                      onClick={copyClabe}
+                      className="flex items-center gap-1 rounded-lg border border-neutral-200 px-2 py-1 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-50"
+                    >
+                      {copied ? (
+                        <Check className="h-3.5 w-3.5 text-exito" />
+                      ) : (
+                        <Copy className="h-3.5 w-3.5" />
+                      )}
+                      {copied ? 'Copiada' : 'Copiar'}
+                    </button>
+                  </dd>
+                </div>
+              )}
+            </dl>
+          </section>
         )}
 
         {team.length > 0 && (
