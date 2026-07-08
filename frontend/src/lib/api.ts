@@ -19,7 +19,9 @@ import {
 } from '../data/mockComunidad';
 
 export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
-const TOKEN_KEY = 'dasha-token';
+// El token de sesión ya no vive en el frontend: viaja en una cookie HttpOnly que
+// el backend fija y el navegador adjunta solo (credentials: 'include'). Aquí solo
+// guardamos el perfil para pintar nombre/avatar y para saber si hay sesión activa.
 const USER_KEY = 'dasha-user';
 
 export type AuthUser = {
@@ -29,22 +31,16 @@ export type AuthUser = {
   role: string;
 };
 
-export function getToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
-}
-
 export function getStoredUser(): AuthUser | null {
   const raw = localStorage.getItem(USER_KEY);
   return raw ? (JSON.parse(raw) as AuthUser) : null;
 }
 
-export function setSession(user: AuthUser, token: string): void {
-  localStorage.setItem(TOKEN_KEY, token);
+export function setSession(user: AuthUser): void {
   localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
 export function clearSession(): void {
-  localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
 }
 
@@ -60,13 +56,17 @@ async function request<T>(path: string, options: RequestInit = {}, auth = false)
     ...((options.headers as Record<string, string>) ?? {}),
   };
 
-  if (auth) {
-    const token = getToken();
-    if (!token) throw new Error('Inicia sesión para continuar');
-    headers.Authorization = `Bearer ${token}`;
+  // Sin token que revisar: usamos el perfil guardado como señal de sesión para
+  // cortar antes de la red y dar un mensaje claro. La cookie va en credentials.
+  if (auth && !getStoredUser()) {
+    throw new Error('Inicia sesión para continuar');
   }
 
-  const response = await fetch(`${API_URL}${path}`, { ...options, headers });
+  const response = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers,
+    credentials: 'include',
+  });
   const body = (await response.json().catch(() => ({}))) as Envelope<T>;
 
   if (!response.ok || body.status === 'error') {
@@ -77,14 +77,14 @@ async function request<T>(path: string, options: RequestInit = {}, auth = false)
 }
 
 export async function register(name: string, email: string, password: string) {
-  return request<{ user: AuthUser; token: string }>('/auth/register', {
+  return request<{ user: AuthUser }>('/auth/register', {
     method: 'POST',
     body: JSON.stringify({ name, email, password }),
   });
 }
 
 export async function login(email: string, password: string) {
-  return request<{ user: AuthUser; token: string }>('/auth/login', {
+  return request<{ user: AuthUser }>('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
   });
@@ -186,7 +186,7 @@ export async function getNearbyReports(
 
 // GET /reports y GET /stats devuelven el dato directo (sin envoltura {status,data}).
 async function requestRaw<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`);
+  const response = await fetch(`${API_URL}${path}`, { credentials: 'include' });
   if (!response.ok) throw new Error('No se pudo consultar el servidor');
   return (await response.json()) as T;
 }
@@ -331,14 +331,13 @@ export async function getLostPets(): Promise<LostPet[]> {
 // Fetch autenticado tolerante a la forma de la respuesta: acepta el dato directo
 // (como /me, que viene plano) o envuelto en { data }.
 async function authedRaw<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = getToken();
-  if (!token) throw new Error('Inicia sesión para continuar');
+  if (!getStoredUser()) throw new Error('Inicia sesión para continuar');
 
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
       ...((options.headers as Record<string, string>) ?? {}),
     },
   });
