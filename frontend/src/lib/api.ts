@@ -7,7 +7,7 @@ import type {
   MedicalEntry,
   MedicalEntryType,
 } from '../data/mockAnimals';
-import type { Ally, AllyType } from '../data/mockAllies';
+import type { Ally, AllyType, AllyMember, AllyAnimal, AllyPaymentInfo } from '../data/mockAllies';
 import { mockAllies } from '../data/mockAllies';
 import type { LostPet } from '../data/mockLostPets';
 import { releaseNotes, type ReleaseNote } from '../data/novedades';
@@ -1256,4 +1256,86 @@ export async function getAllies(): Promise<Ally[]> {
     lat: Number(raw.lat),
     lng: Number(raw.lng),
   }));
+}
+
+// Detalle público de un aliado. Backend: GET /allies/:id, que además de los
+// campos base trae los anidados slogan, coverUrl, team (con bio), animals y
+// paymentInfo. Mapeo tolerante a la forma (camelCase o snake_case).
+function allyStr(value: unknown): string {
+  return typeof value === 'string' ? value : value == null ? '' : String(value);
+}
+
+function mapAllyMember(raw: Record<string, unknown>): AllyMember {
+  const userVal = raw.user;
+  const user = userVal && typeof userVal === 'object' ? (userVal as Record<string, unknown>) : raw;
+  const photo = raw.photoUrl ?? raw.photo_url ?? user.photoUrl ?? user.photo_url ?? user.avatarUrl;
+  const bio = allyStr(raw.bio ?? user.bio);
+  return {
+    name: allyStr(user.name ?? raw.name) || 'Sin nombre',
+    title: allyStr(raw.title ?? user.title),
+    photoUrl: typeof photo === 'string' && photo ? photo : null,
+    bio: bio || undefined,
+  };
+}
+
+function mapAllyAnimalLite(raw: Record<string, unknown>): AllyAnimal {
+  const photos = raw.photos;
+  let photo = allyStr(raw.photo);
+  if (!photo && Array.isArray(photos) && photos.length > 0) {
+    const first = photos[0];
+    photo = typeof first === 'string' ? first : allyStr((first as Record<string, unknown>)?.url);
+  }
+  return {
+    id: allyStr(raw.id ?? raw._id),
+    name: allyStr(raw.name) || 'Sin nombre',
+    photo: photo || '/placeholder-animal.svg',
+    status: allyStr(raw.statusLabel ?? raw.status),
+  };
+}
+
+function mapAllyPaymentInfo(raw: unknown): AllyPaymentInfo | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const p = raw as Record<string, unknown>;
+  const bank = allyStr(p.bank ?? p.bankName ?? p.bank_name);
+  const accountHolder = allyStr(p.accountHolder ?? p.account_holder ?? p.holder ?? p.titular);
+  const clabe = allyStr(p.clabe ?? p.CLABE ?? p.accountNumber ?? p.account_number ?? p.account);
+  if (!bank && !accountHolder && !clabe) return null;
+  return {
+    bank: bank || undefined,
+    accountHolder: accountHolder || undefined,
+    clabe: clabe || undefined,
+  };
+}
+
+export async function getAlly(id: string): Promise<Ally | null> {
+  const body = await requestRaw<Record<string, unknown> | null>(`/allies/${id}`);
+  if (!body || typeof body !== 'object') return null;
+  // Tolerante a que venga directo o dentro de { data }.
+  const raw =
+    'data' in body && body.data && typeof body.data === 'object'
+      ? (body.data as Record<string, unknown>)
+      : body;
+  const orgTypeRaw = allyStr(raw.orgType ?? raw.type);
+  const teamRaw = Array.isArray(raw.team) ? raw.team : [];
+  const animalsRaw = Array.isArray(raw.animals) ? raw.animals : [];
+  return {
+    id: allyStr(raw.id ?? raw._id),
+    name: allyStr(raw.name),
+    description: allyStr(raw.description),
+    logoUrl: allyStr(raw.logoUrl ?? raw.logo_url) || null,
+    address: allyStr(raw.address),
+    phone: allyStr(raw.phone) || null,
+    whatsapp: allyStr(raw.whatsapp) || null,
+    website: allyStr(raw.website) || null,
+    orgType: allyTypes.includes(orgTypeRaw as AllyType) ? (orgTypeRaw as AllyType) : 'ngo',
+    isVerified: Boolean(raw.isVerified ?? raw.is_verified),
+    lat: Number(raw.lat ?? 0),
+    lng: Number(raw.lng ?? 0),
+    schedule: allyStr(raw.schedule) || undefined,
+    slogan: allyStr(raw.slogan) || undefined,
+    coverUrl: allyStr(raw.coverUrl ?? raw.cover_url) || null,
+    team: teamRaw.map((member) => mapAllyMember(member as Record<string, unknown>)),
+    animals: animalsRaw.map((animal) => mapAllyAnimalLite(animal as Record<string, unknown>)),
+    paymentInfo: mapAllyPaymentInfo(raw.paymentInfo ?? raw.payment_info),
+  };
 }

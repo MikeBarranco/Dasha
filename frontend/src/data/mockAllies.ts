@@ -28,6 +28,14 @@ export type AllyAnimal = {
   status: string;
 };
 
+// Datos bancarios para que un donante sepa a dónde transferir. Los expone el
+// backend en GET /allies/:id (paymentInfo). Son públicos a propósito.
+export type AllyPaymentInfo = {
+  bank?: string;
+  accountHolder?: string;
+  clabe?: string;
+};
+
 export type Ally = {
   id: string;
   name: string;
@@ -46,6 +54,7 @@ export type Ally = {
   coverUrl?: string | null;
   team?: AllyMember[];
   animals?: AllyAnimal[];
+  paymentInfo?: AllyPaymentInfo | null;
   gallery?: string[];
   events?: AllyEvent[];
   badges?: AllyBadge[];
@@ -93,6 +102,11 @@ export const mockAllies: Ally[] = [
       { id: 'a1', name: 'Charlie', photo: '/seed/charlie-recuperado.jpg', status: 'Buscando hogar' },
       { id: 'a2', name: 'Balú', photo: '/seed/perrito1.jpg', status: 'En tratamiento' },
     ],
+    paymentInfo: {
+      bank: 'BBVA',
+      accountHolder: 'Veterinaria San Roque S.C.',
+      clabe: '012650001234567890',
+    },
     events: [
       { title: 'Jornada de esterilización', date: '12 jul 2026', place: 'En clínica' },
       { title: 'Vacunación antirrábica gratuita', date: '3 ago 2026', place: 'En clínica' },
@@ -127,6 +141,11 @@ export const mockAllies: Ally[] = [
       { id: 'a3', name: 'Luna', photo: '/seed/gatito9.jpg', status: 'Buscando hogar' },
       { id: 'a4', name: 'Rocky', photo: '/seed/perrito5.jpg', status: 'En tratamiento' },
     ],
+    paymentInfo: {
+      bank: 'Banorte',
+      accountHolder: 'Refugio Patitas Felices A.C.',
+      clabe: '072650009876543210',
+    },
     events: [{ title: 'Feria de adopción', date: '20 jul 2026', place: 'Parque Juárez' }],
     badges: [{ label: 'Aliado verificado' }, { label: 'Adopciones' }],
   },
