@@ -1,4 +1,4 @@
-import { API_URL, getToken } from './api';
+import { API_URL, getStoredUser } from './api';
 
 export type LostPetInput = {
   petName: string;
@@ -28,8 +28,7 @@ const sizeMap: Record<string, string> = {
 
 // Publica una mascota perdida en el backend (POST /lost-pets, protegido).
 export async function createLostPetReport(input: LostPetInput): Promise<LostPetResult> {
-  const token = getToken();
-  if (!token) throw new Error('Inicia sesión para publicar');
+  if (!getStoredUser()) throw new Error('Inicia sesión para publicar');
 
   const body = {
     petName: input.petName,
@@ -47,9 +46,9 @@ export async function createLostPetReport(input: LostPetInput): Promise<LostPetR
 
   const response = await fetch(`${API_URL}/lost-pets`, {
     method: 'POST',
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(body),
   });

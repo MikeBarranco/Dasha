@@ -1,17 +1,16 @@
-import { API_URL, getToken } from './api';
+import { API_URL, getStoredUser } from './api';
 
 // Cliente para los endpoints protegidos /admin/*. Es tolerante a la forma de la
 // respuesta: acepta tanto { status, data } como el dato directo, porque el
 // contrato exacto de Isabel aun no esta documentado a nivel de campos.
 async function adminFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = getToken();
-  if (!token) throw new Error('Inicia sesión como administrador');
+  if (!getStoredUser()) throw new Error('Inicia sesión como administrador');
 
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
       ...((options.headers as Record<string, string>) ?? {}),
     },
   });

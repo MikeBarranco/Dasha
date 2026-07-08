@@ -1,37 +1,29 @@
 import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { setSession } from '../lib/api';
-
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
+import { setSession, API_URL, type AuthUser } from '../lib/api';
 
 export function AuthCallbackPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = searchParams.get('token');
-    
-    if (!token) {
-      // Si no hay token, hubo un error
+    // Con la cookie HttpOnly el token ya no llega en la URL: el backend fija la
+    // cookie en el redirect. Si algo falló, viene ?error. Si todo salió bien,
+    // pedimos el perfil con la cookie (credentials) y lo guardamos.
+    if (searchParams.get('error')) {
       navigate('/login?error=oauth_failed', { replace: true });
       return;
     }
 
-    // Guardar token temporalmente para autorizar la siguiente petición
-    localStorage.setItem('dasha-token', token);
-
-    // Obtener los datos del usuario usando el nuevo token
-    fetch(`${API_URL}/me`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+    fetch(`${API_URL}/me`, { credentials: 'include' })
       .then((res) => {
         if (!res.ok) throw new Error('Error HTTP');
         return res.json();
       })
-      .then((user) => {
+      .then((body) => {
+        const user = (body?.data ?? body) as AuthUser | null;
         if (user && user.id) {
-          // Guardar el perfil completo y notificar a la app
-          setSession(user, token);
+          setSession(user);
           window.dispatchEvent(new Event('dasha-auth-change'));
           // Redirigir al mapa (la app); la portada "/" es para visitantes sin sesión
           navigate('/mapa', { replace: true });
@@ -41,10 +33,8 @@ export function AuthCallbackPage() {
       })
       .catch((err) => {
         console.error('Error completando OAuth:', err);
-        localStorage.removeItem('dasha-token');
         navigate('/login?error=oauth_failed', { replace: true });
       });
-
   }, [searchParams, navigate]);
 
   return (
