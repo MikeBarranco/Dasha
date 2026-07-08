@@ -2,7 +2,11 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../config/db';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dasha_super_secret_key_2026_fepro';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error('CRITICAL ERROR: JWT_SECRET must be defined in production environment variables.');
+}
+const SECRET_TO_USE = JWT_SECRET || 'dasha_super_secret_key_2026_fepro';
 
 export class AuthService {
   static async register(data: any) {
@@ -26,7 +30,7 @@ export class AuthService {
       select: { id: true, name: true, email: true, role: true },
     });
 
-    const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, {
+    const token = jwt.sign({ id: user.id, role: user.role }, SECRET_TO_USE, {
       expiresIn: '7d',
     });
 
@@ -48,7 +52,7 @@ export class AuthService {
       throw new Error('Credenciales inválidas');
     }
 
-    const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, {
+    const token = jwt.sign({ id: user.id, role: user.role }, SECRET_TO_USE, {
       expiresIn: '7d',
     });
 
@@ -63,7 +67,7 @@ export class AuthService {
   }
 
   static generateToken(user: { id: string; role: string }) {
-    return jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, {
+    return jwt.sign({ id: user.id, role: user.role }, SECRET_TO_USE, {
       expiresIn: '7d',
     });
   }

@@ -7,6 +7,13 @@ export class AuthController {
       const data = req.body;
       const result = await AuthService.register(data);
 
+      res.cookie('token', result.token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
       res.status(201).json({
         status: 'success',
         message: 'Usuario registrado exitosamente',
@@ -26,6 +33,13 @@ export class AuthController {
       const data = req.body;
       const result = await AuthService.login(data);
 
+      res.cookie('token', result.token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+
       res.status(200).json({
         status: 'success',
         message: 'Sesión iniciada exitosamente',
@@ -37,6 +51,22 @@ export class AuthController {
       } else {
         next(error);
       }
+    }
+  }
+
+  static async logout(req: Request, res: Response, next: NextFunction) {
+    try {
+      res.clearCookie('token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+      });
+      res.status(200).json({
+        status: 'success',
+        message: 'Sesión cerrada exitosamente',
+      });
+    } catch (error: any) {
+      next(error);
     }
   }
 }
