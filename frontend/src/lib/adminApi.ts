@@ -652,9 +652,8 @@ export type AdminVolunteer = {
   availability: string;
   helpType: string;
   motivation: string;
-  ineFront: string | null;
-  ineBack: string | null;
-  selfie: string | null;
+  idDoc: string | null;
+  idSelfie: string | null;
   requestedAgo: string;
 };
 
@@ -679,9 +678,10 @@ function mapVolunteer(raw: Raw): AdminVolunteer {
     availability: asString(pick(prefs, ['availability'])),
     helpType: asString(pick(prefs, ['helpType'])),
     motivation: asString(pick(prefs, ['motivation'])),
-    ineFront: asString(pick(raw, ['ineFrontUrl', 'ine_front_url', 'ineFront'])) || null,
-    ineBack: asString(pick(raw, ['ineBackUrl', 'ine_back_url', 'ineBack'])) || null,
-    selfie: asString(pick(raw, ['selfieUrl', 'selfie_url', 'selfie'])) || null,
+    // Se ENVÍAN como idDocBase64/idSelfieBase64, pero el backend las DEVUELVE en
+    // ineFrontUrl y selfieUrl (confirmado por Isabel). Se mapean desde ahí.
+    idDoc: asString(pick(raw, ['ineFrontUrl', 'ine_front_url', 'ineFront'])) || null,
+    idSelfie: asString(pick(raw, ['selfieUrl', 'selfie_url', 'selfie'])) || null,
     requestedAgo: timeAgo(asString(pick(raw, ['createdAt', 'created_at']))),
   };
 }

@@ -37,7 +37,7 @@ export function useAuth() {
     // le pedimos que la destruya. Pase lo que pase con la red, limpiamos el
     // perfil local para que la UI cierre sesión de inmediato.
     try {
-      await fetch(`${API_URL}/logout`, { method: 'POST', credentials: 'include' });
+      await fetch(`${API_URL}/auth/logout`, { method: 'POST', credentials: 'include' });
     } catch (error) {
       console.error('Error al cerrar sesión', error);
     } finally {

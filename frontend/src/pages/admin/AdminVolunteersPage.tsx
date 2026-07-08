@@ -124,9 +124,8 @@ function VolunteerCard({
       )}
 
       <div className="mt-3 flex gap-2">
-        <PhotoThumb src={volunteer.ineFront} label="INE frente" onView={onView} />
-        <PhotoThumb src={volunteer.ineBack} label="INE reverso" onView={onView} />
-        <PhotoThumb src={volunteer.selfie} label="Selfie" onView={onView} />
+        <PhotoThumb src={volunteer.idDoc} label="Identificación" onView={onView} />
+        <PhotoThumb src={volunteer.idSelfie} label="Selfie con ID" onView={onView} />
       </div>
 
       {volunteer.status === 'pending' ? (
@@ -199,7 +198,7 @@ export function AdminVolunteersPage() {
 
   const handleDecision = async (id: string, status: 'approved' | 'rejected') => {
     await updateVolunteerStatus(id, status);
-    // Tras decidir, el backend borra las fotos del INE; reflejamos el nuevo
+    // Tras decidir, el backend borra las fotos de identidad; reflejamos el nuevo
     // estado y limpiamos las fotos en pantalla.
     setVolunteers((list) =>
       list
@@ -209,9 +208,8 @@ export function AdminVolunteersPage() {
                   ...volunteer,
                   status,
                   statusLabel: status === 'approved' ? 'Aprobado' : 'Rechazado',
-                  ineFront: null,
-                  ineBack: null,
-                  selfie: null,
+                  idDoc: null,
+                  idSelfie: null,
                 }
               : volunteer,
           )
