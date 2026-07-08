@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { X, Navigation, Clock, MapPin, Maximize2 } from 'lucide-react';
+import { X, Navigation, Clock, MapPin, Maximize2, Radio } from 'lucide-react';
 import { ShareButton } from '../ui/ShareButton';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 import { useSheetDismiss } from '../../lib/useSheetDismiss';
@@ -25,6 +26,7 @@ type ReportDetailProps = {
 
 export function ReportDetail({ report, onClose }: ReportDetailProps) {
   useLockBodyScroll();
+  const navigate = useNavigate();
   const [showPhoto, setShowPhoto] = useState(false);
   const { dragControls, scrollRef, onPointerDown, onPointerMove, onDragEnd } =
     useSheetDismiss(onClose);
@@ -120,12 +122,25 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
           </div>
 
           <div className="mt-5">
-            <button
-              type="button"
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-naranja py-3 font-semibold text-white transition-opacity hover:opacity-90"
-            >
-              <Navigation className="h-5 w-5" /> Voy en camino
-            </button>
+            {report.activeAssignmentId ? (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  navigate(`/rescate/${report.activeAssignmentId}`);
+                }}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-cobalto py-3 font-semibold text-white transition-opacity hover:opacity-90"
+              >
+                <Radio className="h-5 w-5" /> Ver rescate en vivo
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-naranja py-3 font-semibold text-white transition-opacity hover:opacity-90"
+              >
+                <Navigation className="h-5 w-5" /> Voy en camino
+              </button>
+            )}
           </div>
         </div>
       </motion.div>
