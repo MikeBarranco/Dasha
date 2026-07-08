@@ -1,8 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { Plus, Pencil, Trash2, AlertCircle, RefreshCw } from 'lucide-react';
 import { AnimalFormSheet } from '../../components/admin/AnimalFormSheet';
-import { getAdminAnimals, deleteAdminAnimal, type AdminAnimal } from '../../lib/adminApi';
+import {
+  getAdminAnimals,
+  deleteAdminAnimal,
+  animalStatusOptions,
+  type AdminAnimal,
+} from '../../lib/adminApi';
 import { getAllies } from '../../lib/api';
 
 type OrgOption = { id: string; name: string };
@@ -15,6 +20,24 @@ export function AdminAnimalsPage() {
   const [editing, setEditing] = useState<AdminAnimal | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+
+  // Conteo por estatus para las pastillas de filtro. Un estatus fuera del
+  // contrato (por si el backend agrega otro) igual se cuenta y aparece en "Todos".
+  const counts = useMemo(() => {
+    const byStatus: Record<string, number> = {};
+    for (const option of animalStatusOptions) byStatus[option.value] = 0;
+    for (const animal of animals ?? []) {
+      byStatus[animal.status] = (byStatus[animal.status] ?? 0) + 1;
+    }
+    return { byStatus, total: animals?.length ?? 0 };
+  }, [animals]);
+
+  const visibleAnimals = useMemo(() => {
+    if (!animals) return null;
+    if (statusFilter === 'all') return animals;
+    return animals.filter((animal) => animal.status === statusFilter);
+  }, [animals, statusFilter]);
 
   const fetchAnimals = (reset: boolean) => {
     if (reset) {
@@ -81,7 +104,7 @@ export function AdminAnimalsPage() {
   return (
     <div>
       <div className="flex items-center justify-between gap-3">
-        <h1 className="font-display text-2xl font-bold text-cobalto">Animales</h1>
+        <h1 className="font-display text-2xl font-bold text-cobalto">Rehabilitación</h1>
         <button
           type="button"
           onClick={openNew}
@@ -91,6 +114,37 @@ export function AdminAnimalsPage() {
           Nuevo
         </button>
       </div>
+
+      {animals !== null && !error && animals.length > 0 && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {[{ value: 'all', label: 'Todos' }, ...animalStatusOptions].map((option) => {
+            const active = statusFilter === option.value;
+            const count =
+              option.value === 'all' ? counts.total : (counts.byStatus[option.value] ?? 0);
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setStatusFilter(option.value)}
+                className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                  active
+                    ? 'border-cobalto bg-cobalto text-white'
+                    : 'border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50'
+                }`}
+              >
+                {option.label}
+                <span
+                  className={`rounded-full px-1.5 text-xs font-semibold ${
+                    active ? 'bg-white/20 text-white' : 'bg-neutral-100 text-neutral-500'
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {animals === null && (
         <div className="mt-6 space-y-3">
@@ -125,9 +179,25 @@ export function AdminAnimalsPage() {
         </div>
       )}
 
-      {animals !== null && animals.length > 0 && (
+      {animals !== null &&
+        visibleAnimals !== null &&
+        animals.length > 0 &&
+        visibleAnimals.length === 0 && (
+          <div className="mt-6 flex flex-col items-center justify-center rounded-2xl border border-dashed border-neutral-300 bg-white/60 px-6 py-12 text-center">
+            <p className="font-semibold text-neutral-700">Sin casos en este estatus</p>
+            <button
+              type="button"
+              onClick={() => setStatusFilter('all')}
+              className="mt-3 text-sm font-semibold text-cobalto hover:underline"
+            >
+              Ver todos
+            </button>
+          </div>
+        )}
+
+      {visibleAnimals !== null && visibleAnimals.length > 0 && (
         <div className="mt-6 space-y-3">
-          {animals.map((animal) => (
+          {visibleAnimals.map((animal) => (
             <div
               key={animal.id}
               className="flex items-center gap-3 rounded-2xl border border-neutral-200 bg-white p-3"

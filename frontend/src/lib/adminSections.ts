@@ -37,8 +37,8 @@ export const adminSections: AdminSection[] = [
   },
   {
     to: '/admin/animales',
-    label: 'Animales',
-    description: 'Gestiona los casos de rehabilitación',
+    label: 'Rehabilitación',
+    description: 'Casos en recuperación, hogar temporal y adopción',
     icon: PawPrint,
   },
   {
