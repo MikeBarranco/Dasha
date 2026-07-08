@@ -591,9 +591,8 @@ export async function removeMyOrgTeamMember(userId: string): Promise<void> {
 }
 
 export async function postVolunteerApplication(data: {
-  ineFrontBase64: string;
-  ineBackBase64: string;
-  selfieBase64: string;
+  idDocBase64: string;
+  idSelfieBase64: string;
   isFoster?: boolean;
   fosterCapacity?: number;
   phone?: string;
@@ -1000,7 +999,7 @@ export async function createAdoptionRequest(
   animalId: string,
   input: AdoptionRequestInput,
 ): Promise<void> {
-  await authedRaw(`/animals/${animalId}/adoption-requests`, {
+  await authedRaw(`/animals/${animalId}/adopt`, {
     method: 'POST',
     body: JSON.stringify(input),
   });

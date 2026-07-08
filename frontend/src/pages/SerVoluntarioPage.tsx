@@ -51,7 +51,7 @@ function CaptureField({
   label: string;
   hint: string;
   value: string | null;
-  frame: 'card' | 'face';
+  frame?: 'card' | 'face';
   facing: 'environment' | 'user';
   onChange: (value: string | null) => void;
 }) {
@@ -133,9 +133,8 @@ export function SerVoluntarioPage() {
   const [ayuda, setAyuda] = useState<string[]>([]);
   const [dispo, setDispo] = useState<string[]>([]);
   const [motivation, setMotivation] = useState('');
-  const [ineFront, setIneFront] = useState<string | null>(null);
-  const [ineBack, setIneBack] = useState<string | null>(null);
-  const [selfie, setSelfie] = useState<string | null>(null);
+  const [idDoc, setIdDoc] = useState<string | null>(null);
+  const [idSelfie, setIdSelfie] = useState<string | null>(null);
   const [fosterCapacity, setFosterCapacity] = useState('');
   const [accept, setAccept] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -174,7 +173,7 @@ export function SerVoluntarioPage() {
 
   const phoneValid = /^\d{10}$/.test(phone.replace(/\s/g, ''));
   const isFoster = ayuda.includes('Hogar temporal');
-  const docsReady = Boolean(ineFront && ineBack && selfie);
+  const docsReady = Boolean(idDoc && idSelfie);
   const canSubmit =
     phoneValid && zone.trim().length > 1 && ayuda.length > 0 && docsReady && accept;
 
@@ -185,15 +184,14 @@ export function SerVoluntarioPage() {
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!canSubmit || submitting) return;
-    if (!ineFront || !ineBack || !selfie) return;
+    if (!idDoc || !idSelfie) return;
     setSubmitting(true);
     setError(null);
     try {
       const cleanPhone = phone.replace(/\s/g, '');
       await postVolunteerApplication({
-        ineFrontBase64: ineFront,
-        ineBackBase64: ineBack,
-        selfieBase64: selfie,
+        idDocBase64: idDoc,
+        idSelfieBase64: idSelfie,
         isFoster,
         ...(isFoster && fosterCapacity ? { fosterCapacity: Number(fosterCapacity) } : {}),
         phone: cleanPhone,
@@ -338,33 +336,23 @@ export function SerVoluntarioPage() {
         <div className="rounded-2xl border border-neutral-200 p-4">
           <p className="text-sm font-semibold text-neutral-800">Verificación de identidad</p>
           <p className="mt-0.5 text-xs text-neutral-500">
-            Toma la foto con la cámara y encuádrala en el marco. Las usamos solo para validar tu
-            identidad.
+            Toma las dos fotos con la cámara. Las usamos solo para validar tu identidad.
           </p>
           <div className="mt-3 space-y-3">
             <CaptureField
-              label="INE (frente)"
+              label="Identificación oficial con foto"
               hint="Tomar foto"
-              value={ineFront}
+              value={idDoc}
               frame="card"
               facing="environment"
-              onChange={setIneFront}
+              onChange={setIdDoc}
             />
             <CaptureField
-              label="INE (reverso)"
-              hint="Tomar foto"
-              value={ineBack}
-              frame="card"
-              facing="environment"
-              onChange={setIneBack}
-            />
-            <CaptureField
-              label="Selfie"
+              label="Selfie sujetando tu identificación"
               hint="Tomar selfie"
-              value={selfie}
-              frame="face"
+              value={idSelfie}
               facing="user"
-              onChange={setSelfie}
+              onChange={setIdSelfie}
             />
           </div>
         </div>
