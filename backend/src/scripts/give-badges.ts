@@ -27,7 +27,9 @@ async function main() {
           create: { userId: user.id, achievementId: badge.id }
         });
         count++;
-      } catch (e) { }
+      } catch (e) {
+        // Ignorar si la medalla ya existe
+      }
     }
     console.log(`¡Le dimos ${count} medallas a ${user.email} (Admin)!`);
   }
