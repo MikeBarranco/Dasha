@@ -159,7 +159,15 @@ export class AnimalController {
     try {
       const userId = (req as any).user?.id;
       const animalId = req.params.id as string;
-      const { message } = req.body;
+      const { 
+        message, 
+        applicantName, 
+        whatsapp, 
+        housingType, 
+        hasHadPets, 
+        otherPets, 
+        reason 
+      } = req.body;
 
       if (!userId) {
         res.status(401).json({ error: 'No autorizado' });
@@ -191,11 +199,16 @@ export class AnimalController {
         return;
       }
 
+      let finalMessage = message || '';
+      if (applicantName || whatsapp || reason) {
+        finalMessage = `Nombre: ${applicantName || 'N/A'}\nWhatsApp: ${whatsapp || 'N/A'}\nTipo de vivienda: ${housingType || 'N/A'}\n¿Ha tenido mascotas?: ${hasHadPets ? 'Sí' : 'No'}\nOtras mascotas: ${otherPets || 'Ninguna'}\nMotivo: ${reason || 'N/A'}`;
+      }
+
       const application = await prisma.adoptionApplication.create({
         data: {
           animalId,
           applicantId: userId,
-          message: message || ''
+          message: finalMessage
         }
       });
 
