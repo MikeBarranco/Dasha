@@ -1067,9 +1067,12 @@ export async function updateMyOrgAdoptionRequest(
   id: string,
   status: 'accepted' | 'rejected',
 ): Promise<void> {
+  // El backend espera 'approved'/'rejected'. Internamente la UI usa 'accepted'
+  // para la etiqueta "Aceptada", así que traducimos solo al momento de enviar.
+  const backendStatus = status === 'accepted' ? 'approved' : 'rejected';
   await authedRaw(`/me/organization/adoption-requests/${id}`, {
     method: 'PATCH',
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status: backendStatus }),
   });
 }
 
