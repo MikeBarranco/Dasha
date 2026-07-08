@@ -465,6 +465,8 @@ model RescueAssignment {
   acceptedAt      DateTime                               @default(now()) @map("accepted_at") @db.Timestamptz
   etaMinutes      Int?                                   @map("eta_minutes")
   startLocation   Unsupported("geography(Point, 4326)")? @map("start_location")
+  currentLocation Unsupported("geography(Point, 4326)")? @map("current_location")
+  lastLocationAt  DateTime?                              @map("last_location_at") @db.Timestamptz
   completedAt     DateTime?                              @map("completed_at") @db.Timestamptz
   cancelledReason String?                                @map("cancelled_reason")
 
@@ -480,6 +482,9 @@ model Organization {
   description  String?
   logoUrl      String?                                @map("logo_url")
   logoPublicId String?                                @map("logo_public_id") @db.VarChar(255)
+  coverUrl     String?                                @map("cover_url")
+  coverPublicId String?                               @map("cover_public_id") @db.VarChar(255)
+  slogan       String?                                @db.VarChar(255)
   address      String?                                @db.VarChar(255)
   phone        String?                                @db.VarChar(20)
   whatsapp     String?                                @db.VarChar(20)
@@ -512,6 +517,7 @@ model OrganizationEmployee {
   roleInOrg      RoleInOrg @map("role_in_org")
   isVerified     Boolean   @default(false) @map("is_verified")
   invitedEmail   String?   @map("invited_email") @db.VarChar(255)
+  bio            String?   @db.VarChar(500)
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
   organization Organization @relation(fields: [organizationId], references: [id])
@@ -929,6 +935,7 @@ model Notification {
   type          NotifType
   referenceId   String?   @map("reference_id") @db.Uuid
   referenceType String?   @map("reference_type") @db.VarChar(50)
+  link          String?   @db.VarChar(255)
   isRead        Boolean   @default(false) @map("is_read")
   sentAt        DateTime  @default(now()) @map("sent_at") @db.Timestamptz
 
