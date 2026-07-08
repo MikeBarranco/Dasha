@@ -12,6 +12,9 @@ export type Report = {
   description: string;
   reportedAgo: string;
   status: string;
+  // Si hay un traslado en curso (voluntario en camino), el backend manda el id
+  // de la asignación para poder abrir el seguimiento en vivo tipo Uber.
+  activeAssignmentId?: string | null;
 };
 
 export const mockReports: Report[] = [
