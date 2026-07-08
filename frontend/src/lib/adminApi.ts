@@ -678,14 +678,10 @@ function mapVolunteer(raw: Raw): AdminVolunteer {
     availability: asString(pick(prefs, ['availability'])),
     helpType: asString(pick(prefs, ['helpType'])),
     motivation: asString(pick(prefs, ['motivation'])),
-    idDoc:
-      asString(
-        pick(raw, ['idDocUrl', 'id_doc_url', 'idDoc', 'ineFrontUrl', 'ine_front_url', 'ineFront']),
-      ) || null,
-    idSelfie:
-      asString(
-        pick(raw, ['idSelfieUrl', 'id_selfie_url', 'idSelfie', 'selfieUrl', 'selfie_url', 'selfie']),
-      ) || null,
+    // Se ENVÍAN como idDocBase64/idSelfieBase64, pero el backend las DEVUELVE en
+    // ineFrontUrl y selfieUrl (confirmado por Isabel). Se mapean desde ahí.
+    idDoc: asString(pick(raw, ['ineFrontUrl', 'ine_front_url', 'ineFront'])) || null,
+    idSelfie: asString(pick(raw, ['selfieUrl', 'selfie_url', 'selfie'])) || null,
     requestedAgo: timeAgo(asString(pick(raw, ['createdAt', 'created_at']))),
   };
 }
