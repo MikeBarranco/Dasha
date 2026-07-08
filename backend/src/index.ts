@@ -59,9 +59,42 @@ app.get('/', (req: Request, res: Response) => {
   res.json({ message: 'Dasha API is running! 🐾' });
 });
 
+import http from 'http';
+import { Server } from 'socket.io';
+
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    credentials: true
+  }
+});
+
+app.set('io', io); // Make io accessible in controllers via req.app.get('io')
+
+io.on('connection', (socket) => {
+  console.log('⚡ Socket connected:', socket.id);
+  
+  // Join a specific rescue assignment room
+  socket.on('join_rescue', (rescueId: string) => {
+    socket.join(`rescue:${rescueId}`);
+    console.log(`Socket ${socket.id} joined room rescue:${rescueId}`);
+  });
+
+  // Leave room
+  socket.on('leave_rescue', (rescueId: string) => {
+    socket.leave(`rescue:${rescueId}`);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('⚡ Socket disconnected:', socket.id);
+  });
+});
+
 // Global Error Handler
 app.use(errorHandler);
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🚀 Server is running on http://localhost:${PORT}`);
 });

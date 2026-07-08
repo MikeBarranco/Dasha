@@ -13,16 +13,17 @@ router.get('/portal/team', requireAuth, OrganizationController.getMyPortalTeam);
 router.post('/portal/team', requireAuth, OrganizationController.addTeamMember);
 router.delete('/portal/team/:employeeId', requireAuth, OrganizationController.removeTeamMember);
 router.get('/portal/reports/nearby', requireAuth, OrganizationController.getNearbyReports);
-router.post('/portal/reports/:reportId/offers', requireAuth, OrganizationController.offerResourceForReport);
-router.post('/portal/reports/:reportId/rescue', requireAuth, OrganizationController.startRescueAssignment);
+router.post('/reports/:reportId/offers', requireAuth, OrganizationController.offerResourceForReport);
+router.post('/reports/:reportId/rescue', requireAuth, OrganizationController.startRescueAssignment);
+router.post('/reports/:reportId/intake', requireAuth, OrganizationController.intakeReport);
 
 router.post('/portal/animals', requireAuth, OrganizationController.createPortalAnimal);
 router.post('/portal/animals/:animalId/records', requireAuth, OrganizationController.addPortalAnimalRecord);
 router.post('/portal/animals/:animalId/timeline', requireAuth, OrganizationController.addPortalTimelineEvent);
 
-router.get('/portal/adoptions', requireAuth, OrganizationController.getPortalAdoptions);
-router.patch('/portal/adoptions/:applicationId/approve', requireAuth, OrganizationController.approvePortalAdoption);
-router.patch('/portal/adoptions/:applicationId/reject', requireAuth, OrganizationController.rejectPortalAdoption);
+router.get('/adoption-requests', requireAuth, OrganizationController.getPortalAdoptions);
+router.patch('/adoption-requests/:applicationId/approve', requireAuth, OrganizationController.approvePortalAdoption);
+router.patch('/adoption-requests/:applicationId/reject', requireAuth, OrganizationController.rejectPortalAdoption);
 
 router.get('/portal/donations', requireAuth, OrganizationController.getPortalDonations);
 router.patch('/portal/donations/:donationId/approve', requireAuth, OrganizationController.approvePortalDonation);
