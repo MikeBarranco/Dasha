@@ -134,39 +134,53 @@ export class ForumController {
     }
   }
 
-  // POST /forum/posts/:id/vote
-  static async votePost(req: Request, res: Response, next: NextFunction) {
+  // POST /forum/posts/:id/like
+  static async toggleLikePost(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = (req as any).user?.id;
       const postId = req.params.id as string;
-      const { value } = req.body; // 1 (upvote) o -1 (downvote)
 
-      if (value !== 1 && value !== -1) {
-        res.status(400).json({ error: 'Valor de voto inválido' });
-        return;
+      // Buscar si ya existe el voto
+      const existingVote = await prisma.forumVote.findUnique({
+        where: { userId_postId: { userId, postId } }
+      });
+
+      let increment = 0;
+
+      if (existingVote && existingVote.value === 1) {
+        // Ya le dio like, se lo quitamos
+        await prisma.forumVote.delete({
+          where: { userId_postId: { userId, postId } }
+        });
+        increment = -1;
+      } else if (existingVote && existingVote.value === -1) {
+        // Tenía dislike, lo cambiamos a like
+        await prisma.forumVote.update({
+          where: { userId_postId: { userId, postId } },
+          data: { value: 1 }
+        });
+        increment = 2; // de -1 a +1 = +2
+      } else {
+        // No tenía voto, lo creamos
+        await prisma.forumVote.create({
+          data: { userId, postId, value: 1 }
+        });
+        increment = 1;
       }
 
-      // Upsert vote
-      await prisma.forumVote.upsert({
-        where: { userId_postId: { userId, postId } },
-        update: { value },
-        create: { userId, postId, value }
-      });
-
-      // Recalcular votos totales
-      const allVotes = await prisma.forumVote.findMany({ where: { postId } });
-      const total = allVotes.reduce((acc, v) => acc + v.value, 0);
-
-      await prisma.forumPost.update({
+      const post = await prisma.forumPost.update({
         where: { id: postId },
-        data: { upvotes: total }
+        data: { upvotes: { increment } },
+        select: { upvotes: true }
       });
 
-      res.status(200).json({ message: 'Voto registrado', totalVotes: total });
+      res.status(200).json({ message: 'Like procesado', totalVotes: post.upvotes });
     } catch (error) {
       next(error);
     }
   }
+
+
 
   // POST /forum/replies/:id/vote
   static async voteReply(req: Request, res: Response, next: NextFunction) {

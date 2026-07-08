@@ -11,7 +11,7 @@ router.get('/posts/:id', ForumController.getPostDetails);
 // Requieren sesión
 router.post('/posts', requireAuth, ForumController.createPost);
 router.post('/posts/:id/replies', requireAuth, ForumController.createReply);
-router.post('/posts/:id/vote', requireAuth, ForumController.votePost);
+router.post('/posts/:id/like', requireAuth, ForumController.toggleLikePost);
 router.post('/replies/:id/vote', requireAuth, ForumController.voteReply);
 
 export default router;

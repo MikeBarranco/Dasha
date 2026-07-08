@@ -238,7 +238,7 @@ export class AdminController {
         await tx.rescueAssignment.deleteMany({ where: { reportId: id } });
         await tx.resource.deleteMany({ where: { reportId: id } });
         await tx.lostPetMatch.deleteMany({ 
-          where: { OR: [{ reportId: id }, { matchedReportId: id }] } 
+          where: { matchedReportId: id } 
         });
         await tx.reportFlag.deleteMany({ where: { reportId: id } });
         
