@@ -123,6 +123,8 @@ type RawReport = {
   lng: number;
   colonia: string | null;
   photo: string | null;
+  activeAssignmentId?: string | null;
+  active_assignment_id?: string | null;
 };
 
 const conditionLabels: Record<string, string> = {
@@ -170,6 +172,7 @@ function mapReport(raw: RawReport): Report {
     description: raw.description ?? '',
     reportedAgo: timeAgo(raw.created_at),
     status: statusLabels[raw.status] ?? raw.status,
+    activeAssignmentId: raw.activeAssignmentId ?? raw.active_assignment_id ?? null,
   };
 }
 
@@ -631,6 +634,8 @@ export async function getMyReports(): Promise<Report[]> {
       description: String(raw.description ?? ''),
       reportedAgo: timeAgo(String(raw.created_at ?? raw.createdAt ?? '')),
       status: statusLabels[statusRaw] ?? (statusRaw || 'Activo'),
+      activeAssignmentId:
+        (raw.activeAssignmentId ?? raw.active_assignment_id ?? null) as string | null,
     };
   });
 }
@@ -1338,4 +1343,153 @@ export async function getAlly(id: string): Promise<Ally | null> {
     animals: animalsRaw.map((animal) => mapAllyAnimalLite(animal as Record<string, unknown>)),
     paymentInfo: mapAllyPaymentInfo(raw.paymentInfo ?? raw.payment_info),
   };
+}
+
+// --- Traslado en vivo tipo Uber (rescue_assignments) ---
+// Un voluntario traslada al animal hacia el aliado; el ciudadano que reportó, el
+// aliado destino y el admin ven su posición en vivo. Spec de Isabel (sockets).
+export type RescueStatus = 'accepted' | 'on_the_way' | 'arrived' | 'completed' | 'cancelled';
+
+export const rescueStatusLabels: Record<RescueStatus, string> = {
+  accepted: 'Caso aceptado',
+  on_the_way: 'En camino',
+  arrived: 'Llegó al destino',
+  completed: 'Traslado completado',
+  cancelled: 'Cancelado',
+};
+
+export type LatLng = { lat: number; lng: number };
+
+export type RescueAssignment = {
+  id: string;
+  status: RescueStatus;
+  statusLabel: string;
+  volunteer: { id: string; name: string; photoUrl: string | null } | null;
+  reportId: string;
+  animal: { id: string; name: string } | null;
+  origin: LatLng | null;
+  destination: { lat: number; lng: number; organizationName: string } | null;
+  currentLocation: { lat: number; lng: number; updatedAt: string } | null;
+};
+
+const rescueStatuses: RescueStatus[] = [
+  'accepted',
+  'on_the_way',
+  'arrived',
+  'completed',
+  'cancelled',
+];
+
+function mapLatLng(value: unknown): LatLng | null {
+  if (!value || typeof value !== 'object') return null;
+  const p = value as Record<string, unknown>;
+  const lat = Number(p.lat ?? p.latitude);
+  const lng = Number(p.lng ?? p.lon ?? p.longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return { lat, lng };
+}
+
+function mapRescueAssignment(raw: Record<string, unknown>): RescueAssignment {
+  const statusRaw = allyStr(raw.status);
+  const status = (rescueStatuses.includes(statusRaw as RescueStatus)
+    ? statusRaw
+    : 'accepted') as RescueStatus;
+  const vol =
+    raw.volunteer && typeof raw.volunteer === 'object'
+      ? (raw.volunteer as Record<string, unknown>)
+      : null;
+  const report =
+    raw.report && typeof raw.report === 'object'
+      ? (raw.report as Record<string, unknown>)
+      : null;
+  const animal =
+    raw.animal && typeof raw.animal === 'object' ? (raw.animal as Record<string, unknown>) : null;
+  const dest =
+    raw.destination && typeof raw.destination === 'object'
+      ? (raw.destination as Record<string, unknown>)
+      : null;
+  const destLL = mapLatLng(dest);
+  const destOrg =
+    dest && dest.organization && typeof dest.organization === 'object'
+      ? (dest.organization as Record<string, unknown>)
+      : null;
+  const cur =
+    raw.currentLocation && typeof raw.currentLocation === 'object'
+      ? (raw.currentLocation as Record<string, unknown>)
+      : null;
+  const curLL = mapLatLng(cur);
+
+  return {
+    id: allyStr(raw.id ?? raw._id),
+    status,
+    statusLabel: rescueStatusLabels[status] ?? status,
+    volunteer: vol
+      ? {
+          id: allyStr(vol.id),
+          name: allyStr(vol.name) || 'Voluntario',
+          photoUrl: typeof vol.photoUrl === 'string' && vol.photoUrl ? vol.photoUrl : null,
+        }
+      : null,
+    reportId: report ? allyStr(report.id) : allyStr(raw.reportId ?? raw.report_id),
+    animal: animal ? { id: allyStr(animal.id), name: allyStr(animal.name) } : null,
+    origin: mapLatLng(raw.origin),
+    destination: destLL
+      ? {
+          lat: destLL.lat,
+          lng: destLL.lng,
+          organizationName: destOrg ? allyStr(destOrg.name) : '',
+        }
+      : null,
+    currentLocation: curLL
+      ? { lat: curLL.lat, lng: curLL.lng, updatedAt: allyStr(cur?.updatedAt ?? cur?.updated_at) }
+      : null,
+  };
+}
+
+// Estado + ubicación del traslado para pintar el mapa en vivo. GET /rescue-assignments/:id
+export async function getRescueAssignment(id: string): Promise<RescueAssignment | null> {
+  const body = await requestRaw<Record<string, unknown> | null>(`/rescue-assignments/${id}`);
+  if (!body || typeof body !== 'object') return null;
+  const raw =
+    'data' in body && body.data && typeof body.data === 'object'
+      ? (body.data as Record<string, unknown>)
+      : body;
+  return mapRescueAssignment(raw);
+}
+
+// El voluntario avanza el estado del traslado. PATCH /rescue-assignments/:id { status }
+export async function updateRescueAssignmentStatus(
+  id: string,
+  status: RescueStatus,
+): Promise<void> {
+  await authedRaw(`/rescue-assignments/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+}
+
+// El voluntario comparte su GPS cada pocos segundos. POST /rescue-assignments/:id/location
+export async function postRescueLocation(id: string, location: LatLng): Promise<void> {
+  await authedRaw(`/rescue-assignments/${id}/location`, {
+    method: 'POST',
+    body: JSON.stringify(location),
+  });
+}
+
+// Traslados del propio voluntario (para saber cuáles seguir).
+// GET /users/rescue-assignments (ojo: es /users/, no /me/).
+export async function getMyRescueAssignments(status?: RescueStatus): Promise<RescueAssignment[]> {
+  const query = status ? `?status=${status}` : '';
+  const data = await authedRaw<Record<string, unknown>[]>(`/users/rescue-assignments${query}`);
+  return (data ?? []).map(mapRescueAssignment);
+}
+
+// El voluntario acepta un reporte y se vuelve el conductor del traslado.
+// POST /reports/:id/accept (sin body). Devuelve la asignación creada.
+export async function acceptReport(reportId: string): Promise<RescueAssignment | null> {
+  const raw = await authedRaw<Record<string, unknown> | null>(`/reports/${reportId}/accept`, {
+    method: 'POST',
+  });
+  if (!raw || typeof raw !== 'object') return null;
+  return mapRescueAssignment(raw as Record<string, unknown>);
 }

@@ -16,6 +16,7 @@ import { AllyProfilePage } from './pages/AllyProfilePage';
 import { LoginPage } from './pages/LoginPage';
 import { RegistroPage } from './pages/RegistroPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
+import { RescateEnVivoPage } from './pages/RescateEnVivoPage';
 import { AdminLayout } from './components/admin/AdminLayout';
 import { AdminHomePage } from './pages/admin/AdminHomePage';
 import { AdminReportsPage } from './pages/admin/AdminReportsPage';
@@ -46,6 +47,7 @@ function App() {
         <Route path="login" element={<LoginPage />} />
         <Route path="registro" element={<RegistroPage />} />
         <Route path="auth/callback" element={<AuthCallbackPage />} />
+        <Route path="rescate/:assignmentId" element={<RescateEnVivoPage />} />
         <Route element={<AppLayout />}>
           <Route path="mapa" element={<MapaPage />} />
           <Route path="reportar" element={<ReportarPage />} />
