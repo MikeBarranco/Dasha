@@ -7,8 +7,6 @@ services:
       POSTGRES_USER: admin_dasha
       POSTGRES_PASSWORD: ${DB_PASSWORD:-dasha_dev}
       POSTGRES_DB: dasha_staging
-    ports:
-      - '5432:5432'
     volumes:
       - dasha_db_data:/var/lib/postgresql/data
 

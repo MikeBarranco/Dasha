@@ -1,7 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dasha_super_secret_key_2026_fepro';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error('CRITICAL ERROR: JWT_SECRET must be defined in production environment variables.');
+}
+const SECRET_TO_USE = JWT_SECRET || 'dasha_super_secret_key_2026_fepro';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -16,17 +20,23 @@ declare global {
 export type AuthRequest = Request;
 
 export const requireAuth = (req: AuthRequest, res: Response, next: NextFunction): void => {
-  const authHeader = req.headers.authorization;
+  // Intentar leer de cookies primero, luego del header Authorization para retrocompatibilidad temporal
+  let token = req.cookies?.token;
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  if (!token) {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+    }
+  }
+
+  if (!token) {
     res.status(401).json({ status: 'error', message: 'No autorizado, se requiere token' });
     return;
   }
 
-  const token = authHeader.split(' ')[1];
-
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { id: string; role: string };
+    const decoded = jwt.verify(token, SECRET_TO_USE) as { id: string; role: string };
     req.user = decoded;
     next();
   } catch (error) {
