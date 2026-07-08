@@ -1,9 +1,22 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, Loader2, MapPin, Radio, PawPrint } from 'lucide-react';
+import { ChevronLeft, Loader2, MapPin, Radio, PawPrint, Navigation } from 'lucide-react';
 import { useRescueLive } from '../lib/useRescueLive';
-import { rescueStatusLabels } from '../lib/api';
+import { useAuth } from '../lib/useAuth';
+import {
+  rescueStatusLabels,
+  updateRescueAssignmentStatus,
+  postRescueLocation,
+  type RescueStatus,
+} from '../lib/api';
 import { Avatar } from '../components/ui/Avatar';
+
+// Siguiente paso que puede activar el conductor según el estado actual.
+const nextByStatus: Partial<Record<RescueStatus, { next: RescueStatus; label: string }>> = {
+  accepted: { next: 'on_the_way', label: 'Voy en camino' },
+  on_the_way: { next: 'arrived', label: 'Ya llegué al aliado' },
+  arrived: { next: 'completed', label: 'Entregado' },
+};
 
 // El mapa arrastra maplibre; se carga aparte para no engordar el bundle inicial.
 const RescueLiveMap = lazy(() =>
@@ -15,7 +28,37 @@ const RescueLiveMap = lazy(() =>
 export function RescateEnVivoPage() {
   const { assignmentId } = useParams<{ assignmentId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { assignment, position, status, connected, simulated } = useRescueLive(assignmentId);
+  const [pendingStatus, setPendingStatus] = useState<RescueStatus | null>(null);
+  const [advancing, setAdvancing] = useState(false);
+
+  const realAssignment = assignment ?? null;
+  const isDriver = Boolean(
+    user && realAssignment?.volunteer && user.id === realAssignment.volunteer.id,
+  );
+  const liveStatus = pendingStatus ?? status ?? realAssignment?.status ?? null;
+
+  // El conductor comparte su GPS en vivo mientras va en camino.
+  useEffect(() => {
+    if (!isDriver || !realAssignment || liveStatus !== 'on_the_way') return;
+    if (!navigator.geolocation) return;
+    let lastSent = 0;
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const now = Date.now();
+        if (now - lastSent < 4000) return;
+        lastSent = now;
+        void postRescueLocation(realAssignment.id, {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        });
+      },
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 },
+    );
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [isDriver, realAssignment, liveStatus]);
 
   if (assignment === undefined) {
     return (
@@ -47,10 +90,24 @@ export function RescateEnVivoPage() {
     );
   }
 
-  const currentStatus = status ?? assignment.status;
+  const currentStatus = liveStatus ?? assignment.status;
   const volunteer = assignment.volunteer;
   const orgName = assignment.destination?.organizationName;
   const animalName = assignment.animal?.name;
+  const step = nextByStatus[currentStatus];
+
+  const advance = async () => {
+    if (!step || advancing) return;
+    setAdvancing(true);
+    try {
+      await updateRescueAssignmentStatus(assignment.id, step.next);
+      setPendingStatus(step.next);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'No se pudo actualizar el estado.');
+    } finally {
+      setAdvancing(false);
+    }
+  };
 
   return (
     <div className="relative flex h-[100dvh] flex-col bg-lino">
@@ -100,7 +157,29 @@ export function RescateEnVivoPage() {
               <MapPin className="h-4 w-4 flex-shrink-0 text-cobalto" /> Destino: {orgName}
             </p>
           )}
-          {simulated && (
+
+          {isDriver && step && (
+            <button
+              type="button"
+              onClick={advance}
+              disabled={advancing}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-naranja py-3 font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+            >
+              <Navigation className="h-5 w-5" /> {advancing ? 'Guardando…' : step.label}
+            </button>
+          )}
+          {isDriver && currentStatus === 'on_the_way' && (
+            <p className="mt-2 text-center text-xs text-neutral-400">
+              Compartiendo tu ubicación en vivo…
+            </p>
+          )}
+          {isDriver && currentStatus === 'completed' && (
+            <p className="mt-2 text-center text-xs font-medium text-exito">
+              Traslado completado. ¡Gracias por ayudar!
+            </p>
+          )}
+
+          {simulated && !isDriver && (
             <p className="mt-2 text-xs text-neutral-400">
               Recorrido en demostración (aún sin GPS en vivo).
             </p>

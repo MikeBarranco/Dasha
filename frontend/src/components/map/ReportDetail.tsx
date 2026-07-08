@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { X, Navigation, Clock, MapPin, Maximize2, Radio } from 'lucide-react';
+import { X, Navigation, Clock, MapPin, Maximize2, Radio, HeartHandshake, HelpCircle } from 'lucide-react';
 import { ShareButton } from '../ui/ShareButton';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 import { useSheetDismiss } from '../../lib/useSheetDismiss';
+import { useAuth } from '../../lib/useAuth';
+import { acceptReport } from '../../lib/api';
 import type { Report, Severity } from '../../data/mockReports';
 
 const severityLabel: Record<Severity, string> = {
@@ -27,9 +29,29 @@ type ReportDetailProps = {
 export function ReportDetail({ report, onClose }: ReportDetailProps) {
   useLockBodyScroll();
   const navigate = useNavigate();
+  const { user: account } = useAuth();
   const [showPhoto, setShowPhoto] = useState(false);
+  const [accepting, setAccepting] = useState(false);
+  const [acceptError, setAcceptError] = useState<string | null>(null);
+  const [showVolInfo, setShowVolInfo] = useState(false);
   const { dragControls, scrollRef, onPointerDown, onPointerMove, onDragEnd } =
     useSheetDismiss(onClose);
+
+  const isVolunteer = account?.role === 'volunteer' || account?.role === 'admin';
+
+  const handleAccept = async () => {
+    if (accepting) return;
+    setAccepting(true);
+    setAcceptError(null);
+    try {
+      const assignment = await acceptReport(report.id);
+      onClose();
+      navigate(assignment?.id ? `/rescate/${assignment.id}` : '/mapa');
+    } catch (err) {
+      setAcceptError(err instanceof Error ? err.message : 'No se pudo aceptar el caso.');
+      setAccepting(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
@@ -123,6 +145,7 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
 
           <div className="mt-5">
             {report.activeAssignmentId ? (
+              // Ya hay un traslado en curso: cualquiera puede seguirlo en vivo.
               <button
                 type="button"
                 onClick={() => {
@@ -133,13 +156,48 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
               >
                 <Radio className="h-5 w-5" /> Ver rescate en vivo
               </button>
+            ) : isVolunteer ? (
+              // Voluntario aprobado (o admin): puede tomar el caso.
+              <>
+                <button
+                  type="button"
+                  onClick={handleAccept}
+                  disabled={accepting}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-naranja py-3 font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                >
+                  <Navigation className="h-5 w-5" /> {accepting ? 'Aceptando…' : 'Voy en camino'}
+                </button>
+                {acceptError && <p className="mt-2 text-sm text-alerta">{acceptError}</p>}
+              </>
             ) : (
-              <button
-                type="button"
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-naranja py-3 font-semibold text-white transition-opacity hover:opacity-90"
-              >
-                <Navigation className="h-5 w-5" /> Voy en camino
-              </button>
+              // Ciudadano o sin sesión: invitación a ser voluntario + ayuda.
+              <>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => navigate(account ? '/ser-voluntario' : '/login')}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-cobalto py-3 font-semibold text-white transition-opacity hover:opacity-90"
+                  >
+                    <HeartHandshake className="h-5 w-5" /> Conviértete en voluntario
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowVolInfo((value) => !value)}
+                    aria-label="¿Qué es ser voluntario?"
+                    aria-expanded={showVolInfo}
+                    className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-neutral-200 text-neutral-500 transition-colors hover:bg-neutral-50"
+                  >
+                    <HelpCircle className="h-5 w-5" />
+                  </button>
+                </div>
+                {showVolInfo && (
+                  <p className="mt-2 rounded-xl bg-neutral-50 p-3 text-xs leading-relaxed text-neutral-600">
+                    Un voluntario valida su identidad y puede tomar casos como este: recoge al
+                    animalito y lo lleva con un aliado (veterinaria o refugio). Tú decides cuándo
+                    ayudar; cualquiera puede volverse voluntario.
+                  </p>
+                )}
+              </>
             )}
           </div>
         </div>
