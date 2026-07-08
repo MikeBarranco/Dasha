@@ -20,14 +20,15 @@ router.get(
   (req, res) => {
     const user = req.user as any;
     const token = AuthService.generateToken(user);
+    const isProd = process.env.NODE_ENV === 'production';
     res.cookie('token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
-    // Redirigir al frontend con el token en la URL
-    res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}`);
+    // Redirigir al frontend SIN el token en la URL
+    res.redirect(`${process.env.FRONTEND_URL}/auth/callback`);
   }
 );
 
@@ -40,14 +41,15 @@ router.get(
   (req, res) => {
     const user = req.user as any;
     const token = AuthService.generateToken(user);
+    const isProd = process.env.NODE_ENV === 'production';
     res.cookie('token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
-    // Redirigir al frontend con el token en la URL
-    res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}`);
+    // Redirigir al frontend SIN el token en la URL
+    res.redirect(`${process.env.FRONTEND_URL}/auth/callback`);
   }
 );
 
