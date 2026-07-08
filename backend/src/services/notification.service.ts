@@ -65,7 +65,8 @@ export class NotificationService {
         body,
         type,
         referenceId,
-        referenceType
+        referenceType,
+        link
       }
     });
 

@@ -18,6 +18,11 @@ router.delete('/users/:id', AdminController.deleteUser);
 // ==========================================
 // REPORTES
 // ==========================================
+// GET /api/v1/admin/forum/reports (Mock)
+router.get('/forum/reports', (req, res) => {
+  res.json([]);
+});
+
 router.get('/reports', AdminController.getAllReports);
 router.patch('/reports/:id', AdminController.updateReport);
 router.delete('/reports/:id', AdminController.deleteReport);

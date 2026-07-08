@@ -125,6 +125,7 @@ export class ReportService {
       photoUrl: row.photo || null,
       description: row.description,
       status: statusStr,
+      activeAssignmentId: row.active_assignment_id || null,
       createdAt: row.created_at
     };
   }
@@ -152,7 +153,8 @@ export class ReportService {
         ST_X(r.location::geometry) as lng,
         ST_Y(r.location::geometry) as lat,
         c.name as colonia,
-        (SELECT url FROM report_photos rp WHERE rp.report_id = r.id ORDER BY rp.created_at ASC LIMIT 1) as photo
+        (SELECT url FROM report_photos rp WHERE rp.report_id = r.id ORDER BY rp.created_at ASC LIMIT 1) as photo,
+        (SELECT id FROM rescue_assignments ra WHERE ra.report_id = r.id AND ra.status IN ('accepted', 'on_the_way', 'arrived') LIMIT 1) as active_assignment_id
       FROM reports r
       LEFT JOIN colonies c ON r.colony_id = c.id
       WHERE ${whereClause}
@@ -173,7 +175,8 @@ export class ReportService {
         ST_X(r.location::geometry) as lng,
         ST_Y(r.location::geometry) as lat,
         c.name as colonia,
-        (SELECT url FROM report_photos rp WHERE rp.report_id = r.id ORDER BY rp.created_at ASC LIMIT 1) as photo
+        (SELECT url FROM report_photos rp WHERE rp.report_id = r.id ORDER BY rp.created_at ASC LIMIT 1) as photo,
+        (SELECT id FROM rescue_assignments ra WHERE ra.report_id = r.id AND ra.status IN ('accepted', 'on_the_way', 'arrived') LIMIT 1) as active_assignment_id
       FROM reports r
       LEFT JOIN colonies c ON r.colony_id = c.id
       WHERE r.id = ${id}::uuid

@@ -138,6 +138,29 @@ export class UserController {
     }
   }
 
+  static async getMyRescueAssignments(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      const { status } = req.query;
+
+      const assignments = await prisma.rescueAssignment.findMany({
+        where: {
+          volunteerId: userId,
+          ...(status ? { status: status as any } : {})
+        },
+        include: {
+          report: true,
+          destinationOrg: { select: { id: true, name: true } }
+        },
+        orderBy: { acceptedAt: 'desc' }
+      });
+
+      res.status(200).json(assignments);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async updateProfile(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = (req as any).user?.id;

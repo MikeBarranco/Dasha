@@ -210,11 +210,20 @@ export class AdminController {
       });
 
       if (currentReport && data.status && currentReport.status !== data.status) {
+        const statusMap: Record<string, string> = {
+          active: 'Activo',
+          in_progress: 'En Camino',
+          rescued: 'Rescatado',
+          closed: 'Cerrado'
+        };
+        const statusName = statusMap[data.status as string] || data.status;
+        const animalDesc = `${currentReport.species === 'dog' ? 'Perro' : (currentReport.species === 'cat' ? 'Gato' : 'Animal')} (${currentReport.primaryColor})`;
+
         const { NotificationService } = await import('../services/notification.service.js');
         await NotificationService.sendNotification({
           userId: currentReport.userId,
           title: 'Actualización de tu reporte',
-          body: `El estado de tu reporte ha cambiado a: ${data.status}.`,
+          body: `El estado de tu reporte de ${animalDesc} ha cambiado a: ${statusName}.`,
           type: 'status_change',
           referenceId: id,
           referenceType: 'report'

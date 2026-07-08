@@ -214,4 +214,19 @@ export class ForumController {
       next(error);
     }
   }
+
+  // POST /forum/posts/:id/report
+  static async reportPost(req: Request, res: Response, next: NextFunction) {
+    try {
+      const postId = req.params.id as string;
+      const { reason } = req.body;
+      const userId = (req as any).user?.id;
+
+      console.log(`[Foro] Post ${postId} reportado por ${userId}. Razón: ${reason}`);
+      
+      res.status(200).json({ message: 'Post reportado exitosamente' });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

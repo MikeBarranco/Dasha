@@ -43,7 +43,9 @@ export class OrganizationController {
           id: true,
           name: true,
           description: true,
+          slogan: true,
           logoUrl: true,
+          coverUrl: true,
           address: true,
           phone: true,
           whatsapp: true,
@@ -51,11 +53,15 @@ export class OrganizationController {
           schedule: true,
           orgType: true,
           isVerified: true,
+          bankName: true,
+          clabe: true,
+          holderName: true,
           // Empleados y sus perfiles de usuario
           employees: {
             where: { isVerified: true },
             select: {
               roleInOrg: true,
+              bio: true,
               user: {
                 select: {
                   name: true,
@@ -120,9 +126,27 @@ export class OrganizationController {
         lng = locationRes[0].lng;
       }
 
+      // Map data to match frontend expectations
+      const { employees, bankName, clabe, holderName, ...rest } = ally;
+
+      const team = employees.map(emp => ({
+        name: emp.user.name,
+        title: emp.roleInOrg === 'veterinarian' ? 'Veterinario' : (emp.roleInOrg === 'admin' ? 'Administrador' : 'Voluntario'),
+        photoUrl: emp.user.avatarUrl,
+        bio: emp.bio
+      }));
+
+      const paymentInfo = (bankName || clabe || holderName) ? {
+        bankName,
+        clabe,
+        holderName
+      } : null;
+
       // Formatear respuesta combinada
       res.status(200).json({
-        ...ally,
+        ...rest,
+        team,
+        paymentInfo,
         lat,
         lng
       });
@@ -482,6 +506,87 @@ export class OrganizationController {
   // ==========================================
   // PORTAL DE ALIADOS (CARTILLA E INGRESO)
   // ==========================================
+
+  // POST /me/organization/reports/:reportId/intake
+  static async intakeReport(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      const reportId = req.params.reportId as string;
+
+      // Buscar org a la que pertenece el usuario
+      const emp = await prisma.organizationEmployee.findFirst({
+        where: { userId, isVerified: true },
+        select: { organizationId: true }
+      });
+
+      if (!emp) {
+        res.status(403).json({ error: 'No perteneces a una organización' });
+        return;
+      }
+
+      // Validar reporte
+      const report = await prisma.report.findUnique({
+        where: { id: reportId },
+        include: { photos: true }
+      });
+
+      if (!report) {
+        res.status(404).json({ error: 'Reporte no encontrado' });
+        return;
+      }
+
+      await prisma.$transaction(async (tx) => {
+        // 1. Cambiar reporte a rescued
+        await tx.report.update({
+          where: { id: reportId },
+          data: { status: 'rescued' }
+        });
+
+        // 2. Si no tiene perfil, crearlo
+        const existingProfile = await tx.animalProfile.findUnique({ where: { reportId } });
+        if (!existingProfile) {
+          const profile = await tx.animalProfile.create({
+            data: {
+              reportId,
+              organizationId: emp.organizationId,
+              name: `Rescatado #${report.id.substring(0, 4)}`,
+              species: report.species,
+              status: 'in_treatment',
+              // Copy first photo if exists
+              photos: report.photos.length > 0 ? {
+                create: {
+                  url: report.photos[0].url,
+                  publicId: report.photos[0].publicId,
+                  orderIndex: 0
+                }
+              } : undefined
+            }
+          });
+
+          // 3. Crear primer timeline event
+          await tx.animalTimelineEvent.create({
+            data: {
+              animalId: profile.id,
+              date: new Date(),
+              type: 'admitted',
+              title: 'Ingreso a Rehabilitación',
+              description: 'El animal fue ingresado a la clínica para su evaluación y tratamiento.'
+            }
+          });
+        }
+        
+        // Finalizar asignaciones activas
+        await tx.rescueAssignment.updateMany({
+          where: { reportId, status: { in: ['accepted', 'on_the_way', 'arrived'] as any[] } },
+          data: { status: 'completed', completedAt: new Date() }
+        });
+      });
+
+      res.status(200).json({ message: 'Ingreso completado. Reporte marcado como rescatado y perfil creado.' });
+    } catch (error) {
+      next(error);
+    }
+  }
 
   /**
    * Ingresa un nuevo animal a la clínica y crea su perfil

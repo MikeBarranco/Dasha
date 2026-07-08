@@ -12,6 +12,7 @@ import lostPetRoutes from './lost-pet.routes';
 import changelogRoutes from './changelog.routes';
 import eventRoutes from './event.routes';
 import forumRoutes from './forum.routes';
+import rescueAssignmentRoutes from './rescue-assignment.routes';
 
 const router = Router();
 
@@ -28,6 +29,7 @@ router.use('/lost-pets', lostPetRoutes);
 router.use('/novedades', changelogRoutes);
 router.use('/events', eventRoutes);
 router.use('/forum', forumRoutes);
+router.use('/rescue-assignments', rescueAssignmentRoutes);
 
 router.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
