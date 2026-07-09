@@ -74,7 +74,7 @@ export function connectRescueRoom(assignmentId: string, handlers: RescueLiveHand
     const position = parsePosition(payload);
     if (position) handlers.onLocation?.(position);
   });
-  socket.on('rescue_status_changed', (payload: unknown) => {
+  socket.on('status_updated', (payload: unknown) => {
     const status = parseStatus(payload);
     if (status) handlers.onStatus?.(status);
   });
