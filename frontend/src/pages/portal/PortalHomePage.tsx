@@ -9,6 +9,8 @@ import {
   Clock,
   MapPin,
   Pencil,
+  Ambulance,
+  ChevronRight,
 } from 'lucide-react';
 import { Avatar } from '../../components/ui/Avatar';
 import { getAllies } from '../../lib/api';
@@ -107,6 +109,22 @@ export function PortalHomePage() {
         <StatCard icon={Users} value={team.length} label="Equipo" />
         <StatCard icon={HeartHandshake} value="—" label="Donaciones" />
       </section>
+
+      <Link
+        to="/portal/rescates"
+        className="flex items-center gap-3 rounded-2xl border border-cobalto/20 bg-cobalto/5 p-4 transition-colors hover:bg-cobalto/10"
+      >
+        <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-cobalto text-white">
+          <Ambulance className="h-5 w-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-base font-bold text-cobalto">Rescates entrantes</p>
+          <p className="text-xs text-neutral-500">
+            Revisa los animalitos que un voluntario lleva en camino e ingrésalos al llegar.
+          </p>
+        </div>
+        <ChevronRight className="h-5 w-5 flex-shrink-0 text-cobalto" />
+      </Link>
 
       <section className="rounded-2xl border border-neutral-200 bg-white p-4">
         <div className="flex items-center justify-between gap-2">

@@ -1493,3 +1493,104 @@ export async function acceptReport(reportId: string): Promise<RescueAssignment |
   if (!raw || typeof raw !== 'object') return null;
   return mapRescueAssignment(raw as Record<string, unknown>);
 }
+
+// --- Intake del aliado (cierre del flujo: reporte -> rehabilitación) ---
+// El aliado destino ve los rescates que un voluntario le lleva en camino y, cuando
+// llega el animalito, confirma la recepción ("Ingresar") para abrir su ficha.
+
+export type IncomingRescue = {
+  reportId: string;
+  assignmentId: string | null;
+  status: RescueStatus;
+  statusLabel: string;
+  species: 'perro' | 'gato';
+  condition: string;
+  description: string;
+  colonia: string;
+  photos: string[];
+  volunteer: { name: string; photoUrl: string | null } | null;
+  reportedAgo: string;
+};
+
+// Fotos tolerantes: pueden venir como ['url'], [{url}] o un solo 'photo'.
+function collectPhotos(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) =>
+        typeof item === 'string'
+          ? item
+          : item && typeof item === 'object'
+            ? allyStr((item as Record<string, unknown>).url)
+            : '',
+      )
+      .filter((url): url is string => Boolean(url));
+  }
+  if (typeof value === 'string' && value) return [value];
+  return [];
+}
+
+function mapIncomingRescue(raw: Record<string, unknown>): IncomingRescue {
+  // El backend puede anidar el reporte bajo `report` o mandarlo plano.
+  const report =
+    raw.report && typeof raw.report === 'object' ? (raw.report as Record<string, unknown>) : raw;
+
+  const statusRaw = allyStr(raw.status ?? report.status);
+  const status = (rescueStatuses.includes(statusRaw as RescueStatus)
+    ? statusRaw
+    : 'on_the_way') as RescueStatus;
+
+  const volRaw =
+    raw.volunteer && typeof raw.volunteer === 'object'
+      ? (raw.volunteer as Record<string, unknown>)
+      : report.volunteer && typeof report.volunteer === 'object'
+        ? (report.volunteer as Record<string, unknown>)
+        : null;
+  const volPhoto = volRaw ? (volRaw.photoUrl ?? volRaw.photo_url ?? volRaw.avatarUrl) : null;
+
+  const photos = collectPhotos(raw.photos ?? report.photos ?? report.photo);
+  const speciesRaw = allyStr(report.species);
+  const conditionRaw = allyStr(report.condition);
+  const created = allyStr(
+    report.created_at ?? report.createdAt ?? raw.created_at ?? raw.createdAt,
+  );
+
+  return {
+    reportId: allyStr(report.id ?? raw.reportId ?? raw.report_id ?? raw.id),
+    assignmentId:
+      allyStr(
+        raw.assignmentId ??
+          raw.assignment_id ??
+          report.activeAssignmentId ??
+          report.active_assignment_id,
+      ) || null,
+    status,
+    statusLabel: rescueStatusLabels[status] ?? status,
+    species: speciesRaw === 'cat' ? 'gato' : 'perro',
+    condition: conditionLabels[conditionRaw] ?? conditionRaw,
+    description: allyStr(report.description),
+    colonia: allyStr(report.colonia) || 'Sin colonia',
+    photos: photos.length > 0 ? photos : ['/placeholder-animal.svg'],
+    volunteer: volRaw
+      ? {
+          name: allyStr(volRaw.name) || 'Voluntario',
+          photoUrl: typeof volPhoto === 'string' && volPhoto ? volPhoto : null,
+        }
+      : null,
+    reportedAgo: created ? timeAgo(created) : '',
+  };
+}
+
+// Rescates que un voluntario lleva EN CAMINO hacia esta organización.
+// GET /organizations/portal/incoming-rescues (token del aliado).
+export async function getIncomingRescues(): Promise<IncomingRescue[]> {
+  const data = await authedRaw<Record<string, unknown>[]>(
+    '/organizations/portal/incoming-rescues',
+  );
+  return (data ?? []).map(mapIncomingRescue);
+}
+
+// El aliado confirma la recepción: el reporte pasa a rehabilitación y se abre su
+// ficha. POST /me/organization/reports/:id/intake (sin body).
+export async function intakeReport(reportId: string): Promise<void> {
+  await authedRaw(`/me/organization/reports/${reportId}/intake`, { method: 'POST' });
+}
