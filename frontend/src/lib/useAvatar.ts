@@ -1,26 +1,27 @@
 import { useEffect, useState } from 'react';
 import { defaultAvatar } from './avatars';
-import { getStoredUser } from './api';
+import { getStoredUser, setStoredUserAvatar } from './api';
 
 const KEY_PREFIX = 'dasha-avatar:';
 const CHANGE_EVENT = 'dasha-avatar-change';
 const AUTH_EVENT = 'dasha-auth-change';
 
-function storageKey(): string | null {
-  const user = getStoredUser();
-  return user ? `${KEY_PREFIX}${user.id}` : null;
-}
-
+// El avatar vive en la sesión (llega del backend en /auth y /me), así se ve igual
+// en cualquier dispositivo. localStorage queda como respaldo local por si una
+// respuesta vieja aún no trae avatarUrl.
 function readAvatar(): string {
-  const key = storageKey();
-  if (!key) return defaultAvatar;
-  return window.localStorage.getItem(key) ?? defaultAvatar;
+  const user = getStoredUser();
+  if (!user) return defaultAvatar;
+  if (user.avatarUrl) return user.avatarUrl;
+  return window.localStorage.getItem(`${KEY_PREFIX}${user.id}`) ?? defaultAvatar;
 }
 
-// Guarda el avatar de un usuario y avisa a la app. Se usa para sincronizar el
-// avatar que viene del backend (GET /me) entre dispositivos.
+// Sincroniza el avatar que llega del backend (GET /me) en la sesión y en el
+// respaldo local, y avisa a la app para repintar.
 export function setStoredAvatar(userId: string, url: string): void {
   window.localStorage.setItem(`${KEY_PREFIX}${userId}`, url);
+  const current = getStoredUser();
+  if (current && current.id === userId) setStoredUserAvatar(url);
   window.dispatchEvent(new Event(CHANGE_EVENT));
 }
 
@@ -38,9 +39,10 @@ export function useAvatar() {
   }, []);
 
   const setAvatar = (url: string) => {
-    const key = storageKey();
-    if (!key) return;
-    window.localStorage.setItem(key, url);
+    const user = getStoredUser();
+    if (!user) return;
+    window.localStorage.setItem(`${KEY_PREFIX}${user.id}`, url);
+    setStoredUserAvatar(url);
     window.dispatchEvent(new Event(CHANGE_EVENT));
   };
 
