@@ -81,6 +81,7 @@ router.delete('/novedades/:id', AdminController.deleteChangelogEntry);
 // ==========================================
 router.post('/notifications', AdminController.sendManualNotification);
 router.get('/notifications', AdminController.getManualNotificationsHistory);
+router.delete('/notifications/:id', AdminController.deleteManualNotification);
 // ==========================================
 // DENUNCIAS (FLAGS) Y MEDALLAS
 // ==========================================

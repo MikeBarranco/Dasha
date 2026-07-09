@@ -408,6 +408,7 @@ model Report {
   flags            ReportFlag[]
 
   @@map("reports")
+  @@index([status])
 }
 
 model ReportPhoto {
@@ -474,6 +475,7 @@ model RescueAssignment {
   volunteer User   @relation("RescueVolunteer", fields: [volunteerId], references: [id])
 
   @@map("rescue_assignments")
+  @@index([volunteerId, status])
 }
 
 model Organization {
@@ -942,6 +944,7 @@ model Notification {
   user User @relation(fields: [userId], references: [id])
 
   @@map("notifications")
+  @@index([userId, isRead])
 }
 
 model Colony {

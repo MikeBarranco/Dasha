@@ -111,4 +111,32 @@ export class NotificationService {
 
     return notif;
   }
+  static async sendPushToUsersAsync(userIds: string[], pushPayload: string) {
+    try {
+      // Find all subscriptions for these users
+      const subscriptions = await prisma.pushSubscription.findMany({
+        where: { userId: { in: userIds } }
+      });
+
+      const pushPromises = subscriptions.map(async (sub) => {
+        try {
+          const pushSubscription = {
+            endpoint: sub.endpoint,
+            keys: { p256dh: sub.p256dh, auth: sub.auth }
+          };
+          await webpush.sendNotification(pushSubscription, pushPayload);
+        } catch (error: any) {
+          if (error.statusCode === 410 || error.statusCode === 404) {
+            await prisma.pushSubscription.delete({ where: { id: sub.id } });
+          } else {
+            console.error('Error sending push to subscription:', sub.id, error);
+          }
+        }
+      });
+
+      await Promise.allSettled(pushPromises);
+    } catch (err) {
+      console.error('Error in sendPushToUsersAsync:', err);
+    }
+  }
 }

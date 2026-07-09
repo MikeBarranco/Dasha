@@ -16,6 +16,7 @@ router.get('/portal/reports/nearby', requireAuth, OrganizationController.getNear
 router.post('/reports/:reportId/offers', requireAuth, OrganizationController.offerResourceForReport);
 router.post('/reports/:reportId/rescue', requireAuth, OrganizationController.startRescueAssignment);
 router.post('/reports/:reportId/intake', requireAuth, OrganizationController.intakeReport);
+router.get('/portal/incoming-rescues', requireAuth, OrganizationController.getIncomingRescues);
 
 router.post('/portal/animals', requireAuth, OrganizationController.createPortalAnimal);
 router.post('/portal/animals/:animalId/records', requireAuth, OrganizationController.addPortalAnimalRecord);
