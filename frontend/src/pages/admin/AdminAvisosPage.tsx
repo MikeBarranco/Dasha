@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Send, Megaphone, CheckCircle2, AlertCircle, Link2 } from 'lucide-react';
+import { Send, Megaphone, CheckCircle2, AlertCircle, Link2, Trash2 } from 'lucide-react';
 import {
   getAdminNotifications,
   sendAdminNotification,
+  deleteAdminNotification,
   notificationAudienceOptions,
   type AdminNotification,
 } from '../../lib/adminApi';
@@ -20,6 +21,21 @@ export function AdminAvisosPage() {
   const [sent, setSent] = useState(false);
 
   const [history, setHistory] = useState<AdminNotification[] | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const removeNotification = async (id: string) => {
+    setDeletingId(id);
+    try {
+      await deleteAdminNotification(id);
+      setHistory((list) => (list ? list.filter((item) => item.id !== id) : list));
+      setConfirmDeleteId(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'No se pudo borrar el aviso. Intenta de nuevo.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const loadHistory = () => {
     getAdminNotifications()
@@ -220,9 +236,21 @@ export function AdminAvisosPage() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <p className="min-w-0 flex-1 font-medium text-neutral-800">{item.title}</p>
-                  <span className="flex-shrink-0 rounded-full bg-cobalto/10 px-2 py-0.5 text-xs font-medium text-cobalto">
-                    {item.audienceLabel}
-                  </span>
+                  <div className="flex flex-shrink-0 items-center gap-2">
+                    <span className="rounded-full bg-cobalto/10 px-2 py-0.5 text-xs font-medium text-cobalto">
+                      {item.audienceLabel}
+                    </span>
+                    {confirmDeleteId !== item.id && (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteId(item.id)}
+                        aria-label="Borrar aviso"
+                        className="rounded-lg p-1.5 text-neutral-400 transition-colors hover:bg-alerta/5 hover:text-alerta"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 {item.body && <p className="mt-1 text-sm text-neutral-600">{item.body}</p>}
                 <div className="mt-2 flex items-center gap-2 text-xs text-neutral-400">
@@ -234,6 +262,32 @@ export function AdminAvisosPage() {
                     </>
                   )}
                 </div>
+                {confirmDeleteId === item.id && (
+                  <div className="mt-3 rounded-xl border border-alerta/20 bg-alerta/5 p-3">
+                    <p className="text-xs text-neutral-600">
+                      Se borrará de tu historial y de la campanita de todos los usuarios que lo
+                      recibieron. Esta acción no se puede deshacer.
+                    </p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => removeNotification(item.id)}
+                        disabled={deletingId === item.id}
+                        className="rounded-lg bg-alerta px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                      >
+                        {deletingId === item.id ? 'Borrando…' : 'Sí, borrar'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteId(null)}
+                        disabled={deletingId === item.id}
+                        className="rounded-lg border border-neutral-200 px-3 py-1.5 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-50 disabled:opacity-60"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                )}
               </li>
             ))}
           </ul>

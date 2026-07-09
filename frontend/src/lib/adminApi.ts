@@ -766,6 +766,13 @@ export async function sendAdminNotification(input: AdminNotificationInput): Prom
   });
 }
 
+// Borra un aviso ya enviado: el backend elimina el registro del historial y lo
+// quita de la campanita/buzón de todos los usuarios que lo recibieron.
+// DELETE /admin/notifications/:id (id del registro del aviso).
+export async function deleteAdminNotification(id: string): Promise<void> {
+  await adminFetch(`/admin/notifications/${id}`, { method: 'DELETE' });
+}
+
 // NOVEDADES (changelog). Hoy la página pública de Novedades es estática
 // (data/novedades.ts). Estas funciones permiten administrarlas DESDE EL PANEL sin
 // tocar código. Spec para Isabel (pendientes-isabel.md, sección de Novedades):
