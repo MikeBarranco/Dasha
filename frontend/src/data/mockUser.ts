@@ -24,7 +24,7 @@ export const mockUser: UserProfile = {
   name: 'Ana Torres',
   role: 'Ciudadano',
   level: 2,
-  levelName: 'Vecina solidaria',
+  levelName: 'Rescatista de la comunidad',
   xp: 140,
   xpToNext: 250,
   stats: {

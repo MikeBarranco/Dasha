@@ -179,7 +179,7 @@ export function DonationSheet({ animal, initialMode = 'money', onClose }: Donati
                       }
                       inputMode="numeric"
                       placeholder="Otro"
-                      className="w-24 rounded-xl border border-neutral-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-cobalto/30"
+                      className="w-24 rounded-xl border border-neutral-200 px-3 py-2 text-base outline-none focus:ring-2 focus:ring-cobalto/30"
                     />
                   </div>
                 </div>
@@ -221,7 +221,7 @@ export function DonationSheet({ animal, initialMode = 'money', onClose }: Donati
                   maxLength={300}
                   rows={3}
                   placeholder="Ej. croquetas, transporte, hogar temporal, medicinas…"
-                  className="w-full resize-none rounded-xl border border-neutral-200 p-3 text-sm outline-none focus:ring-2 focus:ring-cobalto/30"
+                  className="w-full resize-none rounded-xl border border-neutral-200 p-3 text-base outline-none focus:ring-2 focus:ring-cobalto/30"
                 />
                 <p className="mt-2 text-xs text-neutral-400">
                   {animal.vet} te contactará para coordinar la entrega.

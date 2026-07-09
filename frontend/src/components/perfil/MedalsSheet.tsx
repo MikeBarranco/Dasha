@@ -115,7 +115,14 @@ export function MedalsSheet({ medals, initialSelectedId = null, onClose }: Medal
                 </span>
               )}
             </div>
-            <p className="mt-1 text-xs text-neutral-600">{selected.description}</p>
+            {selected.unlocked ? (
+              <p className="mt-1 text-xs text-neutral-600">{selected.description}</p>
+            ) : (
+              <p className="mt-1 text-xs text-neutral-600">
+                <span className="font-semibold text-neutral-700">Cómo conseguirla: </span>
+                {selected.description}
+              </p>
+            )}
           </div>
         )}
       </motion.div>

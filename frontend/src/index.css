@@ -27,6 +27,19 @@ input[type='password']::-ms-clear {
   display: none;
 }
 
+/* En iOS, enfocar un campo con fuente menor a 16px hace zoom y no regresa,
+   cortando la página. En móvil forzamos 16px en los controles de formulario para
+   evitarlo; en escritorio se respetan los tamaños de Tailwind. Los :not() suben la
+   especificidad por encima de las utilidades de una sola clase (text-sm/text-xs)
+   y excluyen controles que no reciben texto ni disparan el zoom. */
+@media (max-width: 640px) {
+  input:not([type='checkbox']):not([type='radio']):not([type='file']):not([type='range']),
+  textarea:not(:disabled),
+  select:not(:disabled) {
+    font-size: 16px;
+  }
+}
+
 .dasha-popup .maplibregl-popup-content {
   padding: 8px 12px;
   border-radius: 12px;
