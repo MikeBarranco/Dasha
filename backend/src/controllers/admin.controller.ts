@@ -23,6 +23,36 @@ export class AdminController {
     }
   }
 
+  static async deleteManualNotification(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      const log = await prisma.auditLog.findUnique({ where: { id } });
+      if (!log || log.action !== 'send_manual_notification') {
+        return res.status(404).json({ error: 'Aviso no encontrado' });
+      }
+
+      const { title, body } = log.metadata as any;
+
+      // Remove notifications from users' inboxes
+      if (title && body) {
+        await prisma.notification.deleteMany({
+          where: {
+            title: title,
+            body: body,
+            type: 'system'
+          }
+        });
+      }
+
+      // Delete the history record
+      await prisma.auditLog.delete({ where: { id } });
+
+      res.status(200).json({ message: 'Aviso eliminado correctamente de la historia y de los usuarios' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async deleteUser(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
@@ -884,7 +914,7 @@ export class AdminController {
             userId: u.id,
             title: `Nuevo Aviso: ${title}`,
             body: 'Toca para leer más información en la sección de Comunidad.',
-            type: 'announcement',
+            type: 'system',
             referenceId: entry.id,
             referenceType: 'changelog'
           });
@@ -969,15 +999,22 @@ export class AdminController {
       const targetUsers = await prisma.user.findMany({ where: whereClause, select: { id: true } });
       const { NotificationService } = await import('../services/notification.service.js');
 
-      for (const u of targetUsers) {
-        await NotificationService.sendNotification({
-          userId: u.id,
-          title,
-          body,
-          type: 'announcement',
-          link
-        });
-      }
+      // Bulk create notifications in DB
+      const notificationsData = targetUsers.map(u => ({
+        userId: u.id,
+        title,
+        body,
+        type: 'system' as any,
+        link
+      }));
+      await prisma.notification.createMany({ data: notificationsData });
+
+      // Run push notifications in background without awaiting
+      const userIds = targetUsers.map(u => u.id);
+      const pushPayload = JSON.stringify({ title, body, url: link || '/' });
+      NotificationService.sendPushToUsersAsync(userIds, pushPayload).catch(err => {
+        console.error('Error background bulk push:', err);
+      });
 
       // Guardar el historial en AuditLog
       const auditLog = await prisma.auditLog.create({

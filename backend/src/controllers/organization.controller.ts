@@ -29,6 +29,44 @@ export class OrganizationController {
     }
   }
 
+  // ========================================================
+  // INCOMING RESCUES
+  // ========================================================
+  static async getIncomingRescues(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user?.id;
+      if (!userId) return res.status(401).json({ error: 'No autorizado' });
+
+      const employee = await prisma.organizationEmployee.findFirst({
+        where: { userId }
+      });
+      if (!employee) return res.status(403).json({ error: 'No perteneces a ninguna organización' });
+
+      // Get reports assigned to this org that are currently in progress
+      const incoming = await prisma.report.findMany({
+        where: {
+          destinationOrgId: employee.organizationId,
+          status: 'in_progress'
+        },
+        include: {
+          volunteer: { select: { id: true, firstName: true, lastName: true, avatarUrl: true, phone: true } },
+          photos: { select: { url: true } },
+          rescues: {
+            where: { status: 'on_the_way' },
+            orderBy: { acceptedAt: 'desc' },
+            take: 1
+          }
+        }
+      });
+
+      // Parse geometry if necessary (currently findMany returns unsupported as undefined, 
+      // but usually the frontend relies on rescues.currentLocation for live tracking).
+      res.status(200).json(incoming);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   /**
    * Obtiene la ficha detallada de un aliado
    */
