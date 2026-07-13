@@ -39,6 +39,7 @@ import { PortalRescatesPage } from './pages/portal/PortalRescatesPage';
 import { PortalPerritosPage } from './pages/portal/PortalPerritosPage';
 import { PortalAdopcionesPage } from './pages/portal/PortalAdopcionesPage';
 import { PortalDonacionesPage } from './pages/portal/PortalDonacionesPage';
+import { PortalNecesidadesPage } from './pages/portal/PortalNecesidadesPage';
 
 function App() {
   // Disuasión ligera contra guardar fotos por clic derecho (hotlinking). No rompe
@@ -96,6 +97,7 @@ function App() {
           <Route path="perritos" element={<PortalPerritosPage />} />
           <Route path="adopciones" element={<PortalAdopcionesPage />} />
           <Route path="donaciones" element={<PortalDonacionesPage />} />
+          <Route path="necesidades" element={<PortalNecesidadesPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

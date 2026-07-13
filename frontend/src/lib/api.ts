@@ -1677,3 +1677,34 @@ export async function coverNeed(id: string, message?: string): Promise<void> {
     body: JSON.stringify(message ? { message } : {}),
   });
 }
+
+// El aliado gestiona sus necesidades desde el portal. GET /me/organization/needs
+export async function getMyOrgNeeds(): Promise<Need[]> {
+  const data = await authedRaw<Record<string, unknown>[]>('/me/organization/needs');
+  return (data ?? []).map(mapNeed);
+}
+
+export type CreateNeedInput = {
+  type: NeedType;
+  title: string;
+  description?: string;
+  quantity?: string;
+  animalId?: string;
+};
+
+// Crea una necesidad. POST /me/organization/needs
+export async function createNeed(input: CreateNeedInput): Promise<void> {
+  await authedRaw('/me/organization/needs', { method: 'POST', body: JSON.stringify(input) });
+}
+
+// El aliado marca una necesidad como entregada o la cancela.
+// PATCH /me/organization/needs/:id { status }
+export async function updateNeedStatus(
+  id: string,
+  status: 'delivered' | 'cancelled',
+): Promise<void> {
+  await authedRaw(`/me/organization/needs/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+}
