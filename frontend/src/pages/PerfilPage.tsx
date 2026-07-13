@@ -18,6 +18,7 @@ import {
 import { Avatar } from '../components/ui/Avatar';
 import { AvatarPicker } from '../components/perfil/AvatarPicker';
 import { MyReports } from '../components/perfil/MyReports';
+import { MyContributions } from '../components/perfil/MyContributions';
 import { PushToggle } from '../components/perfil/PushToggle';
 import { MedalsSheet } from '../components/perfil/MedalsSheet';
 import { AccountSettingsSheet } from '../components/perfil/AccountSettingsSheet';
@@ -247,6 +248,8 @@ export function PerfilPage() {
         ))}
 
       <MyReports />
+
+      <MyContributions />
 
       <div>
         <div className="mb-3 flex items-center justify-between">

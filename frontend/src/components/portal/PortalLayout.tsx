@@ -13,6 +13,7 @@ import {
   HeartHandshake,
   Home,
   Ambulance,
+  HandHeart,
 } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { useAuth } from '../../lib/useAuth';
@@ -33,6 +34,7 @@ const portalSections = [
   { to: '/portal/perritos', label: 'Mis perritos', icon: PawPrint, end: false },
   { to: '/portal/adopciones', label: 'Adopciones', icon: Home, end: false },
   { to: '/portal/donaciones', label: 'Donaciones', icon: HeartHandshake, end: false },
+  { to: '/portal/necesidades', label: 'Necesidades', icon: HandHeart, end: false },
 ];
 
 export function PortalLayout() {

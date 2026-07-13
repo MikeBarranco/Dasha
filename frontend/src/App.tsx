@@ -14,6 +14,7 @@ import { NovedadesPage } from './pages/NovedadesPage';
 import { SerVoluntarioPage } from './pages/SerVoluntarioPage';
 import { AliadosPage } from './pages/AliadosPage';
 import { AllyProfilePage } from './pages/AllyProfilePage';
+import { NecesidadesPage } from './pages/NecesidadesPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegistroPage } from './pages/RegistroPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
@@ -38,6 +39,7 @@ import { PortalRescatesPage } from './pages/portal/PortalRescatesPage';
 import { PortalPerritosPage } from './pages/portal/PortalPerritosPage';
 import { PortalAdopcionesPage } from './pages/portal/PortalAdopcionesPage';
 import { PortalDonacionesPage } from './pages/portal/PortalDonacionesPage';
+import { PortalNecesidadesPage } from './pages/portal/PortalNecesidadesPage';
 
 function App() {
   // Disuasión ligera contra guardar fotos por clic derecho (hotlinking). No rompe
@@ -72,6 +74,7 @@ function App() {
           <Route path="ser-voluntario" element={<SerVoluntarioPage />} />
           <Route path="aliados" element={<AliadosPage />} />
           <Route path="aliados/:id" element={<AllyProfilePage />} />
+          <Route path="necesidades" element={<NecesidadesPage />} />
         </Route>
         <Route path="admin" element={<AdminLayout />}>
           <Route index element={<AdminHomePage />} />
@@ -94,6 +97,7 @@ function App() {
           <Route path="perritos" element={<PortalPerritosPage />} />
           <Route path="adopciones" element={<PortalAdopcionesPage />} />
           <Route path="donaciones" element={<PortalDonacionesPage />} />
+          <Route path="necesidades" element={<PortalNecesidadesPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -1,7 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { MapPin, BadgeCheck, ChevronRight, AlertCircle, RefreshCw } from 'lucide-react';
+import {
+  MapPin,
+  BadgeCheck,
+  ChevronRight,
+  AlertCircle,
+  RefreshCw,
+  HeartHandshake,
+  ArrowRight,
+} from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { cn } from '../lib/cn';
 import { getAllies } from '../lib/api';
@@ -107,6 +115,22 @@ export function AliadosPage() {
         title="Aliados"
         subtitle="Veterinarias, refugios y asociaciones que ayudan a los animalitos en Puebla."
       />
+
+      <Link
+        to="/necesidades"
+        className="mb-4 flex items-center gap-3 rounded-2xl border border-cobalto/20 bg-cobalto/5 p-4 transition-colors hover:bg-cobalto/10"
+      >
+        <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-cobalto text-white">
+          <HeartHandshake className="h-5 w-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-base font-bold text-cobalto">Necesidades de los aliados</p>
+          <p className="text-xs text-neutral-500">
+            Cubre apoyos concretos: alimento, transporte, hogar temporal…
+          </p>
+        </div>
+        <ArrowRight className="h-5 w-5 flex-shrink-0 text-cobalto" />
+      </Link>
 
       <div className="mb-4 flex flex-wrap gap-2">
         {filters.map((option) => (
