@@ -29,6 +29,9 @@ export type AuthUser = {
   name: string;
   email: string;
   role: string;
+  // El avatar viaja en la sesión (backend) para que se vea igual en cualquier
+  // dispositivo; puede no venir en respuestas viejas, por eso es opcional.
+  avatarUrl?: string | null;
 };
 
 export function getStoredUser(): AuthUser | null {
@@ -42,6 +45,14 @@ export function setSession(user: AuthUser): void {
 
 export function clearSession(): void {
   localStorage.removeItem(USER_KEY);
+}
+
+// Actualiza solo el avatar del usuario en sesión (tras cambiarlo o al recibirlo
+// del backend), sin tocar el resto del perfil guardado.
+export function setStoredUserAvatar(url: string | null): void {
+  const user = getStoredUser();
+  if (!user) return;
+  localStorage.setItem(USER_KEY, JSON.stringify({ ...user, avatarUrl: url }));
 }
 
 type Envelope<T> = {

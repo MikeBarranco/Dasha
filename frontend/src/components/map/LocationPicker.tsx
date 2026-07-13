@@ -8,7 +8,7 @@ const PUEBLA_CENTER: [number, number] = [-98.2, 19.04];
 // Cuánto se puede mover el pin respecto a la ubicación real del usuario. Es un
 // ajuste FINO para afinar la posición (no para reportar desde otro lugar). Se
 // deja como constante para poder subirlo fácil si el GPS resulta muy impreciso.
-const MAX_ADJUST_METERS = 5;
+const MAX_ADJUST_METERS = 50;
 
 const baseStyle: StyleSpecification = {
   version: 8,
@@ -217,13 +217,20 @@ export function LocationPicker({ onChange, onStatusChange }: LocationPickerProps
       )}
 
       {status === 'ready' && (
-        <button
-          type="button"
-          onClick={recenter}
-          className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-sm font-medium text-cobalto shadow"
-        >
-          <LocateFixed className="h-4 w-4" /> Centrar
-        </button>
+        <>
+          <div className="pointer-events-none absolute inset-x-3 top-3 flex justify-center">
+            <p className="rounded-full bg-white/90 px-3 py-1.5 text-center text-xs font-medium text-neutral-600 shadow">
+              Arrastra el pin para afinar el lugar exacto
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={recenter}
+            className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-sm font-medium text-cobalto shadow"
+          >
+            <LocateFixed className="h-4 w-4" /> Centrar
+          </button>
+        </>
       )}
     </div>
   );

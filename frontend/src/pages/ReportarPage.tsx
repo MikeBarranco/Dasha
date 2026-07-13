@@ -18,7 +18,19 @@ type Urgency = 'critica' | 'media' | 'baja';
 
 const conditionOptions = ['Herido', 'Desnutrido', 'Enfermo', 'Asustado', 'Estable', 'Parece perdido'];
 const sizes = ['Pequeño', 'Mediano', 'Grande'];
-const colorOptions = ['Negro', 'Café', 'Blanco', 'Gris', 'Beige', 'Manchado'];
+const colorOptions = [
+  'Negro',
+  'Blanco',
+  'Café',
+  'Dorado',
+  'Gris',
+  'Beige',
+  'Naranja',
+  'Atigrado',
+  'Manchado',
+  'Bicolor',
+  'Tricolor',
+];
 
 const conditionSeverity: Record<string, Urgency> = {
   Herido: 'critica',
@@ -28,6 +40,10 @@ const conditionSeverity: Record<string, Urgency> = {
   Estable: 'baja',
   'Parece perdido': 'baja',
 };
+
+// "Estable" (sano) no puede convivir con señales de gravedad; al elegir una se
+// deselecciona la otra. "Parece perdido" sí combina con cualquiera.
+const gravityConditions = ['Herido', 'Desnutrido', 'Enfermo', 'Asustado'];
 
 const urgencyMeta: Record<Urgency, { label: string; chip: string }> = {
   critica: { label: 'Crítica', chip: 'bg-red-100 text-red-700' },
@@ -212,9 +228,16 @@ export function ReportarPage() {
   };
 
   const toggleCondition = (value: string) => {
-    setConditions((previous) =>
-      previous.includes(value) ? previous.filter((item) => item !== value) : [...previous, value],
-    );
+    setConditions((previous) => {
+      if (previous.includes(value)) return previous.filter((item) => item !== value);
+      if (value === 'Estable') {
+        return [...previous.filter((item) => !gravityConditions.includes(item)), value];
+      }
+      if (gravityConditions.includes(value)) {
+        return [...previous.filter((item) => item !== 'Estable'), value];
+      }
+      return [...previous, value];
+    });
   };
 
   const resetForm = () => {
@@ -250,9 +273,13 @@ export function ReportarPage() {
         size: size === 'Pequeño' ? 'small' : size === 'Grande' ? 'large' : 'medium',
         condition: conditions.includes('Herido')
           ? 'injured'
-          : conditions.includes('Enfermo')
-            ? 'sick'
-            : 'lost',
+          : conditions.includes('Desnutrido')
+            ? 'malnourished'
+            : conditions.includes('Enfermo')
+              ? 'sick'
+              : conditions.includes('Parece perdido')
+                ? 'lost'
+                : 'stable',
         urgency: urgency === 'critica' ? 'critical' : urgency === 'media' ? 'medium' : 'low',
         description,
         lat,
@@ -482,7 +509,7 @@ export function ReportarPage() {
               maxLength={500}
               rows={3}
               placeholder="Cuéntanos qué ves..."
-              className="w-full rounded-xl border border-neutral-200 p-3 text-sm focus:border-cobalto focus:outline-none"
+              className="w-full rounded-xl border border-neutral-200 p-3 text-base focus:border-cobalto focus:outline-none"
             />
           </div>
         </div>
@@ -491,8 +518,9 @@ export function ReportarPage() {
       {step === 3 && (
         <div>
           <p className="mb-3 text-sm text-neutral-600">
-            Usamos tu ubicación por GPS para marcar el lugar. Puedes ajustar el pin unos metros si
-            hace falta.
+            Usamos tu ubicación por GPS para marcar el lugar. Si el punto no quedó exacto,{' '}
+            <span className="font-medium text-neutral-700">arrastra el pin naranja</span> para
+            afinarlo.
           </p>
           <Suspense
             fallback={<div className="h-72 w-full animate-pulse rounded-2xl bg-neutral-100" />}

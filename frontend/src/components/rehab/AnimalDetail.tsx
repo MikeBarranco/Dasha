@@ -64,6 +64,14 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
     }
     setShowAdoption(true);
   };
+
+  const onDonate = (mode: 'money' | 'items') => {
+    if (!account) {
+      navigate('/login');
+      return;
+    }
+    setDonationMode(mode);
+  };
   const touchStartX = useRef(0);
   const multiTouch = useRef(false);
   const photo = animal.photos[activePhoto];
@@ -264,14 +272,14 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => setDonationMode('money')}
+                onClick={() => onDonate('money')}
                 className="flex items-center justify-center gap-2 rounded-xl bg-purpura py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
               >
                 <Heart className="h-5 w-5" /> Apadrinar
               </button>
               <button
                 type="button"
-                onClick={() => setDonationMode('items')}
+                onClick={() => onDonate('items')}
                 className="flex items-center justify-center gap-2 rounded-xl border border-neutral-200 py-3 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
               >
                 <Gift className="h-5 w-5" /> Donar cosas

@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Store,
   HelpCircle,
+  Compass,
   Download,
   type LucideIcon,
 } from 'lucide-react';
@@ -334,6 +335,13 @@ export function PerfilPage() {
           label="¿Cómo funciona Dasha?"
           onClick={() => openOnboarding()}
         />
+        {realRole === 'volunteer' && (
+          <RowButton
+            icon={Compass}
+            label="Ver guía de voluntario"
+            onClick={() => openOnboarding('volunteer')}
+          />
+        )}
         <RowButton
           icon={LogOut}
           label="Cerrar sesión"

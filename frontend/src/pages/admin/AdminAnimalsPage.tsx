@@ -116,33 +116,51 @@ export function AdminAnimalsPage() {
       </div>
 
       {animals !== null && !error && animals.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {[{ value: 'all', label: 'Todos' }, ...animalStatusOptions].map((option) => {
-            const active = statusFilter === option.value;
-            const count =
-              option.value === 'all' ? counts.total : (counts.byStatus[option.value] ?? 0);
-            return (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => setStatusFilter(option.value)}
-                className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
-                  active
-                    ? 'border-cobalto bg-cobalto text-white'
-                    : 'border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50'
-                }`}
-              >
-                {option.label}
-                <span
-                  className={`rounded-full px-1.5 text-xs font-semibold ${
-                    active ? 'bg-white/20 text-white' : 'bg-neutral-100 text-neutral-500'
+        <div className="mt-4">
+          {/* Filtro: desplegable en móvil, pastillas con conteo en escritorio */}
+          <select
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+            className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm font-medium text-neutral-700 outline-none focus:ring-2 focus:ring-cobalto/30 sm:hidden"
+          >
+            {[{ value: 'all', label: 'Todos' }, ...animalStatusOptions].map((option) => {
+              const count =
+                option.value === 'all' ? counts.total : (counts.byStatus[option.value] ?? 0);
+              return (
+                <option key={option.value} value={option.value}>
+                  {option.label} ({count})
+                </option>
+              );
+            })}
+          </select>
+          <div className="hidden flex-wrap gap-2 sm:flex">
+            {[{ value: 'all', label: 'Todos' }, ...animalStatusOptions].map((option) => {
+              const active = statusFilter === option.value;
+              const count =
+                option.value === 'all' ? counts.total : (counts.byStatus[option.value] ?? 0);
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setStatusFilter(option.value)}
+                  className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                    active
+                      ? 'border-cobalto bg-cobalto text-white'
+                      : 'border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50'
                   }`}
                 >
-                  {count}
-                </span>
-              </button>
-            );
-          })}
+                  {option.label}
+                  <span
+                    className={`rounded-full px-1.5 text-xs font-semibold ${
+                      active ? 'bg-white/20 text-white' : 'bg-neutral-100 text-neutral-500'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 

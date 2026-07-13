@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ScrollToTop } from './components/layout/ScrollToTop';
 import { AnalyticsTracker } from './components/layout/AnalyticsTracker';
@@ -39,6 +40,17 @@ import { PortalAdopcionesPage } from './pages/portal/PortalAdopcionesPage';
 import { PortalDonacionesPage } from './pages/portal/PortalDonacionesPage';
 
 function App() {
+  // Disuasión ligera contra guardar fotos por clic derecho (hotlinking). No rompe
+  // imágenes interactivas: solo cancela el menú contextual sobre <img>. El bloqueo
+  // real (dominios/marca de agua) se hace en Cloudinary, del lado de Isabel.
+  useEffect(() => {
+    const blockImageMenu = (event: MouseEvent) => {
+      if (event.target instanceof HTMLImageElement) event.preventDefault();
+    };
+    document.addEventListener('contextmenu', blockImageMenu);
+    return () => document.removeEventListener('contextmenu', blockImageMenu);
+  }, []);
+
   return (
     <BrowserRouter>
       <ScrollToTop />

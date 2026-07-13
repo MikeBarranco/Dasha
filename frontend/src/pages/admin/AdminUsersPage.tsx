@@ -155,22 +155,36 @@ export function AdminUsersPage() {
       </div>
 
       {users !== null && !error && users.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {roleFilters.map((filter) => (
-            <button
-              key={filter.value}
-              type="button"
-              onClick={() => setRoleFilter(filter.value)}
-              className={cn(
-                'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
-                roleFilter === filter.value
-                  ? 'bg-cobalto text-white'
-                  : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200',
-              )}
-            >
-              {filter.label}
-            </button>
-          ))}
+        <div className="mt-4">
+          {/* Filtro: desplegable en móvil, pastillas en escritorio */}
+          <select
+            value={roleFilter}
+            onChange={(event) => setRoleFilter(event.target.value)}
+            className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm font-medium text-neutral-700 outline-none focus:ring-2 focus:ring-cobalto/30 sm:hidden"
+          >
+            {roleFilters.map((filter) => (
+              <option key={filter.value} value={filter.value}>
+                {filter.label}
+              </option>
+            ))}
+          </select>
+          <div className="hidden flex-wrap gap-2 sm:flex">
+            {roleFilters.map((filter) => (
+              <button
+                key={filter.value}
+                type="button"
+                onClick={() => setRoleFilter(filter.value)}
+                className={cn(
+                  'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                  roleFilter === filter.value
+                    ? 'bg-cobalto text-white'
+                    : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200',
+                )}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
