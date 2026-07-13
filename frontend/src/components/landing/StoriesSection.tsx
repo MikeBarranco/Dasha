@@ -3,12 +3,12 @@ import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { Reveal } from './Reveal';
 import { getAnimals } from '../../lib/api';
-import { mockAnimals, type Animal } from '../../data/mockAnimals';
+import { type Animal } from '../../data/mockAnimals';
 
 // Cuarta sección: historias reales. Se alimenta de los animales que realmente
-// tengamos en rehabilitación (mismo origen que la página de Rehabilitación),
-// con los casos de ejemplo como respaldo. Muestra hasta 3; si hay más, se
-// enlaza a la página completa (pendiente: carrusel, anotado en el roadmap).
+// tengamos en rehabilitación (mismo origen que la página de Rehabilitación).
+// Muestra hasta 3; si hay más, se enlaza a la página completa. Si no hay datos
+// (o la API falla), la sección no se renderiza.
 export function StoriesSection() {
   const [animals, setAnimals] = useState<Animal[] | null>(null);
 
@@ -19,7 +19,8 @@ export function StoriesSection() {
         if (active) setAnimals(data);
       })
       .catch(() => {
-        if (active) setAnimals(mockAnimals);
+        // Sin datos de ejemplo: si falla, la sección simplemente no se muestra.
+        if (active) setAnimals([]);
       });
     return () => {
       active = false;

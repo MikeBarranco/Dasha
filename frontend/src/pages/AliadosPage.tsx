@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { MapPin, BadgeCheck, ChevronRight } from 'lucide-react';
+import { MapPin, BadgeCheck, ChevronRight, AlertCircle, RefreshCw } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { cn } from '../lib/cn';
 import { getAllies } from '../lib/api';
-import { mockAllies, allyTypeLabels, type Ally, type AllyType } from '../data/mockAllies';
+import { allyTypeLabels, type Ally, type AllyType } from '../data/mockAllies';
 
 const filters: { value: AllyType | 'todos'; label: string }[] = [
   { value: 'todos', label: 'Todos' },
@@ -61,22 +61,38 @@ function AllyCard({ ally, onOpen }: { ally: Ally; onOpen: () => void }) {
 
 export function AliadosPage() {
   const [allies, setAllies] = useState<Ally[] | null>(null);
+  const [error, setError] = useState(false);
   const [filter, setFilter] = useState<AllyType | 'todos'>('todos');
   const navigate = useNavigate();
 
-  useEffect(() => {
-    let active = true;
+  // Sin datos de ejemplo: si la API falla se muestra un error real, no aliados
+  // inventados.
+  const loadAllies = (isActive: () => boolean) => {
     getAllies()
       .then((data) => {
-        if (active) setAllies(data.length > 0 ? data : mockAllies);
+        if (isActive()) setAllies(data);
       })
       .catch(() => {
-        if (active) setAllies(mockAllies);
+        if (isActive()) {
+          setAllies([]);
+          setError(true);
+        }
       });
+  };
+
+  useEffect(() => {
+    let active = true;
+    loadAllies(() => active);
     return () => {
       active = false;
     };
   }, []);
+
+  const retryLoad = () => {
+    setError(false);
+    setAllies(null);
+    loadAllies(() => true);
+  };
 
   const filtered = useMemo(
     () => (allies ?? []).filter((ally) => filter === 'todos' || ally.orgType === filter),
@@ -115,6 +131,21 @@ export function AliadosPage() {
           {[0, 1, 2, 3].map((index) => (
             <div key={index} className="h-40 animate-pulse rounded-2xl bg-neutral-100" />
           ))}
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-alerta/20 bg-alerta/5 px-6 py-12 text-center">
+          <AlertCircle className="h-8 w-8 text-alerta" />
+          <p className="mt-3 font-semibold text-neutral-700">No pudimos cargar los aliados</p>
+          <p className="mt-1 max-w-xs text-sm text-neutral-500">
+            Revisa tu conexión e inténtalo de nuevo.
+          </p>
+          <button
+            type="button"
+            onClick={retryLoad}
+            className="mt-4 flex items-center gap-2 rounded-xl bg-cobalto px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+          >
+            <RefreshCw className="h-4 w-4" /> Reintentar
+          </button>
         </div>
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-neutral-300 py-12 text-center">

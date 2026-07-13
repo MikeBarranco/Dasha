@@ -17,6 +17,8 @@ import {
   Copy,
   Check,
   HeartHandshake,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react';
 import { ShareButton } from '../components/ui/ShareButton';
 import { Avatar } from '../components/ui/Avatar';
@@ -29,24 +31,58 @@ export function AllyProfilePage() {
   const navigate = useNavigate();
   // undefined = cargando; null = no encontrado; objeto = aliado.
   const [ally, setAlly] = useState<Ally | null | undefined>(() => (id ? undefined : null));
+  const [error, setError] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
+  const loadAlly = (isActive: () => boolean) => {
     if (!id) return;
-    let active = true;
     getAlly(id)
-      // Si el backend no lo trae (p. ej. vista previa con un aliado de ejemplo),
-      // caemos al mock por id para no mostrar "no encontrado" de más.
       .then((data) => {
-        if (active) setAlly(data ?? mockAllies.find((item) => item.id === id) ?? null);
+        if (!isActive()) return;
+        // La vista previa del portal (admin) usa un aliado de EJEMPLO por id: solo
+        // para ese caso conservamos el mock. Para un aliado real, si no viene, es
+        // "no encontrado" de verdad.
+        setAlly(data ?? mockAllies.find((item) => item.id === id) ?? null);
       })
       .catch(() => {
-        if (active) setAlly(mockAllies.find((item) => item.id === id) ?? null);
+        if (!isActive()) return;
+        const preview = mockAllies.find((item) => item.id === id);
+        if (preview) setAlly(preview);
+        else setError(true);
       });
+  };
+
+  useEffect(() => {
+    let active = true;
+    loadAlly(() => active);
     return () => {
       active = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  const retryLoad = () => {
+    setError(false);
+    setAlly(undefined);
+    loadAlly(() => true);
+  };
+
+  if (error) {
+    return (
+      <div className="mx-auto flex max-w-2xl flex-col items-center py-16 text-center">
+        <AlertCircle className="h-8 w-8 text-alerta" />
+        <p className="mt-3 font-semibold text-neutral-700">No pudimos cargar este aliado</p>
+        <p className="mt-1 text-sm text-neutral-500">Revisa tu conexión e inténtalo de nuevo.</p>
+        <button
+          type="button"
+          onClick={retryLoad}
+          className="mt-4 flex items-center gap-2 rounded-xl bg-cobalto px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+        >
+          <RefreshCw className="h-4 w-4" /> Reintentar
+        </button>
+      </div>
+    );
+  }
 
   if (ally === undefined) {
     return (

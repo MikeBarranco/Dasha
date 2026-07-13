@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, SlidersHorizontal } from 'lucide-react';
+import { Search, SlidersHorizontal, AlertCircle, RefreshCw } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { ProgressBar } from '../components/ui/ProgressBar';
 import { EmptyState } from '../components/ui/EmptyState';
 import { AnimalDetail } from '../components/rehab/AnimalDetail';
-import { mockAnimals, type Animal, type AnimalSize, type AnimalStatus } from '../data/mockAnimals';
+import { type Animal, type AnimalSize, type AnimalStatus } from '../data/mockAnimals';
 import { getAnimals } from '../lib/api';
 
 function normalize(value: string): string {
@@ -50,20 +50,36 @@ function FilterSelect({ value, onChange, children }: FilterSelectProps) {
 export function RehabilitacionPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [animals, setAnimals] = useState<Animal[] | null>(null);
+  const [error, setError] = useState(false);
+
+  // Sin datos de ejemplo: si la API falla se muestra un error real con Reintentar,
+  // no una lista inventada.
+  const loadAnimals = (isActive: () => boolean) => {
+    getAnimals()
+      .then((data) => {
+        if (isActive()) setAnimals(data);
+      })
+      .catch(() => {
+        if (isActive()) {
+          setAnimals([]);
+          setError(true);
+        }
+      });
+  };
 
   useEffect(() => {
     let active = true;
-    getAnimals()
-      .then((data) => {
-        if (active) setAnimals(data);
-      })
-      .catch(() => {
-        if (active) setAnimals(mockAnimals);
-      });
+    loadAnimals(() => active);
     return () => {
       active = false;
     };
   }, []);
+
+  const retryLoad = () => {
+    setError(false);
+    setAnimals(null);
+    loadAnimals(() => true);
+  };
 
   const list = animals ?? [];
   const animalParam = searchParams.get('animal');
@@ -223,6 +239,23 @@ export function RehabilitacionPage() {
           {[0, 1, 2].map((index) => (
             <div key={index} className="h-72 animate-pulse rounded-2xl bg-neutral-100" />
           ))}
+        </div>
+      ) : error ? (
+        <div className="mt-8 flex flex-col items-center justify-center rounded-2xl border border-alerta/20 bg-alerta/5 px-6 py-12 text-center">
+          <AlertCircle className="h-8 w-8 text-alerta" />
+          <p className="mt-3 font-semibold text-neutral-700">
+            No pudimos cargar los animalitos
+          </p>
+          <p className="mt-1 max-w-xs text-sm text-neutral-500">
+            Revisa tu conexión e inténtalo de nuevo.
+          </p>
+          <button
+            type="button"
+            onClick={retryLoad}
+            className="mt-4 flex items-center gap-2 rounded-xl bg-cobalto px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+          >
+            <RefreshCw className="h-4 w-4" /> Reintentar
+          </button>
         </div>
       ) : filtered.length === 0 ? (
         <div className="mt-8">
