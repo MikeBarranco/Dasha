@@ -11,11 +11,13 @@ import {
   Pencil,
   Ambulance,
   ChevronRight,
+  HelpCircle,
 } from 'lucide-react';
 import { Avatar } from '../../components/ui/Avatar';
 import { getAllies } from '../../lib/api';
 import { mockAllies, allyTypeLabels, type Ally } from '../../data/mockAllies';
 import { useAllyPortal } from '../../lib/useAllyPortal';
+import { openOnboarding } from '../../lib/onboarding';
 
 function StatCard({
   icon: Icon,
@@ -249,6 +251,14 @@ export function PortalHomePage() {
           transferencia.
         </p>
       </section>
+
+      <button
+        type="button"
+        onClick={() => openOnboarding('ally')}
+        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white py-3 text-sm font-medium text-neutral-600 transition-colors hover:bg-neutral-50"
+      >
+        <HelpCircle className="h-4 w-4" /> ¿Cómo funciona el portal?
+      </button>
     </div>
   );
 }

@@ -27,6 +27,8 @@ export function CameraCapture({
   const streamRef = useRef<MediaStream | null>(null);
   const [status, setStatus] = useState<CamStatus>('loading');
   const [facing, setFacing] = useState<'environment' | 'user'>(initialFacing);
+  // Se incrementa al tocar "Reintentar" para volver a pedir el permiso de cámara.
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -67,7 +69,12 @@ export function CameraCapture({
       active = false;
       stop();
     };
-  }, [facing]);
+  }, [facing, retry]);
+
+  const retryCamera = () => {
+    setStatus('loading');
+    setRetry((value) => value + 1);
+  };
 
   const capture = () => {
     const video = videoRef.current;
@@ -133,9 +140,17 @@ export function CameraCapture({
           <CameraOff className="h-8 w-8 text-alerta" />
           <p className="text-sm font-medium text-white">No pudimos abrir la cámara</p>
           <p className="max-w-xs text-xs text-neutral-400">
-            Activa el permiso de cámara de tu navegador. El reporte se toma en el momento, por eso
-            no se puede subir desde la galería.
+            Toca el candado (o la cámara) en la barra de direcciones de tu navegador, permite el
+            acceso y vuelve a intentar. El reporte se toma en el momento, por eso no se puede subir
+            desde la galería.
           </p>
+          <button
+            type="button"
+            onClick={retryCamera}
+            className="mt-1 rounded-full bg-white px-4 py-2 text-sm font-semibold text-neutral-800 transition-opacity hover:opacity-90"
+          >
+            Reintentar
+          </button>
         </div>
       )}
 

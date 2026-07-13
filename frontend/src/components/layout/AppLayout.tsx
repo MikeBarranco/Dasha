@@ -66,7 +66,7 @@ export function AppLayout() {
       </main>
       <BottomNav onReportClick={openChooser} />
       <ReportChooser open={chooserOpen} onClose={() => setChooserOpen(false)} />
-      <InstallBanner />
+      <InstallBanner suppressed={showOnboarding || showVolunteer} />
       <AnimatePresence>
         {showOnboarding && <Onboarding steps={appSteps} onClose={closeOnboarding} />}
       </AnimatePresence>

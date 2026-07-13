@@ -17,8 +17,9 @@ function wasDismissed(): boolean {
 // Banner que invita a instalar Dasha como app. Aparece tras unos segundos, una
 // sola vez (se recuerda si lo cierran), y solo si tiene sentido: no si ya está
 // instalada. En Android/escritorio lanza el instalador nativo; en iOS abre las
-// instrucciones para hacerlo desde Compartir.
-export function InstallBanner() {
+// instrucciones para hacerlo desde Compartir. `suppressed` lo oculta mientras hay
+// otra capa encima (ej. el onboarding) para no encimarse.
+export function InstallBanner({ suppressed = false }: { suppressed?: boolean }) {
   const { canPrompt, isIOS, isStandalone, promptInstall } = useInstallPrompt();
   const [dismissed, setDismissed] = useState(() => wasDismissed());
   const [showIOS, setShowIOS] = useState(false);
@@ -48,7 +49,7 @@ export function InstallBanner() {
   };
 
   const eligible = !isStandalone && (canPrompt || isIOS);
-  const visible = ready && eligible && !dismissed;
+  const visible = ready && eligible && !dismissed && !suppressed;
 
   return (
     <>
