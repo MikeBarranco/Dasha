@@ -27,6 +27,15 @@ input[type='password']::-ms-clear {
   display: none;
 }
 
+/* Disuasión ligera contra arrastrar/guardar fotos (hotlinking). NO se usa
+   pointer-events:none para no romper imágenes interactivas (tarjetas, covers,
+   marcadores); el clic derecho se cancela en JS (ver App). */
+img {
+  -webkit-user-drag: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 /* En iOS, enfocar un campo con fuente menor a 16px hace zoom y no regresa,
    cortando la página. En móvil forzamos 16px en los controles de formulario para
    evitarlo; en escritorio se respetan los tamaños de Tailwind. Los :not() suben la
