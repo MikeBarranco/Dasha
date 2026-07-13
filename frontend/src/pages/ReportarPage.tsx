@@ -1,14 +1,19 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 import { Camera, Dog, Cat, ArrowLeft, Check } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { cn } from '../lib/cn';
-import { createReport, type CreateReportInput } from '../lib/api';
+import { createReport, getNearbyReports, addSighting, type CreateReportInput } from '../lib/api';
 import { compressImage } from '../lib/image';
 import { useAuth } from '../lib/useAuth';
 import { CameraCapture } from '../components/map/CameraCapture';
 import { detectAnimal, preloadAnimalModel, type AnimalDetection } from '../lib/detectAnimal';
+import {
+  DuplicateCheckSheet,
+  type DuplicateCandidate,
+} from '../components/map/DuplicateCheckSheet';
+import type { Report } from '../data/mockReports';
 
 const LocationPicker = lazy(() =>
   import('../components/map/LocationPicker').then((module) => ({ default: module.LocationPicker })),
@@ -56,6 +61,19 @@ function computeUrgency(selected: string[]): Urgency | null {
   if (selected.some((value) => conditionSeverity[value] === 'critica')) return 'critica';
   if (selected.some((value) => conditionSeverity[value] === 'media')) return 'media';
   return 'baja';
+}
+
+// Distancia aproximada en metros entre dos puntos GPS (haversine), para detectar
+// reportes cercanos que podrían ser el mismo animal.
+function distanceMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000;
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
 }
 
 type SelectChipProps = {
@@ -140,6 +158,9 @@ export function ReportarPage() {
   const [lng, setLng] = useState(-98.2);
   const [locationReady, setLocationReady] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [dupes, setDupes] = useState<DuplicateCandidate[] | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [savingSightingId, setSavingSightingId] = useState<string | null>(null);
 
   const urgency = computeUrgency(conditions);
 
@@ -256,15 +277,9 @@ export function ReportarPage() {
     setHasCollar(false);
   };
 
-  const handleSubmit = async () => {
-    if (!photoBase64) {
-      alert('Espera un momento a que la foto termine de procesarse.');
-      return;
-    }
-    if (!locationReady) {
-      alert('Necesitamos tu ubicación para publicar el reporte. Activa el permiso e inténtalo.');
-      return;
-    }
+  const submitReport = async () => {
+    if (!photoBase64) return;
+    setDupes(null);
     setIsSubmitting(true);
     try {
       const payload: CreateReportInput = {
@@ -295,6 +310,52 @@ export function ReportarPage() {
       alert('Error al publicar: ' + (error.message || error));
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Antes de publicar, busca reportes activos del mismo tipo muy cerca (posibles
+  // duplicados del mismo animal). Si los hay, muestra la hoja de comparación; si no
+  // (o si el chequeo falla), publica directo sin estorbar.
+  const handlePublish = async () => {
+    if (!photoBase64) {
+      alert('Espera un momento a que la foto termine de procesarse.');
+      return;
+    }
+    if (!locationReady) {
+      alert('Necesitamos tu ubicación para publicar el reporte. Activa el permiso e inténtalo.');
+      return;
+    }
+    setChecking(true);
+    try {
+      const nearby = await getNearbyReports(lat, lng, 0.3);
+      const matches = nearby
+        .filter((report) => report.species === species && report.status !== 'Rescatado')
+        .map((report) => ({ report, distanceM: distanceMeters(lat, lng, report.lat, report.lng) }))
+        .filter((candidate) => candidate.distanceM <= 250)
+        .sort((a, b) => a.distanceM - b.distanceM)
+        .slice(0, 3);
+      if (matches.length > 0) {
+        setDupes(matches);
+        setChecking(false);
+        return;
+      }
+    } catch {
+      // Si el chequeo de cercanos falla, no bloqueamos el reporte.
+    }
+    setChecking(false);
+    await submitReport();
+  };
+
+  const confirmSighting = async (report: Report) => {
+    setSavingSightingId(report.id);
+    try {
+      await addSighting(report.id);
+      setDupes(null);
+      navigate(`/mapa?reporte=${report.id}`);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'No se pudo sumar el avistamiento.');
+    } finally {
+      setSavingSightingId(null);
     }
   };
 
@@ -561,17 +622,36 @@ export function ReportarPage() {
         ) : (
           <button
             type="button"
-            onClick={handleSubmit}
-            disabled={isSubmitting || !locationReady}
+            onClick={handlePublish}
+            disabled={isSubmitting || checking || !locationReady}
             className={cn(
               'flex-1 rounded-xl py-3 font-semibold text-white transition-opacity hover:opacity-90',
-              isSubmitting || !locationReady ? 'cursor-not-allowed bg-neutral-300' : 'bg-naranja',
+              isSubmitting || checking || !locationReady
+                ? 'cursor-not-allowed bg-neutral-300'
+                : 'bg-naranja',
             )}
           >
-            {isSubmitting ? 'Publicando...' : 'Publicar reporte'}
+            {checking ? 'Revisando…' : isSubmitting ? 'Publicando...' : 'Publicar reporte'}
           </button>
         )}
       </div>
+
+      <AnimatePresence>
+        {dupes && (
+          <DuplicateCheckSheet
+            newReport={{
+              photoUrl: photoUrl ?? '/placeholder-animal.svg',
+              speciesLabel: species === 'gato' ? 'Gato' : 'Perro',
+              condition: conditions.join(', '),
+            }}
+            candidates={dupes}
+            savingId={savingSightingId}
+            onSame={confirmSighting}
+            onDifferent={submitReport}
+            onClose={() => setDupes(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -1513,6 +1513,12 @@ export async function acceptReport(reportId: string): Promise<RescueAssignment |
   return mapRescueAssignment(raw as Record<string, unknown>);
 }
 
+// Suma un avistamiento a un reporte existente en vez de crear un duplicado.
+// POST /reports/:id/sighting (incrementa seen_count / last_seen_at en el backend).
+export async function addSighting(reportId: string): Promise<void> {
+  await authedRaw(`/reports/${reportId}/sighting`, { method: 'POST' });
+}
+
 // --- Intake del aliado (cierre del flujo: reporte -> rehabilitación) ---
 // El aliado destino ve los rescates que un voluntario le lleva en camino y, cuando
 // llega el animalito, confirma la recepción ("Ingresar") para abrir su ficha.
