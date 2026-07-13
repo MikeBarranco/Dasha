@@ -9,6 +9,7 @@ import type {
 } from '../data/mockAnimals';
 import type { Ally, AllyType, AllyMember, AllyAnimal, AllyPaymentInfo } from '../data/mockAllies';
 import { mockAllies } from '../data/mockAllies';
+import { demoNeeds, type Need, type NeedType, type NeedStatus } from '../data/needs';
 import type { LostPet } from '../data/mockLostPets';
 import { releaseNotes, type ReleaseNote } from '../data/novedades';
 import {
@@ -1604,4 +1605,75 @@ export async function getIncomingRescues(): Promise<IncomingRescue[]> {
 // ficha. POST /me/organization/reports/:id/intake (sin body).
 export async function intakeReport(reportId: string): Promise<void> {
   await authedRaw(`/me/organization/reports/${reportId}/intake`, { method: 'POST' });
+}
+
+// --- Tablero de necesidades de aliados (recursos de patrocinadores) ---
+// Los aliados publican necesidades (alimento, transporte, hogar temporal, etc.) y
+// cualquier usuario con sesión las cubre. Tipos alineados con `resources` de BD.txt.
+
+const needTypeValues: NeedType[] = [
+  'food',
+  'transport',
+  'foster',
+  'medical_service',
+  'supplies',
+  'other',
+];
+const needStatusValues: NeedStatus[] = ['open', 'covered', 'delivered'];
+
+function mapNeed(raw: Record<string, unknown>): Need {
+  const org =
+    raw.organization && typeof raw.organization === 'object'
+      ? (raw.organization as Record<string, unknown>)
+      : null;
+  const animal =
+    raw.animal && typeof raw.animal === 'object' ? (raw.animal as Record<string, unknown>) : null;
+  const coveredBy =
+    raw.coveredBy && typeof raw.coveredBy === 'object'
+      ? (raw.coveredBy as Record<string, unknown>)
+      : null;
+  const typeRaw = allyStr(raw.type ?? raw.resourceType ?? raw.resource_type);
+  const statusRaw = allyStr(raw.status);
+  const created = allyStr(raw.createdAt ?? raw.created_at);
+  return {
+    id: allyStr(raw.id ?? raw._id),
+    type: needTypeValues.includes(typeRaw as NeedType) ? (typeRaw as NeedType) : 'other',
+    title: allyStr(raw.title),
+    description: allyStr(raw.description),
+    quantity: allyStr(raw.quantity),
+    organizationName: org ? allyStr(org.name) : allyStr(raw.organizationName),
+    organizationId: org ? allyStr(org.id) : allyStr(raw.organizationId ?? raw.organization_id),
+    animalName: animal ? allyStr(animal.name) : allyStr(raw.animalName) || null,
+    status: needStatusValues.includes(statusRaw as NeedStatus) ? (statusRaw as NeedStatus) : 'open',
+    coveredByName: coveredBy ? allyStr(coveredBy.name) : allyStr(raw.coveredByName) || null,
+    createdAgo: created ? timeAgo(created) : '',
+  };
+}
+
+export type NeedsResult = { needs: Need[]; demo: boolean };
+
+// Tablero público de necesidades. GET /needs. Mientras el backend no exista,
+// devuelve datos de DEMOSTRACIÓN etiquetados (demo: true) para no dejar la pantalla
+// vacía; en cuanto el endpoint responda, usa datos reales (demo: false).
+export async function getActiveNeeds(): Promise<NeedsResult> {
+  try {
+    const body = await requestRaw<unknown>('/needs');
+    const list = Array.isArray(body)
+      ? (body as unknown[])
+      : body && typeof body === 'object' && Array.isArray((body as Record<string, unknown>).data)
+        ? ((body as Record<string, unknown>).data as unknown[])
+        : null;
+    if (!list) return { needs: demoNeeds, demo: true };
+    return { needs: list.map((item) => mapNeed(item as Record<string, unknown>)), demo: false };
+  } catch {
+    return { needs: demoNeeds, demo: true };
+  }
+}
+
+// Un usuario con sesión se compromete a cubrir una necesidad. POST /needs/:id/cover.
+export async function coverNeed(id: string, message?: string): Promise<void> {
+  await authedRaw(`/needs/${id}/cover`, {
+    method: 'POST',
+    body: JSON.stringify(message ? { message } : {}),
+  });
 }
