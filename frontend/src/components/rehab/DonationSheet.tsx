@@ -63,15 +63,15 @@ export function DonationSheet({ animal, initialMode = 'money', onClose }: Donati
 
     setSubmitting(true);
     // El apoyo real se hace por fuera (transferencia / entrega). Registramos el
-    // comprobante para que el aliado lo confirme; si el backend aún no existe, no
-    // bloqueamos el agradecimiento al donante.
+    // comprobante para que el aliado lo confirme; solo agradecemos si el registro
+    // se guardó de verdad, y si falla mostramos el error real.
     try {
       await createDonation(animal.id, input);
-    } catch {
-      /* pendiente de backend: no bloqueamos al donante */
+      setDone(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo registrar tu apoyo. Intenta de nuevo.');
     } finally {
       setSubmitting(false);
-      setDone(true);
     }
   };
 
