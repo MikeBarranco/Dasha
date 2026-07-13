@@ -27,7 +27,7 @@ export class AuthService {
         email: data.email,
         passwordHash,
       },
-      select: { id: true, name: true, email: true, role: true },
+      select: { id: true, name: true, email: true, role: true, avatarUrl: true },
     });
 
     const token = jwt.sign({ id: user.id, role: user.role }, SECRET_TO_USE, {
@@ -61,6 +61,7 @@ export class AuthService {
       name: user.name,
       email: user.email,
       role: user.role,
+      avatarUrl: user.avatarUrl,
     };
 
     return { user: userWithoutPassword, token };

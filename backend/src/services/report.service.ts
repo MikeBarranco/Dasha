@@ -18,6 +18,9 @@ export class ReportService {
           size: data.size,
           condition: data.condition,
           urgency: data.urgency,
+          isAggressive: data.isAggressive,
+          hasCollar: data.hasCollar,
+          isMoving: data.isMoving,
           description: data.description || '',
           // Insertamos las fotos en la misma transacción (relación)
           photos: {
