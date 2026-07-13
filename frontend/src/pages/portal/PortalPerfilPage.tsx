@@ -40,12 +40,15 @@ export function PortalPerfilPage() {
     let active = true;
     getAllies()
       .then((data) => {
-        const list = data.length > 0 ? data : mockAllies;
-        const found =
-          list.find((item) => item.id === ctx.organizationId) ??
-          mockAllies.find((item) => item.id === ctx.organizationId) ??
-          null;
         if (!active) return;
+        const real = data.find((item) => item.id === ctx.organizationId) ?? null;
+        // El mock solo aplica en la vista previa (admin); un aliado real ve su
+        // organización real, no una de ejemplo.
+        const found =
+          real ??
+          (ctx.preview
+            ? (mockAllies.find((item) => item.id === ctx.organizationId) ?? null)
+            : null);
         setOrg(found);
         if (found) {
           setName(found.name ?? '');
@@ -64,7 +67,7 @@ export function PortalPerfilPage() {
     return () => {
       active = false;
     };
-  }, [ctx.organizationId]);
+  }, [ctx.organizationId, ctx.preview]);
 
   const pickImage = async (
     files: FileList | null,

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { CountUp } from '../components/ui/CountUp';
 import { ReportDetail } from '../components/map/ReportDetail';
@@ -16,8 +17,8 @@ import {
 } from '../lib/reportFilters';
 import { MapModeSwitch } from '../components/map/MapModeSwitch';
 import { AllyFilters } from '../components/map/AllyFilters';
-import { mockReports, type Report } from '../data/mockReports';
-import { mockAllies, type Ally, type AllyType } from '../data/mockAllies';
+import { type Report } from '../data/mockReports';
+import { type Ally, type AllyType } from '../data/mockAllies';
 import { type LostPet } from '../data/mockLostPets';
 import { type MapMode } from '../lib/mapMode';
 import { getReports, getStats, getAllies, getLostPets, type Stats } from '../lib/api';
@@ -47,44 +48,59 @@ export function MapaPage() {
   const [listFocusAlly, setListFocusAlly] = useState<Ally | null>(null);
   const [focusLostPet, setFocusLostPet] = useState<LostPet | null>(null);
   const [detailLostPet, setDetailLostPet] = useState<LostPet | null>(null);
+  const [reportsError, setReportsError] = useState(false);
 
   const filteredReports = useMemo(
     () => (reports ? applyReportFilters(reports, filters) : null),
     [reports, filters],
   );
 
-  useEffect(() => {
-    let active = true;
+  // Sin datos de ejemplo: si la API falla, se muestran estados vacíos/errores
+  // reales (nunca reportes o aliados inventados) para que se note si algo no responde.
+  const fetchAll = (isActive: () => boolean) => {
     getReports()
       .then((data) => {
-        if (active) setReports(data);
+        if (isActive()) setReports(data);
       })
       .catch(() => {
-        if (active) setReports(mockReports);
+        if (isActive()) {
+          setReports([]);
+          setReportsError(true);
+        }
       });
     getStats()
       .then((data) => {
-        if (active) setStats(data);
+        if (isActive()) setStats(data);
       })
       .catch(() => {});
     getAllies()
       .then((data) => {
-        if (active) setAllies(data.length > 0 ? data : mockAllies);
+        if (isActive()) setAllies(data);
       })
       .catch(() => {
-        if (active) setAllies(mockAllies);
+        if (isActive()) setAllies([]);
       });
     getLostPets()
       .then((data) => {
-        if (active) setLostPets(data);
+        if (isActive()) setLostPets(data);
       })
       .catch(() => {
-        if (active) setLostPets([]);
+        if (isActive()) setLostPets([]);
       });
+  };
+
+  useEffect(() => {
+    let active = true;
+    fetchAll(() => active);
     return () => {
       active = false;
     };
   }, []);
+
+  const retryLoad = () => {
+    setReportsError(false);
+    fetchAll(() => true);
+  };
 
   const reportId = searchParams.get('reporte');
   const selectedReport = reportId
@@ -219,6 +235,22 @@ export function MapaPage() {
           </motion.div>
         ))}
       </div>
+
+      {reportsError && (
+        <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-alerta/20 bg-alerta/5 px-4 py-3">
+          <AlertCircle className="h-5 w-5 flex-shrink-0 text-alerta" />
+          <p className="min-w-0 flex-1 text-sm text-neutral-700">
+            No pudimos cargar los reportes. Revisa tu conexión e inténtalo de nuevo.
+          </p>
+          <button
+            type="button"
+            onClick={retryLoad}
+            className="flex items-center gap-1.5 rounded-xl bg-cobalto px-3 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+          >
+            <RefreshCw className="h-4 w-4" /> Reintentar
+          </button>
+        </div>
+      )}
 
       <div className="relative z-30 mt-4 flex items-start justify-between gap-3">
         <MapModeSwitch mode={mapMode} onChange={changeMode} />

@@ -45,20 +45,27 @@ export function PortalHomePage() {
     let active = true;
     getAllies()
       .then((data) => {
-        const list = data.length > 0 ? data : mockAllies;
-        const found =
-          list.find((item) => item.id === ctx.organizationId) ??
-          mockAllies.find((item) => item.id === ctx.organizationId) ??
-          null;
-        if (active) setAlly(found);
+        if (!active) return;
+        const real = data.find((item) => item.id === ctx.organizationId) ?? null;
+        // El mock solo aplica en la vista previa (admin); un aliado real ve su
+        // organización real o "no encontrada", nunca una de ejemplo.
+        setAlly(
+          real ??
+            (ctx.preview
+              ? (mockAllies.find((item) => item.id === ctx.organizationId) ?? null)
+              : null),
+        );
       })
       .catch(() => {
-        if (active) setAlly(mockAllies.find((item) => item.id === ctx.organizationId) ?? null);
+        if (!active) return;
+        setAlly(
+          ctx.preview ? (mockAllies.find((item) => item.id === ctx.organizationId) ?? null) : null,
+        );
       });
     return () => {
       active = false;
     };
-  }, [ctx.organizationId]);
+  }, [ctx.organizationId, ctx.preview]);
 
   if (ally === undefined) {
     return (
