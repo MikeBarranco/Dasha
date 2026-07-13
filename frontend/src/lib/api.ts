@@ -9,7 +9,14 @@ import type {
 } from '../data/mockAnimals';
 import type { Ally, AllyType, AllyMember, AllyAnimal, AllyPaymentInfo } from '../data/mockAllies';
 import { mockAllies } from '../data/mockAllies';
-import { demoNeeds, type Need, type NeedType, type NeedStatus } from '../data/needs';
+import {
+  demoNeeds,
+  demoContributions,
+  type Need,
+  type NeedType,
+  type NeedStatus,
+  type Contribution,
+} from '../data/needs';
 import type { LostPet } from '../data/mockLostPets';
 import { releaseNotes, type ReleaseNote } from '../data/novedades';
 import {
@@ -1707,4 +1714,35 @@ export async function updateNeedStatus(
     method: 'PATCH',
     body: JSON.stringify({ status }),
   });
+}
+
+function mapContribution(raw: Record<string, unknown>): Contribution {
+  const org =
+    raw.organization && typeof raw.organization === 'object'
+      ? (raw.organization as Record<string, unknown>)
+      : null;
+  const typeRaw = allyStr(raw.type ?? raw.resourceType ?? raw.resource_type);
+  const statusRaw = allyStr(raw.status);
+  const created = allyStr(raw.createdAt ?? raw.created_at);
+  return {
+    id: allyStr(raw.id ?? raw._id),
+    type: needTypeValues.includes(typeRaw as NeedType) ? (typeRaw as NeedType) : 'other',
+    title: allyStr(raw.title),
+    organizationName: org ? allyStr(org.name) : allyStr(raw.organizationName),
+    status: statusRaw === 'delivered' ? 'delivered' : 'covered',
+    createdAgo: created ? timeAgo(created) : '',
+  };
+}
+
+export type ContributionsResult = { items: Contribution[]; demo: boolean };
+
+// Aportes del usuario (necesidades que ha cubierto) para "Mis aportes" del perfil.
+// GET /me/contributions. Si el endpoint aún no existe, cae a demo etiquetada.
+export async function getMyContributions(): Promise<ContributionsResult> {
+  try {
+    const data = await authedRaw<Record<string, unknown>[]>('/me/contributions');
+    return { items: (data ?? []).map(mapContribution), demo: false };
+  } catch {
+    return { items: demoContributions, demo: true };
+  }
 }

@@ -31,6 +31,52 @@ export type Need = {
   createdAgo: string;
 };
 
+// Aportes del usuario (necesidades que ha cubierto) para la sección "Mis aportes"
+// del perfil. Demo etiquetada mientras el backend no exista.
+export type Contribution = {
+  id: string;
+  type: NeedType;
+  title: string;
+  organizationName: string;
+  status: 'covered' | 'delivered';
+  createdAgo: string;
+};
+
+export const demoContributions: Contribution[] = [
+  {
+    id: 'c1',
+    type: 'food',
+    title: 'Croquetas para cachorros',
+    organizationName: 'Refugio Huellitas',
+    status: 'delivered',
+    createdAgo: 'hace 1 sem',
+  },
+  {
+    id: 'c2',
+    type: 'transport',
+    title: 'Traslado a la veterinaria',
+    organizationName: 'Patitas al Rescate',
+    status: 'covered',
+    createdAgo: 'hace 2 d',
+  },
+  {
+    id: 'c3',
+    type: 'supplies',
+    title: 'Cobijas y jaulas',
+    organizationName: 'Gatitos Puebla',
+    status: 'delivered',
+    createdAgo: 'hace 3 sem',
+  },
+  {
+    id: 'c4',
+    type: 'medical_service',
+    title: 'Consulta veterinaria donada',
+    organizationName: 'Refugio Huellitas',
+    status: 'delivered',
+    createdAgo: 'hace 1 mes',
+  },
+];
+
 export const demoNeeds: Need[] = [
   {
     id: 'demo-1',
