@@ -4,7 +4,10 @@ import { requireAuth } from '../middlewares/auth.middleware';
 
 const router = Router();
 
-// POST /api/v1/uploads/signature (Protegido, solo usuarios logueados pueden subir fotos)
+// Endpoint que devuelve la firma y los parámetros para subir a Cloudinary
 router.post('/signature', requireAuth, UploadController.getSignature);
+
+// Proxy para agregar marca de agua
+router.get('/proxy', UploadController.proxyImage);
 
 export default router;

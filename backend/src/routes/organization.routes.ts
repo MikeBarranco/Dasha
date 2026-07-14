@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { OrganizationController } from '../controllers/organization.controller';
+import { NeedController } from '../controllers/need.controller';
 import { requireAuth } from '../middlewares/auth.middleware';
 
 const router = Router();
@@ -31,12 +32,18 @@ router.patch('/portal/donations/:donationId/approve', requireAuth, OrganizationC
 router.patch('/portal/donations/:donationId/reject', requireAuth, OrganizationController.rejectPortalDonation);
 
 // ==========================================
-// DIRECTORIO PÚBLICO
+// DIRECTORIO PUBLICO
 // ==========================================
-// GET /api/v1/allies (Pública, obtiene aliados para el mapa)
+// GET /api/v1/allies (Publica, obtiene aliados para el mapa)
 router.get('/', OrganizationController.getAllies);
 
-// GET /api/v1/allies/:id (Pública, ficha detallada del aliado)
+// GET /api/v1/allies/:id (Publica, ficha detallada del aliado)
 router.get('/:id', OrganizationController.getAllyById);
+
+// GET /api/v1/organizations/:id/needs (Listar necesidades de una org especifica)
+router.get('/:id/needs', NeedController.getOrganizationNeeds);
+
+// POST /api/v1/organizations/:id/needs (Crear necesidad para una org)
+router.post('/:id/needs', requireAuth, NeedController.createNeed);
 
 export default router;

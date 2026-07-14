@@ -36,17 +36,11 @@ app.use(helmet());
 app.use(morgan('dev'));
 app.use(cookieParser());
 
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  limit: 200, // Límite por IP
-  standardHeaders: 'draft-7',
-  legacyHeaders: false,
-  message: { status: 'error', message: 'Demasiadas peticiones desde esta IP, por favor intenta más tarde.' }
-});
+import { csrfProtection } from './middlewares/csrf.middleware';
 
-// Aplicar rate limiting a las rutas de API
-app.use('/api/', apiLimiter);
 
+
+app.use(csrfProtection);
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ limit: '2mb', extended: true }));
 
@@ -73,13 +67,59 @@ const io = new Server(server, {
 
 app.set('io', io); // Make io accessible in controllers via req.app.get('io')
 
+import jwt from 'jsonwebtoken';
+import { prisma } from './config/db';
+
+const SECRET_TO_USE = process.env.JWT_SECRET as string;
+
+io.use((socket, next) => {
+  const cookieStr = socket.handshake.headers.cookie;
+  if (!cookieStr) return next(new Error('Authentication error'));
+  const tokenMatch = cookieStr.match(/(?:^|;\s*)token=([^;]*)/);
+  if (!tokenMatch) return next(new Error('Authentication error'));
+  
+  try {
+    const decoded = jwt.verify(tokenMatch[1], SECRET_TO_USE) as any;
+    (socket as any).user = decoded;
+    next();
+  } catch (err) {
+    next(new Error('Authentication error'));
+  }
+});
+
 io.on('connection', (socket) => {
   console.log('⚡ Socket connected:', socket.id);
   
   // Join a specific rescue assignment room
-  socket.on('join_rescue', (rescueId: string) => {
-    socket.join(`rescue:${rescueId}`);
-    console.log(`Socket ${socket.id} joined room rescue:${rescueId}`);
+  socket.on('join_rescue', async (rescueId: string) => {
+    const user = (socket as any).user;
+    
+    if (user?.role === 'admin') {
+      socket.join(`rescue:${rescueId}`);
+      console.log(`Socket ${socket.id} joined room rescue:${rescueId} (admin)`);
+      return;
+    }
+
+    try {
+      const assignment = await prisma.rescueAssignment.findUnique({
+        where: { id: rescueId },
+        include: { report: true }
+      });
+      if (!assignment) return;
+      
+      const isVolunteer = assignment.volunteerId === user.id;
+      const isReporter = assignment.report.userId === user.id;
+      const isAlly = assignment.report.destinationOrgId === user.id;
+      
+      if (isVolunteer || isReporter || isAlly) {
+        socket.join(`rescue:${rescueId}`);
+        console.log(`Socket ${socket.id} joined room rescue:${rescueId}`);
+      } else {
+        console.log(`Socket ${socket.id} denied access to rescue:${rescueId}`);
+      }
+    } catch(err) {
+      console.error('Error verifying join_rescue permissions:', err);
+    }
   });
 
   // Leave room

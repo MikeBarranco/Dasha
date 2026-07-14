@@ -84,7 +84,8 @@ export class NotificationService {
       const pushPayload = JSON.stringify({
         title,
         body,
-        url: targetUrl
+        icon: '/pwa-192x192.png',
+        data: { url: targetUrl }
       });
 
       const pushPromises = subscriptions.map(async (sub) => {
@@ -137,6 +138,39 @@ export class NotificationService {
       await Promise.allSettled(pushPromises);
     } catch (err) {
       console.error('Error in sendPushToUsersAsync:', err);
+    }
+  }
+
+  static async sendWebPushToAll(title: string, body: string, url: string) {
+    try {
+      const allSubscriptions = await prisma.pushSubscription.findMany();
+      if (!allSubscriptions.length) return;
+
+      const pushPayload = JSON.stringify({
+        title,
+        body,
+        icon: '/pwa-192x192.png',
+        data: { url }
+      });
+
+      const pushPromises = allSubscriptions.map(async (sub) => {
+        try {
+          const pushSubscription = {
+            endpoint: sub.endpoint,
+            keys: { p256dh: sub.p256dh, auth: sub.auth }
+          };
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          const webpush = require('web-push');
+          await webpush.sendNotification(pushSubscription, pushPayload);
+        } catch (error: any) {
+          if (error.statusCode === 410 || error.statusCode === 404) {
+            await prisma.pushSubscription.delete({ where: { id: sub.id } });
+          }
+        }
+      });
+      await Promise.allSettled(pushPromises);
+    } catch (err) {
+      console.error('Error sending web push to all:', err);
     }
   }
 }

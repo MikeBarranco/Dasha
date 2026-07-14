@@ -18,13 +18,34 @@ export class StatsController {
 
       // 3. Voluntarios (usuarios con role = volunteer o volunteerStatus = approved)
       const voluntarios = await prisma.user.count({
-        where: { role: 'volunteer' }
+        where: { 
+          OR: [
+            { role: 'volunteer' },
+            { volunteerStatus: 'approved' }
+          ]
+        }
+      });
+
+      // 4. Aliados (Organizations)
+      const aliadosRegistrados = await prisma.organization.count();
+
+      // 5. Adopciones Logradas (Animales con estado 'adopted')
+      const adopcionesLogradas = await prisma.animalProfile.count({
+        where: { status: 'adopted' }
+      });
+
+      // 6. Animales en Búsqueda de Hogar (estado 'looking_for_adoption')
+      const animalesEnAdopcion = await prisma.animalProfile.count({
+        where: { status: 'looking_for_adoption' }
       });
 
       res.status(200).json({
         reportesActivos,
         rescatesLogrados,
-        voluntarios
+        voluntarios,
+        aliadosRegistrados,
+        adopcionesLogradas,
+        animalesEnAdopcion
       });
     } catch (error) {
       next(error);

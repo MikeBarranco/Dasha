@@ -3,6 +3,7 @@ import { v2 as cloudinary } from 'cloudinary';
 import { ReportService } from '../services/report.service';
 import { analyzeAnimalPhoto } from '../services/animalAnalysis.service';
 import { AchievementService } from '../services/achievement.service';
+import { prisma } from '../config/db';
 
 // Configurar Cloudinary (toma las credenciales de process.env automáticamente)
 cloudinary.config({
@@ -43,6 +44,47 @@ export class ReportController {
       // Evaluar logros de reportero de forma asíncrona (sin bloquear la respuesta)
       if (data.userId) {
         AchievementService.checkAndGrantReporterAchievements(data.userId);
+        // Otorgar XP por reporte
+        prisma.user.update({
+          where: { id: data.userId },
+          data: { experiencePoints: { increment: 10 } }
+        }).catch((err: any) => console.error('Error granting XP for report:', err));
+      }
+
+      // DSH-29: Notificar a voluntarios cercanos si es urgencia alta o crítica
+      if (data.urgency === 'high' || data.urgency === 'critical') {
+        (async () => {
+          try {
+            const { NotificationService } = await import('../services/notification.service.js');
+            // Buscar voluntarios disponibles cercanos al reporte (dentro de su search_radius_km)
+            const nearbyVolunteers: any[] = await prisma.$queryRaw`
+              SELECT id, search_radius_km
+              FROM users
+              WHERE is_available = true
+                AND volunteer_status = 'approved'
+                AND last_location IS NOT NULL
+                AND ST_DWithin(
+                  last_location::geography,
+                  ST_SetSRID(ST_MakePoint(${data.lng}, ${data.lat}), 4326)::geography,
+                  search_radius_km * 1000
+                )
+            `;
+
+            for (const vol of nearbyVolunteers) {
+              await NotificationService.sendNotification({
+                userId: vol.id,
+                title: '¡Emergencia cerca de ti!',
+                body: `Se ha reportado un ${data.species === 'dog' ? 'perro' : 'gato'} con urgencia ${data.urgency === 'high' ? 'alta' : 'crítica'}.`,
+                type: 'system_alert',
+                referenceId: report.id,
+                referenceType: 'report',
+                link: `/reports/${report.id}`
+              });
+            }
+          } catch (err) {
+            console.error('Error notifying nearby volunteers (DSH-29):', err);
+          }
+        })();
       }
       
       res.status(201).json({
@@ -199,6 +241,45 @@ export class ReportController {
         status: 'success',
         data: analysisResult
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async addSighting(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const { lat, lng, description, photoUrl } = req.body;
+      const userId = (req as any).user?.id;
+
+      if (!lat || !lng) {
+        res.status(400).json({ error: 'Latitud y longitud son requeridas' });
+        return;
+      }
+
+      await prisma.$executeRaw`
+        INSERT INTO case_actions (
+          id, report_id, actor_id, action_type, description, photo_url, location, created_at
+        ) VALUES (
+          gen_random_uuid(), 
+          ${id}::uuid, 
+          ${userId ? userId : null}::uuid, 
+          'sighting_added'::"ActionType", 
+          ${description || 'Nuevo avistamiento reportado'}, 
+          ${photoUrl || null}, 
+          ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326), 
+          NOW()
+        );
+      `;
+
+      // Actualizar ǧltima ubicacin del reporte
+      await prisma.$executeRaw`
+        UPDATE reports
+        SET location = ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)
+        WHERE id = ${id}::uuid;
+      `;
+
+      res.status(201).json({ status: 'success', message: 'Avistamiento sumado exitosamente' });
     } catch (error) {
       next(error);
     }

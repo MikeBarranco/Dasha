@@ -2,10 +2,10 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
-  throw new Error('CRITICAL ERROR: JWT_SECRET must be defined in production environment variables.');
+if (!JWT_SECRET) {
+  throw new Error('CRITICAL ERROR: JWT_SECRET must be defined in environment variables.');
 }
-const SECRET_TO_USE = JWT_SECRET || 'dasha_super_secret_key_2026_fepro';
+const SECRET_TO_USE = JWT_SECRET;
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
