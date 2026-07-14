@@ -14,6 +14,7 @@ import { NovedadesPage } from './pages/NovedadesPage';
 import { SerVoluntarioPage } from './pages/SerVoluntarioPage';
 import { PanelVoluntarioPage } from './pages/PanelVoluntarioPage';
 import { GuiaPage } from './pages/GuiaPage';
+import { ImpactoPage } from './pages/ImpactoPage';
 import { AliadosPage } from './pages/AliadosPage';
 import { AllyProfilePage } from './pages/AllyProfilePage';
 import { NecesidadesPage } from './pages/NecesidadesPage';
@@ -79,6 +80,7 @@ function App() {
           <Route path="aliados/:id" element={<AllyProfilePage />} />
           <Route path="necesidades" element={<NecesidadesPage />} />
           <Route path="guia" element={<GuiaPage />} />
+          <Route path="impacto" element={<ImpactoPage />} />
         </Route>
         <Route path="admin" element={<AdminLayout />}>
           <Route index element={<AdminHomePage />} />
