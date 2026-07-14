@@ -1,7 +1,8 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { Camera, Dog, Cat, ArrowLeft, Check } from 'lucide-react';
+import { Camera, Dog, Cat, ArrowLeft, Check, LifeBuoy, ChevronRight } from 'lucide-react';
+import { guiaSituaciones } from '../data/guiaSituaciones';
 import { PageHeader } from '../components/ui/PageHeader';
 import { cn } from '../lib/cn';
 import { createReport, getNearbyReports, addSighting, type CreateReportInput } from '../lib/api';
@@ -163,6 +164,13 @@ export function ReportarPage() {
   const [savingSightingId, setSavingSightingId] = useState<string | null>(null);
 
   const urgency = computeUrgency(conditions);
+  // Tip de seguridad contextual: si ve un animal herido o asustado/agresivo,
+  // enlazamos la guía "qué hacer mientras llega la ayuda".
+  const safetyTip = conditions.includes('Herido')
+    ? guiaSituaciones.find((item) => item.id === 'herido')
+    : conditions.includes('Asustado')
+      ? guiaSituaciones.find((item) => item.id === 'agresivo')
+      : null;
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -518,6 +526,26 @@ export function ReportarPage() {
                   {urgencyMeta[urgency].label}
                 </span>
                 <span className="text-xs text-neutral-400">(se calcula sola)</span>
+              </div>
+            )}
+            {safetyTip && (
+              <div className="mt-4 rounded-xl border border-info/20 bg-info/5 p-3">
+                <p className="flex items-center gap-1.5 text-sm font-semibold text-cobalto">
+                  <LifeBuoy className="h-4 w-4" /> Mientras llega la ayuda
+                </p>
+                <ul className="mt-1.5 space-y-1">
+                  {safetyTip.evitar.slice(0, 2).map((paso) => (
+                    <li key={paso} className="text-xs text-neutral-600">
+                      • {paso}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  to="/guia"
+                  className="mt-2 flex items-center gap-0.5 text-xs font-semibold text-cobalto"
+                >
+                  Ver guía completa <ChevronRight className="h-3.5 w-3.5" />
+                </Link>
               </div>
             )}
           </div>
