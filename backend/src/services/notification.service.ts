@@ -159,7 +159,7 @@ export class NotificationService {
             endpoint: sub.endpoint,
             keys: { p256dh: sub.p256dh, auth: sub.auth }
           };
-          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
           const webpush = require('web-push');
           await webpush.sendNotification(pushSubscription, pushPayload);
         } catch (error: any) {

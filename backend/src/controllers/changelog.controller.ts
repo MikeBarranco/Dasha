@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { NotificationService } from '../services/notification.service';
@@ -32,7 +31,7 @@ export class ChangelogController {
       else if (items) finalChanges = [items];
       else if (changes) finalChanges = [changes];
       
-      // @ts-ignore
+      // @ts-expect-error: Prisma json types
       const newEntry = await prisma.changelogEntry.create({
         data: {
           version,
@@ -72,7 +71,7 @@ export class ChangelogController {
       if (finalChanges !== undefined) updateData.changes = finalChanges;
       if (type !== undefined) updateData.type = type;
 
-      // @ts-ignore
+      // @ts-expect-error: Prisma json types
       const updated = await prisma.changelogEntry.update({
         where: { id },
         data: updateData
