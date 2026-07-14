@@ -1,21 +1,39 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
+import { AnimatePresence } from 'motion/react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, Loader2, MapPin, Radio, PawPrint, Navigation } from 'lucide-react';
+import {
+  ChevronLeft,
+  Loader2,
+  MapPin,
+  Radio,
+  PawPrint,
+  Navigation,
+  Camera,
+  History,
+  ChevronDown,
+} from 'lucide-react';
 import { useRescueLive } from '../lib/useRescueLive';
 import { useAuth } from '../lib/useAuth';
 import {
   rescueStatusLabels,
   updateRescueAssignmentStatus,
   postRescueLocation,
+  addRescuePhoto,
   type RescueStatus,
+  type RescuePhotoKind,
 } from '../lib/api';
 import { Avatar } from '../components/ui/Avatar';
+import { RescuePhotoSheet } from '../components/rescue/RescuePhotoSheet';
+import { CaseTimeline } from '../components/rescue/CaseTimeline';
 
-// Siguiente paso que puede activar el conductor según el estado actual.
-const nextByStatus: Partial<Record<RescueStatus, { next: RescueStatus; label: string }>> = {
-  accepted: { next: 'on_the_way', label: 'Voy en camino' },
+// Siguiente paso que puede activar el conductor según el estado actual. Los pasos
+// con `photo` piden una foto de evidencia (recogida / entrega) antes de avanzar.
+const nextByStatus: Partial<
+  Record<RescueStatus, { next: RescueStatus; label: string; photo?: RescuePhotoKind }>
+> = {
+  accepted: { next: 'on_the_way', label: 'Voy en camino', photo: 'pickup' },
   on_the_way: { next: 'arrived', label: 'Ya llegué al aliado' },
-  arrived: { next: 'completed', label: 'Entregado' },
+  arrived: { next: 'completed', label: 'Entregado', photo: 'delivery' },
 };
 
 // El mapa arrastra maplibre; se carga aparte para no engordar el bundle inicial.
@@ -32,6 +50,8 @@ export function RescateEnVivoPage() {
   const { assignment, position, status, connected, simulated } = useRescueLive(assignmentId);
   const [pendingStatus, setPendingStatus] = useState<RescueStatus | null>(null);
   const [advancing, setAdvancing] = useState(false);
+  const [photoStep, setPhotoStep] = useState<RescuePhotoKind | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   const realAssignment = assignment ?? null;
   const isDriver = Boolean(
@@ -96,12 +116,32 @@ export function RescateEnVivoPage() {
   const animalName = assignment.animal?.name;
   const step = nextByStatus[currentStatus];
 
-  const advance = async () => {
+  // Al tocar el paso: si pide foto, abrimos la hoja; si no, avanzamos directo.
+  const handleStep = () => {
+    if (!step || advancing) return;
+    if (step.photo) {
+      setPhotoStep(step.photo);
+      return;
+    }
+    void runAdvance(null, '');
+  };
+
+  // Sube la foto (si hay) y avanza el estado. La foto es evidencia opcional: si
+  // su subida falla no bloqueamos el traslado, el estado se actualiza igual.
+  const runAdvance = async (photoBase64: string | null, note: string) => {
     if (!step || advancing) return;
     setAdvancing(true);
     try {
+      if (step.photo && photoBase64) {
+        try {
+          await addRescuePhoto(assignment.id, step.photo, photoBase64, note);
+        } catch {
+          // La evidencia es un extra; seguimos con el avance del estado.
+        }
+      }
       await updateRescueAssignmentStatus(assignment.id, step.next);
       setPendingStatus(step.next);
+      setPhotoStep(null);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'No se pudo actualizar el estado.');
     } finally {
@@ -161,11 +201,12 @@ export function RescateEnVivoPage() {
           {isDriver && step && (
             <button
               type="button"
-              onClick={advance}
+              onClick={handleStep}
               disabled={advancing}
               className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-naranja py-3 font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
             >
-              <Navigation className="h-5 w-5" /> {advancing ? 'Guardando…' : step.label}
+              {step.photo ? <Camera className="h-5 w-5" /> : <Navigation className="h-5 w-5" />}
+              {advancing ? 'Guardando…' : step.label}
             </button>
           )}
           {isDriver && currentStatus === 'on_the_way' && (
@@ -184,8 +225,42 @@ export function RescateEnVivoPage() {
               Recorrido en demostración (aún sin GPS en vivo).
             </p>
           )}
+
+          <div className="mt-3 border-t border-neutral-100 pt-3">
+            <button
+              type="button"
+              onClick={() => setShowHistory((value) => !value)}
+              aria-expanded={showHistory}
+              className="flex w-full items-center justify-between text-sm font-medium text-cobalto"
+            >
+              <span className="flex items-center gap-1.5">
+                <History className="h-4 w-4" /> Historia del caso
+              </span>
+              <ChevronDown
+                className={`h-4 w-4 transition-transform ${showHistory ? 'rotate-180' : ''}`}
+              />
+            </button>
+            {showHistory && (
+              <div className="mt-3 max-h-56 overflow-y-auto pr-1">
+                <CaseTimeline status={currentStatus} />
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {photoStep && (
+          <RescuePhotoSheet
+            kind={photoStep}
+            saving={advancing}
+            onConfirm={(photoBase64, note) => runAdvance(photoBase64, note)}
+            onClose={() => {
+              if (!advancing) setPhotoStep(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
