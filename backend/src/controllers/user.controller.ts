@@ -50,6 +50,41 @@ export class UserController {
     }
   }
 
+  // GET /api/v1/me/availability
+  static async getAvailability(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        res.status(401).json({ error: 'No autorizado' });
+        return;
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { isAvailable: true, searchRadiusKm: true }
+      });
+
+      if (!user) {
+        res.status(404).json({ error: 'Usuario no encontrado' });
+        return;
+      }
+
+      const locationRes: any[] = await prisma.$queryRaw`
+        SELECT ST_X(last_location::geometry) as lng, ST_Y(last_location::geometry) as lat
+        FROM users WHERE id = ${userId}::uuid
+      `;
+
+      res.status(200).json({
+        isAvailable: user.isAvailable,
+        searchRadiusKm: user.searchRadiusKm,
+        lat: locationRes[0]?.lat || null,
+        lng: locationRes[0]?.lng || null
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async updateAvailability(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = (req as any).user?.id;
@@ -128,7 +163,8 @@ export class UserController {
         include: {
           photos: {
             take: 1
-          }
+          },
+          colony: true
         }
       });
 

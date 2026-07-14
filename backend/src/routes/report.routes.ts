@@ -30,4 +30,7 @@ router.patch('/:id/status', requireAuth, validate(updateReportStatusSchema), Rep
 // POST /api/v1/reports/:id/accept (Protegida, voluntario acepta un caso)
 router.post('/:id/accept', requireAuth, ReportController.acceptCase);
 
+// POST /api/v1/reports/:id/sighting (Agregar avistamiento a un reporte existente)
+router.post('/:id/sighting', requireAuth, ReportController.addSighting);
+
 export default router;

@@ -13,25 +13,37 @@ import changelogRoutes from './changelog.routes';
 import eventRoutes from './event.routes';
 import forumRoutes from './forum.routes';
 import rescueAssignmentRoutes from './rescue-assignment.routes';
+import achievementRoutes from './achievement.routes';
+import needRoutes from './need.routes';
+
+import { authLimiter, publicGetLimiter, standardLimiter } from '../middlewares/rateLimit.middleware';
 
 const router = Router();
 
-router.use('/auth', authRoutes);
+// Límite estricto para autenticación
+router.use('/auth', authLimiter, authRoutes);
+
+// Límite estándar para el resto por defecto, excepto los puramente GET o públicos si se desea separarlos, 
+// pero usaremos standardLimiter para la mayoría de mutaciones o uso normal.
+router.use(standardLimiter);
+
 router.use('/me', userRoutes);
 router.use('/reports', reportRoutes);
 router.use('/uploads', uploadRoutes);
-router.use('/stats', statsRoutes);
+router.use('/stats', publicGetLimiter, statsRoutes); // Generoso
 router.use('/allies', organizationRoutes);
 router.use('/animals', animalRoutes);
 router.use('/colonies', colonyRoutes);
 router.use('/admin', adminRoutes);
 router.use('/lost-pets', lostPetRoutes);
-router.use('/novedades', changelogRoutes);
+router.use('/novedades', publicGetLimiter, changelogRoutes); // Generoso
 router.use('/events', eventRoutes);
 router.use('/forum', forumRoutes);
 router.use('/rescue-assignments', rescueAssignmentRoutes);
+router.use('/achievements', publicGetLimiter, achievementRoutes);
+router.use('/needs', needRoutes);
 
-router.get('/health', (req, res) => {
+router.get('/health', publicGetLimiter, (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 

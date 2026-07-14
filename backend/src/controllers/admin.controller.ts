@@ -160,7 +160,7 @@ export class AdminController {
     try {
       const id = req.params.id as string;
       const { role } = req.body;
-      const requesterId = req.user?.id;
+      const requesterId = (req as any).user?.id;
       
       if (!['citizen', 'volunteer', 'admin'].includes(role)) {
         res.status(400).json({ error: 'Rol inválido' });
@@ -248,12 +248,14 @@ export class AdminController {
         };
         const statusName = statusMap[data.status as string] || data.status;
         const animalDesc = `${currentReport.species === 'dog' ? 'Perro' : (currentReport.species === 'cat' ? 'Gato' : 'Animal')} (${currentReport.primaryColor})`;
+        const addressText = currentReport.address ? ` en ${currentReport.address}` : '';
+        const reportName = `Reporte de ${animalDesc}${addressText}`;
 
         const { NotificationService } = await import('../services/notification.service.js');
         await NotificationService.sendNotification({
           userId: currentReport.userId,
           title: 'Actualización de tu reporte',
-          body: `El estado de tu reporte de ${animalDesc} ha cambiado a: ${statusName}.`,
+          body: `El estado del ${reportName} ha cambiado a: ${statusName}.`,
           type: 'status_change',
           referenceId: id,
           referenceType: 'report'
@@ -271,14 +273,25 @@ export class AdminController {
       const id = req.params.id as string;
       
       await prisma.$transaction(async (tx) => {
-        // Eliminar dependencias
+        // Desvincular duplicados
+        await tx.report.updateMany({
+          where: { isDuplicateOf: id },
+          data: { isDuplicateOf: null }
+        });
+
+        const lostPet = await tx.lostPet.findUnique({ where: { reportId: id } });
+        if (lostPet) {
+          await tx.lostPetMatch.deleteMany({ where: { lostPetId: lostPet.id } });
+        }
+
+        await tx.lostPet.deleteMany({ where: { reportId: id } });
+        await tx.animalProfile.deleteMany({ where: { reportId: id } });
+
         await tx.reportStatusHistory.deleteMany({ where: { reportId: id } });
         await tx.caseAction.deleteMany({ where: { reportId: id } });
         await tx.rescueAssignment.deleteMany({ where: { reportId: id } });
         await tx.resource.deleteMany({ where: { reportId: id } });
-        await tx.lostPetMatch.deleteMany({ 
-          where: { matchedReportId: id } 
-        });
+        await tx.lostPetMatch.deleteMany({ where: { matchedReportId: id } });
         await tx.reportFlag.deleteMany({ where: { reportId: id } });
         
         // El modelo ReportPhoto tiene onDelete: Cascade en el schema, así que se borra solo
@@ -625,6 +638,21 @@ export class AdminController {
   // ==========================================
   // FORO
   // ==========================================
+  static async getForumReports(req: Request, res: Response, next: NextFunction) {
+    try {
+      const reports = await prisma.forumPostFlag.findMany({
+        orderBy: { createdAt: 'desc' },
+        include: {
+          post: true,
+          flagger: { select: { id: true, name: true, email: true } }
+        }
+      });
+      res.status(200).json(reports);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async getAllForumPosts(req: Request, res: Response, next: NextFunction) {
     try {
       const posts = await prisma.forumPost.findMany({

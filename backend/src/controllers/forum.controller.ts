@@ -219,12 +219,36 @@ export class ForumController {
   static async reportPost(req: Request, res: Response, next: NextFunction) {
     try {
       const postId = req.params.id as string;
-      const { reason } = req.body;
+      const { reason, notes } = req.body;
       const userId = (req as any).user?.id;
 
-      console.log(`[Foro] Post ${postId} reportado por ${userId}. Razón: ${reason}`);
+      if (!userId) {
+        res.status(401).json({ error: 'No autorizado' });
+        return;
+      }
+
+      if (!reason) {
+        res.status(400).json({ error: 'Debe proporcionar una razón para el reporte' });
+        return;
+      }
+
+      const post = await prisma.forumPost.findUnique({ where: { id: postId } });
+      if (!post) {
+        res.status(404).json({ error: 'Post no encontrado' });
+        return;
+      }
+
+      const flag = await prisma.forumPostFlag.create({
+        data: {
+          postId,
+          flaggedBy: userId,
+          reason,
+          notes,
+          status: 'open'
+        }
+      });
       
-      res.status(200).json({ message: 'Post reportado exitosamente' });
+      res.status(200).json({ message: 'Post reportado exitosamente', data: flag });
     } catch (error) {
       next(error);
     }

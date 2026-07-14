@@ -38,4 +38,34 @@ export class UploadController {
       next(error);
     }
   }
+
+  // Proxy para proteger imágenes (hotlinking)
+  static async proxyImage(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { url } = req.query;
+      if (!url || typeof url !== 'string') {
+        res.status(400).send('URL faltante');
+        return;
+      }
+
+      const referer = req.get('Referer') || req.get('Origin') || '';
+      const isInternal = referer.includes('localhost') || 
+                         referer.includes('157.230.15.186') ||
+                         referer.includes('dasha');
+
+      let targetUrl = url;
+      if (!isInternal && url.includes('res.cloudinary.com')) {
+        const uploadIndex = url.indexOf('/upload/');
+        if (uploadIndex !== -1) {
+          // Agregar marca de agua
+          const watermark = 'l_text:Arial_60_bold:DASHA,co_white,o_50';
+          targetUrl = url.substring(0, uploadIndex + 8) + watermark + '/' + url.substring(uploadIndex + 8);
+        }
+      }
+
+      res.redirect(302, targetUrl);
+    } catch (error) {
+      next(error);
+    }
+  }
 }

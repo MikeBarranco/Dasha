@@ -16,12 +16,18 @@ router.patch('/users/:id/role', AdminController.updateUserRole);
 router.delete('/users/:id', AdminController.deleteUser);
 
 // ==========================================
+// NOVEDADES
+// ==========================================
+import { ChangelogController } from '../controllers/changelog.controller';
+router.post('/novedades', ChangelogController.createEntry);
+router.patch('/novedades/:id', ChangelogController.updateEntry);
+router.delete('/novedades/:id', ChangelogController.deleteEntry);
+
+// ==========================================
 // REPORTES
 // ==========================================
-// GET /api/v1/admin/forum/reports (Mock)
-router.get('/forum/reports', (req, res) => {
-  res.json([]);
-});
+// GET /api/v1/admin/forum/reports
+router.get('/forum/reports', AdminController.getForumReports);
 
 router.get('/reports', AdminController.getAllReports);
 router.patch('/reports/:id', AdminController.updateReport);

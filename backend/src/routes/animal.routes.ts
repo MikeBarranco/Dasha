@@ -27,4 +27,7 @@ router.delete('/:id/follow', requireAuth, AnimalController.unfollowAnimal);
 // POST /api/v1/animals/:id/adopt (Protegida, solicitar adopción)
 router.post('/:id/adopt', requireAuth, AnimalController.requestAdoption);
 
+// POST /api/v1/animals/:id/donations (Protegida, enviar donativo de dinero o especie)
+router.post('/:id/donations', requireAuth, AnimalController.donateToAnimal);
+
 export default router;

@@ -329,6 +329,8 @@ model User {
   forumPosts           ForumPost[]
   forumReplies         ForumReply[]
   forumVotes           ForumVote[]
+  forumPostFlags       ForumPostFlag[]        @relation("ForumPostFlaggedByUser")
+  forumFlagsReviewed   ForumPostFlag[]        @relation("ForumPostFlagReviewer")
   pushSubscriptions    PushSubscription[]
   notifications        Notification[]
   discountCodes        DiscountCode[]
@@ -364,32 +366,32 @@ model UserAvatar {
 }
 
 model Report {
-  id               String                                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId           String                                @map("user_id") @db.Uuid
+  id               String                                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String                                 @map("user_id") @db.Uuid
   species          Species
-  primaryColor     String                                @map("primary_color") @db.VarChar(50)
-  secondaryColor   String?                               @map("secondary_color") @db.VarChar(50)
+  primaryColor     String                                 @map("primary_color") @db.VarChar(50)
+  secondaryColor   String?                                @map("secondary_color") @db.VarChar(50)
   size             Size
   condition        Condition
-  urgency          Urgency                               @default(medium)
-  isMoving         Boolean?                              @map("is_moving")
-  isAggressive     Boolean?                              @map("is_aggressive")
-  hasCollar        Boolean?                              @map("has_collar")
+  urgency          Urgency                                @default(medium)
+  isMoving         Boolean?                               @map("is_moving")
+  isAggressive     Boolean?                               @map("is_aggressive")
+  hasCollar        Boolean?                               @map("has_collar")
   description      String
   location         Unsupported("geography(Point, 4326)")?
-  address          String?                               @db.VarChar(255)
-  colonyId         String?                               @map("colony_id") @db.VarChar(50)
-  aiValidated      Boolean                               @default(false) @map("ai_validated")
-  aiConfidence     Decimal?                              @map("ai_confidence") @db.Decimal(5, 2)
-  status           ReportStatus                          @default(active)
-  volunteerId      String?                               @map("volunteer_id") @db.Uuid
-  destinationOrgId String?                               @map("destination_org_id") @db.Uuid
-  isDuplicateOf    String?                               @map("is_duplicate_of") @db.Uuid
-  seenCount        Int                                   @default(1) @map("seen_count")
-  lastSeenAt       DateTime                              @default(now()) @map("last_seen_at") @db.Timestamptz
-  createdAt        DateTime                              @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt        DateTime                              @default(now()) @map("updated_at") @db.Timestamptz
-  closedAt         DateTime?                             @map("closed_at") @db.Timestamptz
+  address          String?                                @db.VarChar(255)
+  colonyId         String?                                @map("colony_id") @db.VarChar(50)
+  aiValidated      Boolean                                @default(false) @map("ai_validated")
+  aiConfidence     Decimal?                               @map("ai_confidence") @db.Decimal(5, 2)
+  status           ReportStatus                           @default(active)
+  volunteerId      String?                                @map("volunteer_id") @db.Uuid
+  destinationOrgId String?                                @map("destination_org_id") @db.Uuid
+  isDuplicateOf    String?                                @map("is_duplicate_of") @db.Uuid
+  seenCount        Int                                    @default(1) @map("seen_count")
+  lastSeenAt       DateTime                               @default(now()) @map("last_seen_at") @db.Timestamptz
+  createdAt        DateTime                               @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime                               @default(now()) @map("updated_at") @db.Timestamptz
+  closedAt         DateTime?                              @map("closed_at") @db.Timestamptz
 
   user             User                  @relation("ReportUser", fields: [userId], references: [id])
   volunteer        User?                 @relation("ReportVolunteer", fields: [volunteerId], references: [id])
@@ -407,8 +409,8 @@ model Report {
   lostMatches      LostPetMatch[]
   flags            ReportFlag[]
 
-  @@map("reports")
   @@index([status])
+  @@map("reports")
 }
 
 model ReportPhoto {
@@ -474,33 +476,33 @@ model RescueAssignment {
   report    Report @relation(fields: [reportId], references: [id])
   volunteer User   @relation("RescueVolunteer", fields: [volunteerId], references: [id])
 
-  @@map("rescue_assignments")
   @@index([volunteerId, status])
+  @@map("rescue_assignments")
 }
 
 model Organization {
-  id           String                                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name         String                                 @db.VarChar(200)
-  description  String?
-  logoUrl      String?                                @map("logo_url")
-  logoPublicId String?                                @map("logo_public_id") @db.VarChar(255)
-  coverUrl     String?                                @map("cover_url")
-  coverPublicId String?                               @map("cover_public_id") @db.VarChar(255)
-  slogan       String?                                @db.VarChar(255)
-  address      String?                                @db.VarChar(255)
-  phone        String?                                @db.VarChar(20)
-  whatsapp     String?                                @db.VarChar(20)
-  location     Unsupported("geography(Point, 4326)")?
-  website      String?                                @db.VarChar(255)
-  schedule     Json?
-  orgType      OrgType                                @map("org_type")
-  isVerified   Boolean                                @default(false) @map("is_verified")
-  bankName     String?                                @map("bank_name") @db.VarChar(100)
-  clabe        String?                                @db.VarChar(18)
-  holderName   String?                                @map("holder_name") @db.VarChar(200)
-  isActive     Boolean                                @default(true) @map("is_active")
-  createdAt    DateTime                               @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt    DateTime                               @default(now()) @map("updated_at") @db.Timestamptz
+  id            String                                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String                                 @db.VarChar(200)
+  description   String?
+  logoUrl       String?                                @map("logo_url")
+  logoPublicId  String?                                @map("logo_public_id") @db.VarChar(255)
+  coverUrl      String?                                @map("cover_url")
+  coverPublicId String?                                @map("cover_public_id") @db.VarChar(255)
+  slogan        String?                                @db.VarChar(255)
+  address       String?                                @db.VarChar(255)
+  phone         String?                                @db.VarChar(20)
+  whatsapp      String?                                @db.VarChar(20)
+  location      Unsupported("geography(Point, 4326)")?
+  website       String?                                @db.VarChar(255)
+  schedule      Json?
+  orgType       OrgType                                @map("org_type")
+  isVerified    Boolean                                @default(false) @map("is_verified")
+  bankName      String?                                @map("bank_name") @db.VarChar(100)
+  clabe         String?                                @db.VarChar(18)
+  holderName    String?                                @map("holder_name") @db.VarChar(200)
+  isActive      Boolean                                @default(true) @map("is_active")
+  createdAt     DateTime                               @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime                               @default(now()) @map("updated_at") @db.Timestamptz
 
   employees        OrganizationEmployee[]
   events           Event[]
@@ -508,6 +510,7 @@ model Organization {
   animals          AnimalProfile[]        @relation("AnimalOrganization")
   reportsDestined  Report[]               @relation("ReportDestination")
   resourcesOffered Resource[]             @relation("ResourceOrganization")
+  needs            Need[]
 
   @@map("organizations")
 }
@@ -664,6 +667,8 @@ model Donation {
   id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   animalId     String         @map("animal_id") @db.Uuid
   userId       String         @map("user_id") @db.Uuid
+  type         String         @default("money") @db.VarChar(50) // "money" or "items"
+  items        String? // Description of items if type is "items"
   amount       Decimal        @db.Decimal(10, 2)
   currency     String         @default("MXN") @db.VarChar(3)
   status       DonationStatus @default(pending)
@@ -873,9 +878,10 @@ model ForumPost {
   createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz
   updatedAt  DateTime      @default(now()) @map("updated_at") @db.Timestamptz
 
-  user    User         @relation(fields: [userId], references: [id])
+  user    User            @relation(fields: [userId], references: [id])
   replies ForumReply[]
   votes   ForumVote[]
+  flags   ForumPostFlag[]
 
   @@map("forum_posts")
 }
@@ -943,8 +949,8 @@ model Notification {
 
   user User @relation(fields: [userId], references: [id])
 
-  @@map("notifications")
   @@index([userId, isRead])
+  @@map("notifications")
 }
 
 model Colony {
@@ -1034,4 +1040,51 @@ model AnimalFollower {
 
   @@unique([userId, animalId])
   @@map("animal_followers")
+}
+
+model ForumPostFlag {
+  id         String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  postId     String     @map("post_id") @db.Uuid
+  flaggedBy  String     @map("flagged_by") @db.Uuid
+  reason     FlagReason
+  notes      String?
+  status     FlagStatus @default(open)
+  reviewedBy String?    @map("reviewed_by") @db.Uuid
+  createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz
+
+  post     ForumPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  flagger  User      @relation("ForumPostFlaggedByUser", fields: [flaggedBy], references: [id])
+  reviewer User?     @relation("ForumPostFlagReviewer", fields: [reviewedBy], references: [id])
+
+  @@map("forum_post_flags")
+}
+
+model Need {
+  id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId   String       @map("organization_id") @db.Uuid
+  title            String       @db.VarChar(200)
+  description      String
+  category         NeedCategory
+  urgency          Urgency      @default(medium)
+  status           NeedStatus   @default(active)
+  createdAt        DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime     @default(now()) @map("updated_at") @db.Timestamptz
+
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("needs")
+}
+
+enum NeedCategory {
+  food
+  medicine
+  supplies
+  transport
+  other
+}
+
+enum NeedStatus {
+  active
+  fulfilled
+  cancelled
 }
