@@ -13,6 +13,7 @@ import {
   HelpCircle,
   Compass,
   Download,
+  Radio,
   type LucideIcon,
 } from 'lucide-react';
 import { Avatar } from '../components/ui/Avatar';
@@ -338,6 +339,13 @@ export function PerfilPage() {
           label="¿Cómo funciona Dasha?"
           onClick={() => openOnboarding()}
         />
+        {realRole === 'volunteer' && (
+          <RowButton
+            icon={Radio}
+            label="Panel de voluntario"
+            onClick={() => navigate('/voluntario')}
+          />
+        )}
         {realRole === 'volunteer' && (
           <RowButton
             icon={Compass}

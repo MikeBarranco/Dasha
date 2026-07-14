@@ -1516,6 +1516,43 @@ export async function addRescuePhoto(
   });
 }
 
+// --- Modo Activo del voluntario (disponibilidad + radio) ---
+// El voluntario aprobado se pone "Disponible" con un radio (2/5/10 km) y así el
+// backend le manda push de emergencias cercanas y le lista casos por atender.
+
+export type VolunteerAvailability = { active: boolean; radiusKm: number };
+
+// Radios permitidos (km). Un valor fuera de la lista cae al más cercano válido.
+export const availabilityRadiusOptions = [2, 5, 10];
+
+// Lee la disponibilidad actual. GET /me/availability -> { active, radiusKm }.
+// Tolerante: si el backend aún no lo expone, arranca en inactivo/5 km (estado
+// neutral, no datos inventados) para no romper el panel.
+export async function getVolunteerAvailability(): Promise<VolunteerAvailability> {
+  try {
+    const raw = await authedRaw<Record<string, unknown>>('/me/availability');
+    const radius = Number(raw?.radiusKm ?? raw?.radius_km ?? raw?.radius);
+    return {
+      active: Boolean(raw?.active ?? raw?.isActive ?? raw?.available),
+      radiusKm: availabilityRadiusOptions.includes(radius) ? radius : 5,
+    };
+  } catch {
+    return { active: false, radiusKm: 5 };
+  }
+}
+
+// Actualiza disponibilidad + radio (+ ubicación al activar, para el filtro por
+// cercanía). PATCH /me/availability. NO es tolerante a propósito: si falla, el
+// panel muestra el error para que se note (y para que Isabel lo detecte).
+export async function setVolunteerAvailability(data: {
+  active: boolean;
+  radiusKm: number;
+  lat?: number;
+  lng?: number;
+}): Promise<void> {
+  await authedRaw('/me/availability', { method: 'PATCH', body: JSON.stringify(data) });
+}
+
 // Traslados del propio voluntario (para saber cuáles seguir).
 // GET /users/rescue-assignments (ojo: es /users/, no /me/).
 export async function getMyRescueAssignments(status?: RescueStatus): Promise<RescueAssignment[]> {
