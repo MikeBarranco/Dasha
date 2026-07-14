@@ -14,6 +14,7 @@ import {
   Compass,
   Download,
   Radio,
+  BarChart3,
   type LucideIcon,
 } from 'lucide-react';
 import { Avatar } from '../components/ui/Avatar';
@@ -330,6 +331,11 @@ export function PerfilPage() {
           icon={Sparkles}
           label="Novedades"
           onClick={() => navigate('/novedades')}
+        />
+        <RowButton
+          icon={BarChart3}
+          label="Nuestro impacto"
+          onClick={() => navigate('/impacto')}
         />
         {!isStandalone && (
           <RowButton icon={Download} label="Instalar app" onClick={handleInstall} />

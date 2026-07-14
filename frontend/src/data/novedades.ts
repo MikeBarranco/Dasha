@@ -7,6 +7,19 @@ export type ReleaseNote = {
 
 export const releaseNotes: ReleaseNote[] = [
   {
+    version: 'v0.8',
+    date: '14 de julio de 2026',
+    title: 'Rescate de punta a punta, voluntarios e impacto',
+    changes: [
+      'Modo Activo para voluntarios: actívate con un radio y recibe las emergencias más cercanas para ir por ellas.',
+      'Sigue el rescate completo: el voluntario toma foto al recoger y al entregar, y ves la historia del caso paso a paso.',
+      'Tablero de necesidades: los aliados publican lo que necesitan (alimento, transporte, hogar temporal) y tú puedes cubrirlo.',
+      'Al reportar te avisamos si ya hay un reporte del mismo animalito cerca, para no duplicar.',
+      'Nueva guía "qué hacer mientras llega la ayuda", con pasos seguros según la situación.',
+      'Página de Impacto: mira en números los rescates, adopciones y el aporte de la comunidad.',
+    ],
+  },
+  {
     version: 'v0.7',
     date: '3 de julio de 2026',
     title: 'Portada, notificaciones y perfil',

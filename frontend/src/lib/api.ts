@@ -279,6 +279,105 @@ export async function getStats(): Promise<Stats> {
   return requestRaw<Stats>('/stats');
 }
 
+// --- Impacto / estadísticas públicas (pantalla /impacto, UI 2.13) ---
+// Métricas comunitarias. Se leen tolerantes a nombres de campo (es/en). Un valor
+// null = el backend aún no manda ese dato: la tarjeta se OCULTA (no inventamos un
+// número). Si la llamada completa falla, se propaga el error (la pantalla muestra
+// "no se pudo cargar" + reintentar), nunca datos falsos.
+export type ImpactMonth = { month: string; reportes: number; rescates: number };
+export type ImpactColonia = { name: string; count: number };
+
+export type ImpactStats = {
+  rescatesLogrados: number | null;
+  adopciones: number | null;
+  donacionesVerificadas: number | null;
+  voluntariosActivos: number | null;
+  reportesTotales: number | null;
+  tiempoPromedioHoras: number | null;
+  porMes: ImpactMonth[];
+  rankingColonias: ImpactColonia[];
+};
+
+// Número tolerante: acepta el primer alias presente; null si ninguno es numérico.
+function numOrNull(raw: Record<string, unknown>, ...keys: string[]): number | null {
+  for (const key of keys) {
+    const value = raw[key];
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value))) {
+      return Number(value);
+    }
+  }
+  return null;
+}
+
+export async function getImpactStats(): Promise<ImpactStats> {
+  const raw = await requestRaw<Record<string, unknown>>('/stats');
+  const obj = raw && typeof raw === 'object' ? raw : {};
+
+  const monthlyRaw = Array.isArray(obj.porMes)
+    ? obj.porMes
+    : Array.isArray(obj.monthly)
+      ? obj.monthly
+      : Array.isArray(obj.byMonth)
+        ? obj.byMonth
+        : [];
+  const porMes: ImpactMonth[] = monthlyRaw
+    .map((item) => {
+      const m = (item ?? {}) as Record<string, unknown>;
+      return {
+        month: String(m.month ?? m.mes ?? m.label ?? ''),
+        reportes: Number(m.reportes ?? m.reports ?? 0) || 0,
+        rescates: Number(m.rescates ?? m.rescues ?? 0) || 0,
+      };
+    })
+    .filter((item) => item.month);
+
+  const coloniasRaw = Array.isArray(obj.rankingColonias)
+    ? obj.rankingColonias
+    : Array.isArray(obj.topColonies)
+      ? obj.topColonies
+      : Array.isArray(obj.colonias)
+        ? obj.colonias
+        : [];
+  const rankingColonias: ImpactColonia[] = coloniasRaw
+    .map((item) => {
+      const c = (item ?? {}) as Record<string, unknown>;
+      return {
+        name: String(c.name ?? c.nombre ?? c.colonia ?? ''),
+        count: Number(c.count ?? c.rescates ?? c.total ?? 0) || 0,
+      };
+    })
+    .filter((item) => item.name);
+
+  return {
+    rescatesLogrados: numOrNull(obj, 'rescatesLogrados', 'rescues', 'rescuesCount', 'totalRescues'),
+    adopciones: numOrNull(obj, 'adopciones', 'adoptions', 'adopted', 'adoptedCount'),
+    donacionesVerificadas: numOrNull(
+      obj,
+      'donacionesVerificadas',
+      'donationsApproved',
+      'verifiedDonations',
+      'donations',
+    ),
+    voluntariosActivos: numOrNull(
+      obj,
+      'voluntariosActivos',
+      'activeVolunteers',
+      'voluntarios',
+      'volunteers',
+    ),
+    reportesTotales: numOrNull(obj, 'reportesTotales', 'reportsTotal', 'reports', 'totalReports'),
+    tiempoPromedioHoras: numOrNull(
+      obj,
+      'tiempoPromedioHoras',
+      'avgRescueHours',
+      'avgReportToRescueHours',
+    ),
+    porMes,
+    rankingColonias,
+  };
+}
+
 // Novedades (changelog) público. Cuando Isabel exponga GET /novedades, la página
 // de Novedades se alimenta desde el panel sin tocar código. Mientras no exista (o
 // si falla / viene vacío), se usa la lista estática de data/novedades.ts como
