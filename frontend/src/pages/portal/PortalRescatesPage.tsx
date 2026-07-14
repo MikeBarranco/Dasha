@@ -1,9 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { AnimatePresence } from 'motion/react';
 import { Ambulance, AlertCircle, MapPin, Radio, CheckCircle2, Clock, Eye } from 'lucide-react';
 import { Avatar } from '../../components/ui/Avatar';
-import { getIncomingRescues, intakeReport, type IncomingRescue } from '../../lib/api';
+import {
+  getIncomingRescues,
+  intakeReport,
+  type IncomingRescue,
+  type ReceptionInfo,
+} from '../../lib/api';
 import { useAllyPortal } from '../../lib/useAllyPortal';
+import { useAuth } from '../../lib/useAuth';
+import { ReceptionSheet } from '../../components/portal/ReceptionSheet';
 
 // Datos de ejemplo para la vista previa del portal (sin backend real).
 const previewRescues: IncomingRescue[] = [
@@ -45,6 +53,7 @@ const statusStyles: Record<string, string> = {
 
 export function PortalRescatesPage() {
   const ctx = useAllyPortal();
+  const { user } = useAuth();
   const [rescues, setRescues] = useState<IncomingRescue[] | null>(() =>
     ctx.preview ? previewRescues : null,
   );
@@ -52,6 +61,7 @@ export function PortalRescatesPage() {
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [intakingId, setIntakingId] = useState<string | null>(null);
   const [doneName, setDoneName] = useState<string | null>(null);
+  const confirmingRescue = rescues?.find((item) => item.reportId === confirmingId) ?? null;
 
   useEffect(() => {
     if (ctx.preview) return;
@@ -72,7 +82,7 @@ export function PortalRescatesPage() {
     };
   }, [ctx.preview]);
 
-  const ingresar = async (rescue: IncomingRescue) => {
+  const ingresar = async (rescue: IncomingRescue, reception: ReceptionInfo) => {
     if (ctx.preview) {
       setRescues((current) => current?.filter((item) => item.reportId !== rescue.reportId) ?? null);
       setConfirmingId(null);
@@ -81,7 +91,7 @@ export function PortalRescatesPage() {
     }
     setIntakingId(rescue.reportId);
     try {
-      await intakeReport(rescue.reportId);
+      await intakeReport(rescue.reportId, reception);
       setRescues((current) => current?.filter((item) => item.reportId !== rescue.reportId) ?? null);
       setConfirmingId(null);
       setDoneName(rescue.species === 'gato' ? 'el gatito' : 'el perrito');
@@ -216,35 +226,13 @@ export function PortalRescatesPage() {
                       <Radio className="h-4 w-4" /> Ver en vivo
                     </Link>
                   )}
-                  {confirmingId === rescue.reportId ? (
-                    <div className="flex flex-1 items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => ingresar(rescue)}
-                        disabled={intakingId === rescue.reportId}
-                        className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-exito py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-                      >
-                        <CheckCircle2 className="h-4 w-4" />
-                        {intakingId === rescue.reportId ? 'Ingresando…' : 'Sí, confirmar'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setConfirmingId(null)}
-                        disabled={intakingId === rescue.reportId}
-                        className="rounded-xl border border-neutral-200 px-3 py-2.5 text-sm font-medium text-neutral-600 transition-colors hover:bg-neutral-50 disabled:opacity-60"
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setConfirmingId(rescue.reportId)}
-                      className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-cobalto py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-                    >
-                      <CheckCircle2 className="h-4 w-4" /> Ingresar
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingId(rescue.reportId)}
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-cobalto py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                  >
+                    <CheckCircle2 className="h-4 w-4" /> Ingresar
+                  </button>
                 </div>
               </article>
             ))}
@@ -258,6 +246,20 @@ export function PortalRescatesPage() {
           En vista previa los cambios no se guardan de verdad.
         </p>
       )}
+
+      <AnimatePresence>
+        {confirmingRescue && (
+          <ReceptionSheet
+            rescue={confirmingRescue}
+            defaultReceivedBy={user?.name ?? ''}
+            saving={intakingId === confirmingRescue.reportId}
+            onConfirm={(reception) => ingresar(confirmingRescue, reception)}
+            onClose={() => {
+              if (intakingId !== confirmingRescue.reportId) setConfirmingId(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

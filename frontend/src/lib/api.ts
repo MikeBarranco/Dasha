@@ -702,6 +702,8 @@ const actionTypeLabels: Record<string, string> = {
   sighting_added: 'Nuevo avistamiento',
   accepted: 'Un voluntario tomó el caso',
   on_the_way: 'Voluntario en camino',
+  arrived: 'Llegó con el aliado',
+  delivered: 'Entregado al aliado',
   sheltered: 'Puesto a resguardo',
   sent_to_vet: 'Llevado a la veterinaria',
   record_created: 'Ficha de rehabilitación creada',
@@ -1495,6 +1497,25 @@ export async function postRescueLocation(id: string, location: LatLng): Promise<
   });
 }
 
+// Foto que el voluntario toma como evidencia del traslado: al recoger al
+// animalito ('pickup') y al entregarlo con el aliado ('delivery'). Alimenta la
+// línea de tiempo del caso. POST /rescue-assignments/:id/photos
+// Es tolerante a fallos a propósito: si la subida falla, el avance de estado no
+// se bloquea (la evidencia es un extra, no un requisito para mover el rescate).
+export type RescuePhotoKind = 'pickup' | 'delivery';
+
+export async function addRescuePhoto(
+  id: string,
+  kind: RescuePhotoKind,
+  photoBase64: string,
+  note?: string,
+): Promise<void> {
+  await authedRaw(`/rescue-assignments/${id}/photos`, {
+    method: 'POST',
+    body: JSON.stringify({ kind, photoBase64, note: note?.trim() || undefined }),
+  });
+}
+
 // Traslados del propio voluntario (para saber cuáles seguir).
 // GET /users/rescue-assignments (ojo: es /users/, no /me/).
 export async function getMyRescueAssignments(status?: RescueStatus): Promise<RescueAssignment[]> {
@@ -1614,10 +1635,26 @@ export async function getIncomingRescues(): Promise<IncomingRescue[]> {
   return (data ?? []).map(mapIncomingRescue);
 }
 
+// Datos que el aliado captura al recibir al animalito (formulario de recepción).
+// Todos opcionales: si no se llenan, el intake funciona igual que antes.
+export type ReceptionInfo = {
+  // Estado al llegar, con el vocabulario de condiciones (stable | injured | critical).
+  conditionOnArrival?: string;
+  receivedBy?: string;
+  notes?: string;
+};
+
 // El aliado confirma la recepción: el reporte pasa a rehabilitación y se abre su
-// ficha. POST /me/organization/reports/:id/intake (sin body).
-export async function intakeReport(reportId: string): Promise<void> {
-  await authedRaw(`/me/organization/reports/${reportId}/intake`, { method: 'POST' });
+// ficha. POST /me/organization/reports/:id/intake { conditionOnArrival?, receivedBy?, notes? }
+export async function intakeReport(reportId: string, reception?: ReceptionInfo): Promise<void> {
+  const payload: Record<string, string> = {};
+  if (reception?.conditionOnArrival) payload.conditionOnArrival = reception.conditionOnArrival;
+  if (reception?.receivedBy?.trim()) payload.receivedBy = reception.receivedBy.trim();
+  if (reception?.notes?.trim()) payload.notes = reception.notes.trim();
+  await authedRaw(`/me/organization/reports/${reportId}/intake`, {
+    method: 'POST',
+    body: Object.keys(payload).length > 0 ? JSON.stringify(payload) : undefined,
+  });
 }
 
 // --- Tablero de necesidades de aliados (recursos de patrocinadores) ---
