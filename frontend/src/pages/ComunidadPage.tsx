@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import {
   CalendarDays,
@@ -11,6 +11,8 @@ import {
   X,
   Check,
   Flag,
+  LifeBuoy,
+  ChevronRight,
 } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Avatar } from '../components/ui/Avatar';
@@ -146,6 +148,24 @@ export function ComunidadPage() {
         title="Comunidad"
         subtitle="Eventos de esterilización, vacunación y adopción, y un foro para ayudarnos entre todos."
       />
+
+      <Link
+        to="/guia"
+        className="mb-5 flex items-center gap-3 rounded-2xl border border-cobalto/20 bg-cobalto/5 px-4 py-3 transition-colors hover:bg-cobalto/10"
+      >
+        <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-cobalto/10 text-cobalto">
+          <LifeBuoy className="h-5 w-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-cobalto">
+            Guía: qué hacer mientras llega ayuda
+          </span>
+          <span className="block text-xs text-neutral-500">
+            Pasos seguros para ayudar a un animalito herido o asustado.
+          </span>
+        </span>
+        <ChevronRight className="h-5 w-5 flex-shrink-0 text-neutral-400" />
+      </Link>
 
       <div className="mb-5 inline-flex rounded-xl bg-neutral-100 p-1">
         {(['eventos', 'foro'] as Tab[]).map((option) => (
