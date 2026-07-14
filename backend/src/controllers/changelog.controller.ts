@@ -31,7 +31,6 @@ export class ChangelogController {
       else if (items) finalChanges = [items];
       else if (changes) finalChanges = [changes];
       
-      // @ts-expect-error: Prisma json types
       const newEntry = await prisma.changelogEntry.create({
         data: {
           version,
@@ -55,7 +54,7 @@ export class ChangelogController {
 
   static async updateEntry(req: Request, res: Response, next: NextFunction) {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
       const { version, date, title, items, changes, type } = req.body;
       
       let finalChanges: any = undefined;
@@ -71,7 +70,6 @@ export class ChangelogController {
       if (finalChanges !== undefined) updateData.changes = finalChanges;
       if (type !== undefined) updateData.type = type;
 
-      // @ts-expect-error: Prisma json types
       const updated = await prisma.changelogEntry.update({
         where: { id },
         data: updateData
@@ -84,7 +82,7 @@ export class ChangelogController {
 
   static async deleteEntry(req: Request, res: Response, next: NextFunction) {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
       await prisma.changelogEntry.delete({ where: { id } });
       res.status(200).json({ message: 'Novedad eliminada correctamente' });
     } catch (error) {
