@@ -383,6 +383,7 @@ model Report {
   colonyId         String?                                @map("colony_id") @db.VarChar(50)
   aiValidated      Boolean                                @default(false) @map("ai_validated")
   aiConfidence     Decimal?                               @map("ai_confidence") @db.Decimal(5, 2)
+  aiSpecies        String?                                @map("ai_species") @db.VarChar(10)
   status           ReportStatus                           @default(active)
   volunteerId      String?                                @map("volunteer_id") @db.Uuid
   destinationOrgId String?                                @map("destination_org_id") @db.Uuid
@@ -1060,17 +1061,17 @@ model ForumPostFlag {
 }
 
 model Need {
-  id               String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  organizationId   String       @map("organization_id") @db.Uuid
-  title            String       @db.VarChar(200)
-  description      String
-  category         NeedCategory
-  urgency          Urgency      @default(medium)
-  status           NeedStatus   @default(active)
-  createdAt        DateTime     @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt        DateTime     @default(now()) @map("updated_at") @db.Timestamptz
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  title          String       @db.VarChar(200)
+  description    String
+  category       NeedCategory
+  urgency        Urgency      @default(medium)
+  status         NeedStatus   @default(active)
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime     @default(now()) @map("updated_at") @db.Timestamptz
 
-  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@map("needs")
 }
