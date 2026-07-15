@@ -983,6 +983,38 @@ export async function getAnimals(): Promise<Animal[]> {
   return (data ?? []).map(mapAnimal);
 }
 
+// --- Álbum de adoptados (cierre del ciclo: la vida del perrito ya adoptado) ---
+// Galería pública de finales felices; la familia adoptante sigue subiendo fotos
+// y momentos a la ficha del MISMO animal (photos + case_actions).
+
+// Adoptados públicos para la galería. GET /animals/adopted (o /animals?status=adopted).
+// Si falla, se propaga el error (la pantalla muestra "no se pudo cargar"); vacío = estado vacío.
+export async function getAdoptedAnimals(): Promise<Animal[]> {
+  const data = await requestRaw<RawAnimal[]>('/animals/adopted');
+  return (data ?? []).map(mapAnimal);
+}
+
+// Los adoptados del usuario en sesión (para que la familia agregue momentos).
+// GET /me/adopted -> solo los animales que ESTE usuario adoptó.
+export async function getMyAdoptedAnimals(): Promise<Animal[]> {
+  const data = await authedRaw<RawAnimal[]>('/me/adopted');
+  return (data ?? []).map(mapAnimal);
+}
+
+// La familia agrega un momento (foto + descripción) a su perrito adoptado.
+// POST /animals/:id/moments { photoBase64, caption }. Registra un case_action y
+// suma la foto al álbum, para que crezca la historia post-adopción.
+export async function addAdoptedMoment(
+  animalId: string,
+  photoBase64: string,
+  caption: string,
+): Promise<void> {
+  await authedRaw(`/animals/${animalId}/moments`, {
+    method: 'POST',
+    body: JSON.stringify({ photoBase64, caption: caption.trim() || undefined }),
+  });
+}
+
 // Animales que atiende el propio aliado. Backend: /me/organization/animals
 // (spec en pendientes-isabel.md, 11.5). El cambio de estatus va a
 // PATCH /me/organization/animals/:id { status } con el enum del backend.
