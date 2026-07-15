@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { useSearchParams } from 'react-router-dom';
-import { Search, SlidersHorizontal, AlertCircle, RefreshCw } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Search, SlidersHorizontal, AlertCircle, RefreshCw, Heart, ChevronRight } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { ProgressBar } from '../components/ui/ProgressBar';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -142,6 +142,22 @@ export function RehabilitacionPage() {
         title="En rehabilitación"
         subtitle="Conoce a los animales rescatados y apadrina su recuperación."
       />
+
+      <Link
+        to="/adoptados"
+        className="mb-4 flex items-center gap-3 rounded-2xl border border-purpura/20 bg-purpura/5 px-4 py-3 transition-colors hover:bg-purpura/10"
+      >
+        <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-purpura/10 text-purpura">
+          <Heart className="h-5 w-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-purpura">Álbum de adoptados</span>
+          <span className="block text-xs text-neutral-500">
+            Mira los finales felices y cómo van creciendo en su hogar.
+          </span>
+        </span>
+        <ChevronRight className="h-5 w-5 flex-shrink-0 text-neutral-400" />
+      </Link>
 
       <div className="space-y-3">
         <div className="flex gap-2">
