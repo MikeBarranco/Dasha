@@ -17,13 +17,15 @@ import {
   Copy,
   Check,
   HeartHandshake,
+  HandHeart,
   AlertCircle,
   RefreshCw,
 } from 'lucide-react';
 import { ShareButton } from '../components/ui/ShareButton';
 import { Avatar } from '../components/ui/Avatar';
-import { getAlly } from '../lib/api';
+import { getAlly, getOrganizationNeeds } from '../lib/api';
 import { mockAllies, allyTypeLabels, type Ally } from '../data/mockAllies';
+import { needTypeLabels, type Need } from '../data/needs';
 import { whatsappUrl } from '../lib/whatsapp';
 
 export function AllyProfilePage() {
@@ -33,6 +35,7 @@ export function AllyProfilePage() {
   const [ally, setAlly] = useState<Ally | null | undefined>(() => (id ? undefined : null));
   const [error, setError] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [needs, setNeeds] = useState<Need[]>([]);
 
   const loadAlly = (isActive: () => boolean) => {
     if (!id) return;
@@ -59,6 +62,24 @@ export function AllyProfilePage() {
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  // Necesidades activas del aliado (GET /organizations/:id/needs). Van aparte del
+  // aliado en sí; si el endpoint no responde o no hay, la sección simplemente no
+  // aparece (no rompe el perfil).
+  useEffect(() => {
+    if (!id) return;
+    let active = true;
+    getOrganizationNeeds(id)
+      .then((data) => {
+        if (active) setNeeds(data);
+      })
+      .catch(() => {
+        if (active) setNeeds([]);
+      });
+    return () => {
+      active = false;
+    };
   }, [id]);
 
   const retryLoad = () => {
@@ -116,6 +137,7 @@ export function AllyProfilePage() {
   const payment = ally.paymentInfo ?? null;
   const hasPayment = Boolean(payment && (payment.bank || payment.accountHolder || payment.clabe));
   const waLink = whatsappUrl(ally.whatsapp, `Hola ${ally.name}, los contacto desde la app Dasha.`);
+  const openNeeds = needs.filter((need) => need.status === 'open');
 
   const copyClabe = async () => {
     if (!payment?.clabe) return;
@@ -283,6 +305,35 @@ export function AllyProfilePage() {
                 </div>
               )}
             </dl>
+          </section>
+        )}
+
+        {openNeeds.length > 0 && (
+          <section className="mt-4 rounded-2xl border border-naranja/20 bg-naranja/5 p-4">
+            <h2 className="flex items-center gap-2 font-display text-base font-bold text-cobalto">
+              <HandHeart className="h-4 w-4" /> Necesidades actuales
+            </h2>
+            <p className="mt-1 text-xs text-neutral-500">
+              Apoyos concretos que este aliado necesita ahora. Contáctalos para ayudar.
+            </p>
+            <ul className="mt-3 space-y-2">
+              {openNeeds.map((need) => (
+                <li key={need.id} className="rounded-xl border border-neutral-200 bg-white p-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-cobalto/10 px-2.5 py-0.5 text-xs font-medium text-cobalto">
+                      {needTypeLabels[need.type]}
+                    </span>
+                    {need.quantity && (
+                      <span className="text-xs font-medium text-neutral-500">{need.quantity}</span>
+                    )}
+                  </div>
+                  <p className="mt-1 text-sm font-medium text-neutral-800">{need.title}</p>
+                  {need.description && (
+                    <p className="mt-0.5 text-sm text-neutral-600">{need.description}</p>
+                  )}
+                </li>
+              ))}
+            </ul>
           </section>
         )}
 

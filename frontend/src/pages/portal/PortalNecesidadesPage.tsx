@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Plus, AlertCircle, CheckCircle2, X, HandHeart, Eye } from 'lucide-react';
 import {
-  getMyOrgNeeds,
+  getOrganizationNeeds,
   createNeed,
   updateNeedStatus,
   type CreateNeedInput,
@@ -64,7 +64,7 @@ export function PortalNecesidadesPage() {
   useEffect(() => {
     if (ctx.preview) return;
     let active = true;
-    getMyOrgNeeds()
+    getOrganizationNeeds(ctx.organizationId)
       .then((data) => {
         if (!active) return;
         setNeeds(data);
@@ -78,7 +78,7 @@ export function PortalNecesidadesPage() {
     return () => {
       active = false;
     };
-  }, [ctx.preview]);
+  }, [ctx.preview, ctx.organizationId]);
 
   const resetForm = () => {
     setType('food');
@@ -125,8 +125,8 @@ export function PortalNecesidadesPage() {
     setSaving(true);
     setFormError(null);
     try {
-      await createNeed(input);
-      const data = await getMyOrgNeeds();
+      await createNeed(ctx.organizationId, input);
+      const data = await getOrganizationNeeds(ctx.organizationId);
       setNeeds(data);
       resetForm();
       setFormOpen(false);
@@ -148,7 +148,7 @@ export function PortalNecesidadesPage() {
     }
     setActingId(need.id);
     try {
-      await updateNeedStatus(need.id, status);
+      await updateNeedStatus(ctx.organizationId, need.id, status);
       setNeeds((list) =>
         status === 'cancelled'
           ? (list?.filter((item) => item.id !== need.id) ?? list)

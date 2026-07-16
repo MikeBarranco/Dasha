@@ -10,7 +10,6 @@ import {
   CheckCircle2,
   MapPin,
   Clock,
-  Info,
 } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -31,15 +30,13 @@ export function NecesidadesPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [needs, setNeeds] = useState<Need[] | null>(null);
-  const [demo, setDemo] = useState(false);
   const [coveringId, setCoveringId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
-    getActiveNeeds().then((result) => {
+    getActiveNeeds().then((data) => {
       if (!active) return;
-      setNeeds(result.needs);
-      setDemo(result.demo);
+      setNeeds(data);
     });
     return () => {
       active = false;
@@ -60,10 +57,6 @@ export function NecesidadesPage() {
           ) ?? list,
       );
 
-    if (demo) {
-      markCovered();
-      return;
-    }
     setCoveringId(need.id);
     try {
       await coverNeed(need.id);
@@ -81,16 +74,6 @@ export function NecesidadesPage() {
         title="Necesidades"
         subtitle="Los refugios y aliados piden apoyo concreto (alimento, transporte, hogar temporal). Cubre una necesidad y ayuda directo."
       />
-
-      {demo && (
-        <div className="mb-4 flex items-start gap-2 rounded-2xl border border-cobalto/20 bg-cobalto/5 px-4 py-3 text-sm text-neutral-600">
-          <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-cobalto" />
-          <span>
-            Vista de demostración con ejemplos. Se conectará a las necesidades reales de los aliados
-            cuando el backend esté listo.
-          </span>
-        </div>
-      )}
 
       {needs === null && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

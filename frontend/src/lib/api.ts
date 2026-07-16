@@ -10,8 +10,6 @@ import type {
 import type { Ally, AllyType, AllyMember, AllyAnimal, AllyPaymentInfo } from '../data/mockAllies';
 import { mockAllies } from '../data/mockAllies';
 import {
-  demoNeeds,
-  demoContributions,
   type Need,
   type NeedType,
   type NeedStatus,
@@ -290,6 +288,8 @@ export type ImpactColonia = { name: string; count: number };
 export type ImpactStats = {
   rescatesLogrados: number | null;
   adopciones: number | null;
+  animalesEnAdopcion: number | null;
+  aliadosRegistrados: number | null;
   donacionesVerificadas: number | null;
   voluntariosActivos: number | null;
   reportesTotales: number | null;
@@ -351,7 +351,21 @@ export async function getImpactStats(): Promise<ImpactStats> {
 
   return {
     rescatesLogrados: numOrNull(obj, 'rescatesLogrados', 'rescues', 'rescuesCount', 'totalRescues'),
-    adopciones: numOrNull(obj, 'adopciones', 'adoptions', 'adopted', 'adoptedCount'),
+    adopciones: numOrNull(obj, 'adopciones', 'adopcionesLogradas', 'adoptions', 'adopted', 'adoptedCount'),
+    animalesEnAdopcion: numOrNull(
+      obj,
+      'animalesEnAdopcion',
+      'animalsInAdoption',
+      'enAdopcion',
+      'inAdoption',
+    ),
+    aliadosRegistrados: numOrNull(
+      obj,
+      'aliadosRegistrados',
+      'alliesRegistered',
+      'aliados',
+      'allies',
+    ),
     donacionesVerificadas: numOrNull(
       obj,
       'donacionesVerificadas',
@@ -1664,7 +1678,7 @@ export async function getVolunteerAvailability(): Promise<VolunteerAvailability>
     const raw = await authedRaw<Record<string, unknown>>('/me/availability');
     const radius = Number(raw?.radiusKm ?? raw?.radius_km ?? raw?.radius);
     return {
-      active: Boolean(raw?.active ?? raw?.isActive ?? raw?.available),
+      active: Boolean(raw?.isAvailable ?? raw?.active ?? raw?.isActive ?? raw?.available),
       radiusKm: availabilityRadiusOptions.includes(radius) ? radius : 5,
     };
   } catch {
@@ -1675,13 +1689,28 @@ export async function getVolunteerAvailability(): Promise<VolunteerAvailability>
 // Actualiza disponibilidad + radio (+ ubicación al activar, para el filtro por
 // cercanía). PATCH /me/availability. NO es tolerante a propósito: si falla, el
 // panel muestra el error para que se note (y para que Isabel lo detecte).
+// El backend espera isAvailable + coordenadas (PostGIS busca voluntarios cerca de
+// un reporte urgente y les dispara el push). Mandamos isAvailable como campo
+// principal y active de espejo; las coordenadas bajo lat/lng y latitude/longitude
+// para no depender del alias exacto del contrato.
 export async function setVolunteerAvailability(data: {
   active: boolean;
   radiusKm: number;
   lat?: number;
   lng?: number;
 }): Promise<void> {
-  await authedRaw('/me/availability', { method: 'PATCH', body: JSON.stringify(data) });
+  const body: Record<string, unknown> = {
+    isAvailable: data.active,
+    active: data.active,
+    radiusKm: data.radiusKm,
+  };
+  if (typeof data.lat === 'number' && typeof data.lng === 'number') {
+    body.lat = data.lat;
+    body.lng = data.lng;
+    body.latitude = data.lat;
+    body.longitude = data.lng;
+  }
+  await authedRaw('/me/availability', { method: 'PATCH', body: JSON.stringify(body) });
 }
 
 // Traslados del propio voluntario (para saber cuáles seguir).
@@ -1868,12 +1897,11 @@ function mapNeed(raw: Record<string, unknown>): Need {
   };
 }
 
-export type NeedsResult = { needs: Need[]; demo: boolean };
-
-// Tablero público de necesidades. GET /needs. Mientras el backend no exista,
-// devuelve datos de DEMOSTRACIÓN etiquetados (demo: true) para no dejar la pantalla
-// vacía; en cuanto el endpoint responda, usa datos reales (demo: false).
-export async function getActiveNeeds(): Promise<NeedsResult> {
+// Tablero público global de necesidades: reúne las necesidades abiertas de todos
+// los aliados en un solo lugar. GET /needs (agregado). Aún no está desplegado
+// (queda en el documento de Isabel); mientras tanto devuelve lista vacía para que
+// la pantalla muestre su estado vacío, nunca datos inventados.
+export async function getActiveNeeds(): Promise<Need[]> {
   try {
     const body = await requestRaw<unknown>('/needs');
     const list = Array.isArray(body)
@@ -1881,14 +1909,15 @@ export async function getActiveNeeds(): Promise<NeedsResult> {
       : body && typeof body === 'object' && Array.isArray((body as Record<string, unknown>).data)
         ? ((body as Record<string, unknown>).data as unknown[])
         : null;
-    if (!list) return { needs: demoNeeds, demo: true };
-    return { needs: list.map((item) => mapNeed(item as Record<string, unknown>)), demo: false };
+    if (!list) return [];
+    return list.map((item) => mapNeed(item as Record<string, unknown>));
   } catch {
-    return { needs: demoNeeds, demo: true };
+    return [];
   }
 }
 
-// Un usuario con sesión se compromete a cubrir una necesidad. POST /needs/:id/cover.
+// Un usuario con sesión se compromete a cubrir una necesidad. POST /needs/:id/cover
+// (queda en el documento de Isabel).
 export async function coverNeed(id: string, message?: string): Promise<void> {
   await authedRaw(`/needs/${id}/cover`, {
     method: 'POST',
@@ -1896,9 +1925,12 @@ export async function coverNeed(id: string, message?: string): Promise<void> {
   });
 }
 
-// El aliado gestiona sus necesidades desde el portal. GET /me/organization/needs
-export async function getMyOrgNeeds(): Promise<Need[]> {
-  const data = await authedRaw<Record<string, unknown>[]>('/me/organization/needs');
+// Necesidades de una organización. Isabel las expone en /organizations/:id/needs
+// (separadas de los recursos), tanto en el perfil público como para que el propio
+// aliado las gestione desde su portal (con su organizationId).
+export async function getOrganizationNeeds(orgId: string): Promise<Need[]> {
+  if (!orgId) return [];
+  const data = await requestRaw<Record<string, unknown>[]>(`/organizations/${orgId}/needs`);
   return (data ?? []).map(mapNeed);
 }
 
@@ -1910,18 +1942,22 @@ export type CreateNeedInput = {
   animalId?: string;
 };
 
-// Crea una necesidad. POST /me/organization/needs
-export async function createNeed(input: CreateNeedInput): Promise<void> {
-  await authedRaw('/me/organization/needs', { method: 'POST', body: JSON.stringify(input) });
+// El aliado crea una necesidad para su organización. POST /organizations/:id/needs
+export async function createNeed(orgId: string, input: CreateNeedInput): Promise<void> {
+  await authedRaw(`/organizations/${orgId}/needs`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }
 
 // El aliado marca una necesidad como entregada o la cancela.
-// PATCH /me/organization/needs/:id { status }
+// PATCH /organizations/:id/needs/:needId { status } (queda en el documento de Isabel).
 export async function updateNeedStatus(
+  orgId: string,
   id: string,
   status: 'delivered' | 'cancelled',
 ): Promise<void> {
-  await authedRaw(`/me/organization/needs/${id}`, {
+  await authedRaw(`/organizations/${orgId}/needs/${id}`, {
     method: 'PATCH',
     body: JSON.stringify({ status }),
   });
@@ -1945,15 +1981,14 @@ function mapContribution(raw: Record<string, unknown>): Contribution {
   };
 }
 
-export type ContributionsResult = { items: Contribution[]; demo: boolean };
-
 // Aportes del usuario (necesidades que ha cubierto) para "Mis aportes" del perfil.
-// GET /me/contributions. Si el endpoint aún no existe, cae a demo etiquetada.
-export async function getMyContributions(): Promise<ContributionsResult> {
+// GET /me/contributions (queda en el documento de Isabel). Si no está o falla,
+// devuelve lista vacía y la sección se oculta, sin ejemplos inventados.
+export async function getMyContributions(): Promise<Contribution[]> {
   try {
     const data = await authedRaw<Record<string, unknown>[]>('/me/contributions');
-    return { items: (data ?? []).map(mapContribution), demo: false };
+    return (data ?? []).map(mapContribution);
   } catch {
-    return { items: demoContributions, demo: true };
+    return [];
   }
 }
