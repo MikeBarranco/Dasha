@@ -16,15 +16,13 @@ const typeIcon: Record<NeedType, typeof Bone> = {
 
 export function MyContributions() {
   const [items, setItems] = useState<Contribution[] | null>(null);
-  const [demo, setDemo] = useState(false);
   const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     let active = true;
-    getMyContributions().then((result) => {
+    getMyContributions().then((data) => {
       if (!active) return;
-      setItems(result.items);
-      setDemo(result.demo);
+      setItems(data);
     });
     return () => {
       active = false;
@@ -96,12 +94,6 @@ export function MyContributions() {
             >
               {showAll ? 'Ver menos' : `Ver más (${items?.length ?? 0})`}
             </button>
-          )}
-
-          {demo && (
-            <p className="mt-2 text-xs text-neutral-400">
-              Ejemplos de demostración; se conectará a tus aportes reales pronto.
-            </p>
           )}
         </>
       )}

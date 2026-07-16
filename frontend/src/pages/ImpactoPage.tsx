@@ -11,6 +11,8 @@ import {
   RefreshCw,
   BarChart3,
   Trophy,
+  Home,
+  Building2,
 } from 'lucide-react';
 import { getImpactStats, type ImpactStats } from '../lib/api';
 
@@ -68,6 +70,13 @@ export function ImpactoPage() {
           accent: 'text-purpura',
         },
         {
+          key: 'enAdopcion',
+          icon: Home,
+          label: 'Buscando hogar ahora',
+          value: stats.animalesEnAdopcion,
+          accent: 'text-info',
+        },
+        {
           key: 'donaciones',
           icon: HandCoins,
           label: 'Donaciones verificadas',
@@ -80,6 +89,13 @@ export function ImpactoPage() {
           label: 'Voluntarios activos',
           value: stats.voluntariosActivos,
           accent: 'text-naranja',
+        },
+        {
+          key: 'aliados',
+          icon: Building2,
+          label: 'Aliados registrados',
+          value: stats.aliadosRegistrados,
+          accent: 'text-cobalto',
         },
         {
           key: 'reportes',
