@@ -29,7 +29,6 @@ import { useInstallPrompt } from '../lib/useInstallPrompt';
 import { InstallInstructions } from '../components/pwa/InstallInstructions';
 import { SocialLinks } from '../components/ui/SocialLinks';
 import { cn } from '../lib/cn';
-import { mockUser } from '../data/mockUser';
 import { resolveMedals } from '../data/medals';
 import { useAvatar, setStoredAvatar } from '../lib/useAvatar';
 import { useAuth } from '../lib/useAuth';
@@ -74,7 +73,6 @@ function RowButton({
 
 export function PerfilPage() {
   const navigate = useNavigate();
-  const user = mockUser;
   const { avatar, setAvatar } = useAvatar();
   const { user: account, logout } = useAuth();
   const { status: volunteerStatus, clear: clearVolunteer } = useVolunteerStatus();
@@ -132,9 +130,11 @@ export function PerfilPage() {
     const backendResolved = me.volunteerStatus !== null && me.volunteerStatus !== 'pending';
     if (me.role !== 'citizen' || backendResolved) clearVolunteer();
   }, [me, volunteerStatus, clearVolunteer]);
-  const level = me?.level ?? user.level;
-  const xp = me?.experience ?? user.xp;
-  const xpToNext = me ? Math.max(1, me.level * 100) : user.xpToNext;
+  // Sin usuario de ejemplo: si /me aún no manda gamificación, arranca en 0 (honesto),
+  // nunca números inventados. Se llena solo cuando el backend incluya estos campos.
+  const level = me?.level ?? 1;
+  const xp = me?.experience ?? 0;
+  const xpToNext = me ? Math.max(1, me.level * 100) : 100;
   const xpPercent = Math.min(100, Math.round((xp / xpToNext) * 100));
   // Catálogo completo de medallas; se encienden las que el usuario ya ganó
   // (los achievements reales de /me).
@@ -218,8 +218,8 @@ export function PerfilPage() {
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <StatCard value={me?.reportsCount ?? user.stats.reportes} label="Reportes" />
-        <StatCard value={me?.rescuesCount ?? user.stats.rescates} label="Rescates apoyados" />
+        <StatCard value={me?.reportsCount ?? 0} label="Reportes" />
+        <StatCard value={me?.rescuesCount ?? 0} label="Rescates apoyados" />
         <StatCard value={unlockedCount} label="Medallas" />
       </div>
 

@@ -17,12 +17,7 @@ import {
 } from '../data/needs';
 import type { LostPet } from '../data/mockLostPets';
 import { releaseNotes, type ReleaseNote } from '../data/novedades';
-import {
-  communityEvents,
-  forumPosts,
-  type CommunityEvent,
-  type ForumPost,
-} from '../data/mockComunidad';
+import { type CommunityEvent, type ForumPost } from '../data/mockComunidad';
 
 export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
 // El token de sesión ya no vive en el frontend: viaja en una cookie HttpOnly que
@@ -1257,8 +1252,9 @@ export async function unfollowAnimal(animalId: string): Promise<void> {
   await authedRaw(`/animals/${animalId}/follow`, { method: 'DELETE' });
 }
 
-// Comunidad: eventos públicos y foro. Frontend-first con respaldo al mock (hoy los
-// endpoints públicos dan 404). Lectura tolerante; enciende cuando Isabel los
+// Comunidad: eventos públicos y foro. Lectura tolerante a los nombres de campo.
+// Sin datos de ejemplo: si el endpoint no existe o falla, la pantalla muestra su
+// estado vacío (no inventa eventos ni publicaciones). Enciende cuando Isabel los
 // exponga (spec en pendientes-isabel.md, sección de Comunidad).
 function nestedCount(raw: Record<string, unknown>, key: string): number | undefined {
   const count = raw._count;
@@ -1324,13 +1320,8 @@ function mapEvent(raw: Record<string, unknown>): CommunityEvent {
 }
 
 export async function getEvents(): Promise<CommunityEvent[]> {
-  try {
-    const data = await requestRaw<Record<string, unknown>[]>('/events');
-    if (!Array.isArray(data) || data.length === 0) return communityEvents;
-    return data.map(mapEvent);
-  } catch {
-    return communityEvents;
-  }
+  const data = await requestRaw<Record<string, unknown>[]>('/events');
+  return Array.isArray(data) ? data.map(mapEvent) : [];
 }
 
 export async function rsvpEvent(id: string): Promise<void> {
@@ -1367,13 +1358,8 @@ function mapForumPost(raw: Record<string, unknown>): ForumPost {
 }
 
 export async function getForumPosts(): Promise<ForumPost[]> {
-  try {
-    const data = await requestRaw<Record<string, unknown>[]>('/forum/posts');
-    if (!Array.isArray(data) || data.length === 0) return forumPosts;
-    return data.map(mapForumPost);
-  } catch {
-    return forumPosts;
-  }
+  const data = await requestRaw<Record<string, unknown>[]>('/forum/posts');
+  return Array.isArray(data) ? data.map(mapForumPost) : [];
 }
 
 export async function createForumPost(input: {
