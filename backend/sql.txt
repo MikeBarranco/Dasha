@@ -1,1 +1,0 @@
-UPDATE users SET level = FLOOR(experience_points / 100) + 1;
