@@ -11,6 +11,7 @@ export const createReportSchema = z.object({
     condition: z.nativeEnum(Condition),
     urgency: z.nativeEnum(Urgency),
     description: z.string().optional(),
+    aiSpecies: z.string().max(10).optional(),
     
     // Coordenadas para PostGIS
     lat: z.number().min(-90).max(90),

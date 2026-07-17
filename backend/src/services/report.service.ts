@@ -22,6 +22,7 @@ export class ReportService {
           hasCollar: data.hasCollar,
           isMoving: data.isMoving,
           description: data.description || '',
+          aiSpecies: data.aiSpecies,
           // Insertamos las fotos en la misma transacción (relación)
           photos: {
             create: data.photos.map((photo: any) => ({
