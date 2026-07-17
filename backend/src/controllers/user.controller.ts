@@ -44,6 +44,15 @@ export class UserController {
         return;
       }
 
+      const expectedLevel = Math.floor(user.experiencePoints / 100) + 1;
+      if (expectedLevel > user.level) {
+        user.level = expectedLevel;
+        prisma.user.update({
+          where: { id: userId },
+          data: { level: expectedLevel }
+        }).catch(err => console.error('Error auto-leveling user:', err));
+      }
+
       res.status(200).json(user);
     } catch (error) {
       next(error);

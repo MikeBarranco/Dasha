@@ -34,6 +34,8 @@ router.use('/stats', publicGetLimiter, statsRoutes); // Generoso
 router.use('/allies', organizationRoutes);
 router.use('/animals', animalRoutes);
 router.use('/colonies', colonyRoutes);
+router.get('/debug-cookie', (req, res) => res.json({ headers: req.headers, cookies: req.cookies }));
+router.get('/debug-headers', (req, res) => res.json({ headers: req.headers, cookies: req.cookies }));
 router.use('/admin', adminRoutes);
 router.use('/lost-pets', lostPetRoutes);
 router.use('/novedades', publicGetLimiter, changelogRoutes); // Generoso
