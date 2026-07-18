@@ -161,6 +161,25 @@ const statusLabels: Record<string, string> = {
   rescued: 'Rescatado',
 };
 
+// Estados en los que un reporte ya NO debe salir en el mapa (ya se resolvió). El
+// feed ideal del backend ya los excluye, pero filtramos aquí también para que un
+// rescatado nunca se quede pintado. Tolerante a inglés y español.
+const terminalReportStatuses = new Set([
+  'rescued',
+  'completed',
+  'closed',
+  'cancelled',
+  'rescatado',
+  'completado',
+  'cerrado',
+  'cancelado',
+  'resuelto',
+]);
+
+function isTerminalReportStatus(status: string | null | undefined): boolean {
+  return status ? terminalReportStatuses.has(status.toLowerCase()) : false;
+}
+
 function timeAgo(iso: string): string {
   if (!iso) return 'hace un momento';
   const minutes = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
@@ -241,25 +260,33 @@ type ListedReport = {
   description: string | null;
   status: string | null;
   createdAt: string;
+  activeAssignmentId?: string | null;
+  active_assignment_id?: string | null;
 };
 
 export async function getReports(): Promise<Report[]> {
   const data = await requestRaw<ListedReport[]>('/reports');
-  return (data ?? []).map((raw) => ({
-    id: String(raw.id),
-    lat: Number(raw.lat),
-    lng: Number(raw.lng),
-    colonia: raw.colonia ?? 'Sin colonia',
-    species: raw.species === 'gato' || raw.species === 'cat' ? 'gato' : 'perro',
-    condition: conditionLabels[raw.condition] ?? raw.condition,
-    severity: (['baja', 'media', 'critica'].includes(raw.severity)
-      ? raw.severity
-      : 'media') as Severity,
-    photo: raw.photoUrl ?? '/placeholder-animal.svg',
-    description: raw.description ?? '',
-    reportedAgo: timeAgo(raw.createdAt),
-    status: raw.status ?? 'Activo',
-  }));
+  return (data ?? [])
+    // Los reportes ya resueltos no van al mapa: al rescatar, el pin desaparece.
+    .filter((raw) => !isTerminalReportStatus(raw.status))
+    .map((raw) => ({
+      id: String(raw.id),
+      lat: Number(raw.lat),
+      lng: Number(raw.lng),
+      colonia: raw.colonia ?? 'Sin colonia',
+      species: raw.species === 'gato' || raw.species === 'cat' ? 'gato' : 'perro',
+      condition: conditionLabels[raw.condition] ?? raw.condition,
+      severity: (['baja', 'media', 'critica'].includes(raw.severity)
+        ? raw.severity
+        : 'media') as Severity,
+      photo: raw.photoUrl ?? '/placeholder-animal.svg',
+      description: raw.description ?? '',
+      reportedAgo: timeAgo(raw.createdAt),
+      // Estado legible (antes salía el valor crudo del backend, p. ej. "in_progress").
+      status: raw.status ? (statusLabels[raw.status] ?? raw.status) : 'Activo',
+      // Id del traslado en curso: habilita "Ver rescate en vivo" desde el pin del mapa.
+      activeAssignmentId: raw.activeAssignmentId ?? raw.active_assignment_id ?? null,
+    }));
 }
 
 export type Stats = {
