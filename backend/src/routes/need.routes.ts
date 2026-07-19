@@ -13,4 +13,7 @@ router.patch('/:id', requireAuth, NeedController.updateNeed);
 // DELETE /api/v1/needs/:id - Eliminar necesidad
 router.delete('/:id', requireAuth, NeedController.deleteNeed);
 
+// POST /api/v1/needs/:id/cover - Ofrecer ayuda con una necesidad
+router.post('/:id/cover', requireAuth, NeedController.coverNeed);
+
 export default router;

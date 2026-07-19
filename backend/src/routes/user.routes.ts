@@ -22,6 +22,9 @@ router.patch('/availability', requireAuth, validate(updateAvailabilitySchema), U
 // GET /api/v1/me/reports (Protegida, mis reportes)
 router.get('/reports', requireAuth, UserController.getMyReports);
 
+// GET /api/v1/me/contributions (Protegida, mis contribuciones a necesidades y donaciones)
+router.get('/contributions', requireAuth, UserController.getMyContributions);
+
 // GET /api/v1/me/rescue-assignments
 router.get('/rescue-assignments', requireAuth, UserController.getMyRescueAssignments);
 

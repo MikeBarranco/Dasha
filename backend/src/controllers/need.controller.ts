@@ -91,4 +91,39 @@ export class NeedController {
       next(error);
     }
   }
+
+  // POST /api/v1/needs/:id/cover - Ofrecer ayuda con una necesidad
+  static async coverNeed(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      const userId = (req as any).user?.id;
+      const { notes } = req.body;
+
+      if (!userId) {
+        res.status(401).json({ error: 'No autorizado' });
+        return;
+      }
+
+      const need = await prisma.need.findUnique({ where: { id } });
+      if (!need) {
+        res.status(404).json({ error: 'Necesidad no encontrada' });
+        return;
+      }
+
+      const contribution = await prisma.needContribution.create({
+        data: {
+          needId: id,
+          userId,
+          notes
+        }
+      });
+
+      res.status(201).json({
+        message: 'Gracias por ofrecer tu ayuda. La organización ha sido notificada.',
+        data: contribution
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

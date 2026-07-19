@@ -206,6 +206,35 @@ export class UserController {
     }
   }
 
+  static async getMyContributions(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        res.status(401).json({ error: 'No autorizado' });
+        return;
+      }
+
+      const needContributions = await prisma.needContribution.findMany({
+        where: { userId },
+        include: { need: true },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      const donations = await prisma.donation.findMany({
+        where: { userId },
+        include: { animal: { select: { id: true, name: true } } },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      res.status(200).json({
+        needs: needContributions,
+        donations
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async updateProfile(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = (req as any).user?.id;

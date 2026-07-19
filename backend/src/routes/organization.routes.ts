@@ -46,4 +46,11 @@ router.get('/:id/needs', NeedController.getOrganizationNeeds);
 // POST /api/v1/organizations/:id/needs (Crear necesidad para una org)
 router.post('/:id/needs', requireAuth, NeedController.createNeed);
 
+// PATCH /api/v1/organizations/:id/needs/:needId (Actualizar necesidad)
+// Redirige al controlador de necesidades (usa params.needId en vez de id)
+router.patch('/:id/needs/:needId', requireAuth, (req, res, next) => {
+  req.params.id = req.params.needId;
+  NeedController.updateNeed(req, res, next);
+});
+
 export default router;

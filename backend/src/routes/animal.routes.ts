@@ -9,8 +9,14 @@ const router = Router();
 // GET /api/v1/animals (Pública, mapa/directorio de adopción)
 router.get('/', AnimalController.getPublicAnimals);
 
+// GET /api/v1/animals/adopted (Pública, álbum de adoptados)
+router.get('/adopted', AnimalController.getAdoptedAnimals);
+
 // GET /api/v1/animals/:id (Pública, detalle de un animal)
 router.get('/:id', AnimalController.getAnimalById);
+
+// POST /api/v1/animals/:id/moments (Protegida, álbum de recuerdos)
+router.post('/:id/moments', requireAuth, AnimalController.addMoment);
 
 // POST /api/v1/animals (Protegida, crear perfil de animal rescatado)
 router.post('/', requireAuth, validate(createAnimalSchema), AnimalController.createProfile);

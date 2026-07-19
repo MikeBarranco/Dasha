@@ -226,7 +226,7 @@ export class AnimalController {
     try {
       const animalId = req.params.id as string;
       const userId = req.user!.id;
-      const { type, items, amountDeclared, proofBase64, notes, isAnonymous } = req.body;
+      const { type, items, itemsDescription, amount, amountDeclared, proofBase64, notes, isAnonymous } = req.body;
 
       const animal = await prisma.animalProfile.findUnique({
         where: { id: animalId }
@@ -241,11 +241,11 @@ export class AnimalController {
         animalId,
         userId,
         type: type === 'items' ? 'items' : 'money',
-        amount: type === 'items' ? 0 : (amountDeclared || 0),
+        amount: type === 'items' ? 0 : (amount || amountDeclared || 0),
         currency: 'MXN',
         status: 'pending',
         isAnonymous: Boolean(isAnonymous),
-        items: type === 'items' ? items : null
+        items: type === 'items' ? (itemsDescription || items) : null
       };
 
       const newDonation = await prisma.donation.create({
@@ -276,6 +276,60 @@ export class AnimalController {
         status: 'success',
         message: 'Donativo registrado correctamente',
         data: newDonation
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getAdoptedAnimals(req: Request, res: Response, next: NextFunction) {
+    try {
+      const adopted = await prisma.animalProfile.findMany({
+        where: { status: 'adopted' },
+        include: {
+          photos: {
+            orderBy: { createdAt: 'desc' }
+          },
+          organization: {
+            select: { id: true, name: true, logoUrl: true }
+          }
+        },
+        orderBy: { updatedAt: 'desc' }
+      });
+      res.status(200).json(adopted);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async addMoment(req: Request, res: Response, next: NextFunction) {
+    try {
+      const animalId = req.params.id as string;
+      const { photoBase64, caption } = req.body;
+
+      if (!photoBase64) {
+        res.status(400).json({ error: 'Falta la foto (photoBase64)' });
+        return;
+      }
+
+      const { v2: cloudinary } = await import('cloudinary');
+      const uploadResult = await cloudinary.uploader.upload(photoBase64, {
+        folder: 'dasha/adopted_moments'
+      });
+
+      const photo = await prisma.animalPhoto.create({
+        data: {
+          animalId,
+          url: uploadResult.secure_url,
+          publicId: uploadResult.public_id,
+          caption: caption || 'Un hermoso momento',
+          orderIndex: 0
+        }
+      });
+
+      res.status(201).json({
+        message: 'Momento agregado con éxito',
+        data: photo
       });
     } catch (error) {
       next(error);

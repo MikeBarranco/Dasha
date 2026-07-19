@@ -244,7 +244,16 @@ export class AdminController {
           active: 'Activo',
           in_progress: 'En Camino',
           rescued: 'Rescatado',
-          closed: 'Cerrado'
+          in_treatment: 'En Tratamiento',
+          recovering: 'En Recuperación',
+          looking_for_foster: 'Buscando Hogar Temporal',
+          in_foster: 'En Hogar Temporal',
+          looking_for_adoption: 'Buscando Adopción',
+          adopted: 'Adoptado',
+          closed: 'Cerrado',
+          duplicate: 'Duplicado',
+          not_found: 'No Encontrado',
+          deceased: 'Fallecido'
         };
         const statusName = statusMap[data.status as string] || data.status;
         const animalDesc = `${currentReport.species === 'dog' ? 'Perro' : (currentReport.species === 'cat' ? 'Gato' : 'Animal')} (${currentReport.primaryColor})`;
@@ -255,10 +264,11 @@ export class AdminController {
         await NotificationService.sendNotification({
           userId: currentReport.userId,
           title: 'Actualización de tu reporte',
-          body: `El estado del ${reportName} ha cambiado a: ${statusName}.`,
+          body: `El estado de tu ${reportName} ha cambiado a: ${statusName}.`,
           type: 'status_change',
           referenceId: id,
-          referenceType: 'report'
+          referenceType: 'report',
+          link: '/perfil'
         });
       }
 
@@ -285,8 +295,20 @@ export class AdminController {
         }
 
         await tx.lostPet.deleteMany({ where: { reportId: id } });
+        const animalProfiles = await tx.animalProfile.findMany({ where: { reportId: id }, select: { id: true } });
+        for (const ap of animalProfiles) {
+          await tx.animalPhoto.deleteMany({ where: { animalId: ap.id } });
+          await tx.medicalRecord.deleteMany({ where: { animalId: ap.id } });
+          await tx.vaccination.deleteMany({ where: { animalId: ap.id } });
+          await tx.resource.deleteMany({ where: { animalId: ap.id } });
+          await tx.donation.deleteMany({ where: { animalId: ap.id } });
+          await tx.caseAction.deleteMany({ where: { animalId: ap.id } });
+          await tx.fosterAssignment.deleteMany({ where: { animalId: ap.id } });
+          await tx.adoptionApplication.deleteMany({ where: { animalId: ap.id } });
+          await tx.animalTimelineEvent.deleteMany({ where: { animalId: ap.id } });
+          await tx.animalFollower.deleteMany({ where: { animalId: ap.id } });
+        }
         await tx.animalProfile.deleteMany({ where: { reportId: id } });
-
         await tx.reportStatusHistory.deleteMany({ where: { reportId: id } });
         await tx.caseAction.deleteMany({ where: { reportId: id } });
         await tx.rescueAssignment.deleteMany({ where: { reportId: id } });

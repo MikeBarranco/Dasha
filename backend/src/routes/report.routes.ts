@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { ReportController } from '../controllers/report.controller';
 import { validate } from '../middlewares/validate';
-import { requireAuth } from '../middlewares/auth.middleware';
+import { requireAuth, optionalAuth } from '../middlewares/auth.middleware';
 import { createReportSchema, getNearbyReportsSchema, updateReportStatusSchema } from '../schemas/report.schema';
 
 const router = Router();
