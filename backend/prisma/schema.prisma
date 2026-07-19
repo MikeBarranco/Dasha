@@ -336,6 +336,7 @@ model User {
   discountCodes        DiscountCode[]
   auditLogs            AuditLog[]
   followedAnimals      AnimalFollower[]
+  needContributions    NeedContribution[]
 
   @@map("users")
 }
@@ -1072,8 +1073,22 @@ model Need {
   updatedAt      DateTime     @default(now()) @map("updated_at") @db.Timestamptz
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  contributions NeedContribution[]
 
   @@map("needs")
+}
+
+model NeedContribution {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  needId    String   @map("need_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  need Need @relation(fields: [needId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("need_contributions")
 }
 
 enum NeedCategory {

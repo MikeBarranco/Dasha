@@ -1120,19 +1120,27 @@ export class OrganizationController {
    */
   static async getOrganizationAnimals(req: Request, res: Response, next: NextFunction) {
     try {
-      const userId = (req as any).user?.id;
+      const user = (req as any).user;
+      const organizationIdParam = req.query.organizationId as string;
       
-      const myEmployee = await prisma.organizationEmployee.findFirst({
-        where: { userId }
-      });
+      let targetOrgId = '';
 
-      if (!myEmployee) {
-        res.status(403).json({ error: 'No perteneces a ninguna organización' });
-        return;
+      if (user?.role === 'admin' && organizationIdParam) {
+        targetOrgId = organizationIdParam;
+      } else {
+        const myEmployee = await prisma.organizationEmployee.findFirst({
+          where: { userId: user?.id }
+        });
+
+        if (!myEmployee) {
+          res.status(403).json({ error: 'No perteneces a ninguna organización' });
+          return;
+        }
+        targetOrgId = myEmployee.organizationId;
       }
 
       const animals = await prisma.animalProfile.findMany({
-        where: { organizationId: myEmployee.organizationId },
+        where: { organizationId: targetOrgId },
         include: {
           medicalRecords: { orderBy: { createdAt: 'desc' } }
         },

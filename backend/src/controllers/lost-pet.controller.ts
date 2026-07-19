@@ -18,8 +18,8 @@ export class LostPetController {
       }
 
       const { 
-        petName, species, primaryColor, secondaryColor, size, condition, 
-        distinctiveMarks, lat, lng, searchRadiusKm, reward, contactWhatsapp, 
+        petName, species, primaryColor, color, secondaryColor, size, condition, 
+        distinctiveMarks, lat, lng, searchRadiusKm, reward, contactWhatsapp, contactName, lastSeenAt,
         photosBase64 
       } = req.body;
 
@@ -47,7 +47,7 @@ export class LostPetController {
           data: {
             userId,
             species,
-            primaryColor,
+            primaryColor: primaryColor || color || 'Desconocido',
             secondaryColor,
             size,
             condition,
@@ -63,14 +63,15 @@ export class LostPetController {
         // B. Crear el LostPet vinculado usando Raw Query (porque lastSeenLocation es Unsupported y obligatorio)
         const radius = searchRadiusKm || 3;
         const rewardVal = reward ? parseFloat(reward) : null;
+        const seenAt = lastSeenAt ? new Date(lastSeenAt) : new Date();
         
         const lostPetRes: any[] = await tx.$queryRaw`
           INSERT INTO lost_pets (
             report_id, owner_id, pet_name, distinctive_marks, 
-            last_seen_location, last_seen_at, search_radius_km, reward, contact_whatsapp, is_found
+            last_seen_location, last_seen_at, search_radius_km, reward, contact_whatsapp, contact_name, is_found
           ) VALUES (
             ${report.id}::uuid, ${userId}::uuid, ${petName}, ${distinctiveMarks}, 
-            ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326), NOW(), ${radius}, ${rewardVal}, ${contactWhatsapp}, false
+            ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326), ${seenAt}, ${radius}, ${rewardVal}, ${contactWhatsapp}, ${contactName}, false
           ) RETURNING id;
         `;
 
@@ -114,6 +115,7 @@ export class LostPetController {
           lp.search_radius_km as "searchRadiusKm",
           lp.reward,
           lp.contact_whatsapp as "contactWhatsapp",
+          lp.contact_name as "contactName",
           lp.last_seen_at as "lastSeenAt",
           r.created_at as "createdAt",
           ST_X(lp.last_seen_location::geometry) as lng,

@@ -44,6 +44,29 @@ export const requireAuth = (req: AuthRequest, res: Response, next: NextFunction)
   }
 };
 
+export const optionalAuth = (req: AuthRequest, res: Response, next: NextFunction): void => {
+  let token = req.cookies?.token;
+
+  if (!token) {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+    }
+  }
+
+  if (!token) {
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(token, SECRET_TO_USE) as { id: string; role: string };
+    req.user = decoded;
+  } catch (error) {
+    // Ignoramos el error si el token es inválido en optionalAuth
+  }
+  next();
+};
+
 export const requireRole = (role: string) => {
   return (req: AuthRequest, res: Response, next: NextFunction): void => {
     // requireRole siempre debe ir después de requireAuth, así req.user ya existe
