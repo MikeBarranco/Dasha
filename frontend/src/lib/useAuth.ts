@@ -6,10 +6,11 @@ import {
   clearSession,
   getStoredUser,
   API_URL,
+  AUTH_CHANGE_EVENT,
   type AuthUser,
 } from './api';
 
-const CHANGE_EVENT = 'dasha-auth-change';
+const CHANGE_EVENT = AUTH_CHANGE_EVENT;
 
 export function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(getStoredUser);

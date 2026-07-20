@@ -48,6 +48,23 @@ export function clearSession(): void {
   localStorage.removeItem(USER_KEY);
 }
 
+// Evento con el que la UI se entera de que la sesión cambió (entrar, salir o
+// expirar). Lo escucha useAuth para repintar al instante.
+export const AUTH_CHANGE_EVENT = 'dasha-auth-change';
+
+// El backend respondió 401: la cookie de sesión expiró o ya no es válida. El
+// perfil guardado hacía creer a la app que seguíamos dentro (y por eso salían
+// errores raros al publicar). Lo limpiamos para que la interfaz refleje la
+// realidad: las pantallas protegidas mandan a login solas.
+export function handleUnauthorized(): void {
+  if (!getStoredUser()) return;
+  clearSession();
+  window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
+}
+
+// Mensaje único para cuando se cae la sesión, para no inventar textos distintos.
+export const SESSION_EXPIRED_MESSAGE = 'Tu sesión expiró. Vuelve a iniciar sesión.';
+
 // Actualiza solo el avatar del usuario en sesión (tras cambiarlo o al recibirlo
 // del backend), sin tocar el resto del perfil guardado.
 export function setStoredUserAvatar(url: string | null): void {
@@ -80,6 +97,11 @@ async function request<T>(path: string, options: RequestInit = {}, auth = false)
     credentials: 'include',
   });
   const body = (await response.json().catch(() => ({}))) as Envelope<T>;
+
+  if (response.status === 401) {
+    handleUnauthorized();
+    throw new Error(SESSION_EXPIRED_MESSAGE);
+  }
 
   if (!response.ok || body.status === 'error') {
     throw new Error(body.message ?? 'Ocurrió un error con el servidor');
@@ -500,6 +522,10 @@ async function authedRaw<T>(path: string, options: RequestInit = {}): Promise<T>
   });
 
   const body = (await response.json().catch(() => null)) as unknown;
+  if (response.status === 401) {
+    handleUnauthorized();
+    throw new Error(SESSION_EXPIRED_MESSAGE);
+  }
   if (!response.ok) {
     const message =
       body && typeof body === 'object' && !Array.isArray(body)
