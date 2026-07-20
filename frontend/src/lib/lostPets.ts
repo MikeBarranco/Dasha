@@ -42,6 +42,11 @@ export async function createLostPetReport(input: LostPetInput): Promise<LostPetR
     contactWhatsapp: input.contactPhone,
     description: input.description || undefined,
     photosBase64: input.photoBase64 ? [input.photoBase64] : [],
+    // Datos que el formulario ya pedía y que el backend ya guarda: el color
+    // ayuda a identificarla y la última vez que se vio acota la búsqueda.
+    color: input.color || undefined,
+    lastSeenAt: input.lastSeenAt || undefined,
+    contactName: input.contactName || undefined,
   };
 
   const response = await fetch(`${API_URL}/lost-pets`, {

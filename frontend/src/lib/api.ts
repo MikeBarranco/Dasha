@@ -135,6 +135,10 @@ export type CreateReportInput = {
   lat: number;
   lng: number;
   photoBase64: string;
+  // Banderas que el formulario ya preguntaba y que el backend guarda en la ficha:
+  // sirven para que el voluntario sepa a qué se enfrenta antes de llegar.
+  isAggressive?: boolean;
+  hasCollar?: boolean;
 };
 
 export async function createReport(input: CreateReportInput) {
@@ -2025,8 +2029,16 @@ function mapContribution(raw: Record<string, unknown>): Contribution {
 // devuelve lista vacía y la sección se oculta, sin ejemplos inventados.
 export async function getMyContributions(): Promise<Contribution[]> {
   try {
-    const data = await authedRaw<Record<string, unknown>[]>('/me/contributions');
-    return (data ?? []).map(mapContribution);
+    const raw = await authedRaw<unknown>('/me/contributions');
+    // El backend responde { needs, donations }. Tomamos las necesidades cubiertas,
+    // que es lo que muestra "Mis aportes"; toleramos también un arreglo plano por
+    // si el contrato cambia.
+    const list = Array.isArray(raw)
+      ? raw
+      : raw && typeof raw === 'object' && Array.isArray((raw as Record<string, unknown>).needs)
+        ? ((raw as Record<string, unknown>).needs as unknown[])
+        : [];
+    return list.map((item) => mapContribution(item as Record<string, unknown>));
   } catch {
     return [];
   }
