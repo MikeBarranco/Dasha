@@ -308,6 +308,8 @@ export function ReportarPage() {
         lat,
         lng,
         photoBase64,
+        isAggressive,
+        hasCollar,
       };
 
       const created = await createReport(payload);
