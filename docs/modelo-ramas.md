@@ -12,23 +12,40 @@ trazabilidad (por ejemplo `feat(notificaciones): web push (DSH-28)`).
 
 ```mermaid
 gitGraph
-   commit id: "inicio"
+   commit id: "Evaluacion 1"
    branch staging
    checkout staging
-   commit id: "base"
-   branch feat/mapa
-   checkout feat/mapa
-   commit id: "DSH-41"
+   commit id: "integracion continua"
+   branch feat/ruta-uber
+   checkout feat/ruta-uber
+   commit id: "DSH-25"
    checkout staging
-   merge feat/mapa
-   branch feat/notificaciones-push
-   checkout feat/notificaciones-push
-   commit id: "DSH-28"
+   merge feat/ruta-uber
+   branch feat/modo-activo-voluntario
+   checkout feat/modo-activo-voluntario
+   commit id: "DSH-23"
    checkout staging
-   merge feat/notificaciones-push
+   merge feat/modo-activo-voluntario
+   branch fix/estado-reportes-mapa
+   checkout fix/estado-reportes-mapa
+   commit id: "DSH-85"
+   checkout staging
+   merge fix/estado-reportes-mapa
    checkout main
-   merge staging tag: "v0.6"
+   merge staging tag: "Evaluacion 2"
 ```
+
+## El modelo en números
+
+Entre la primera y la segunda evaluación (22 de junio al 20 de julio):
+
+- **130 pull requests** integrados a `staging`.
+- **111 ramas** distintas, una por objetivo.
+- Ninguna escritura directa sobre `main`: producción solo recibe lo que ya pasó
+  por integración.
+
+Cada rama es pequeña a propósito: entre más chico el cambio, más fácil de
+revisar y más rápido de corregir si algo sale mal.
 
 ## Flujo de trabajo
 
