@@ -1,4 +1,4 @@
-import { API_URL, getStoredUser } from './api';
+import { API_URL, getStoredUser, handleUnauthorized, SESSION_EXPIRED_MESSAGE } from './api';
 
 // Cliente para los endpoints protegidos /admin/*. Es tolerante a la forma de la
 // respuesta: acepta tanto { status, data } como el dato directo, porque el
@@ -19,6 +19,11 @@ async function adminFetch<T>(path: string, options: RequestInit = {}): Promise<T
     | { status?: string; message?: string; error?: string; data?: unknown }
     | unknown[]
     | null;
+
+  if (response.status === 401) {
+    handleUnauthorized();
+    throw new Error(SESSION_EXPIRED_MESSAGE);
+  }
 
   if (!response.ok || (body && !Array.isArray(body) && body.status === 'error')) {
     // El backend a veces manda el detalle en `message` y otras en `error`.

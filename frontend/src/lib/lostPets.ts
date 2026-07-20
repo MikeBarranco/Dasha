@@ -1,4 +1,4 @@
-import { API_URL, getStoredUser } from './api';
+import { API_URL, getStoredUser, handleUnauthorized, SESSION_EXPIRED_MESSAGE } from './api';
 
 export type LostPetInput = {
   petName: string;
@@ -56,6 +56,11 @@ export async function createLostPetReport(input: LostPetInput): Promise<LostPetR
   const data = (await response.json().catch(() => null)) as
     | { id?: string; data?: { id?: string }; message?: string }
     | null;
+
+  if (response.status === 401) {
+    handleUnauthorized();
+    throw new Error(SESSION_EXPIRED_MESSAGE);
+  }
 
   if (!response.ok) {
     throw new Error(data?.message ?? 'No se pudo publicar. Intenta de nuevo.');
