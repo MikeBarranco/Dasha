@@ -677,12 +677,28 @@ export async function updateMe(data: {
 // lo previsualice con datos de ejemplo (preview) para poder construir y probar.
 export type AllyRole = 'owner' | 'vet';
 
+// Aliados de ciclo completo (reciben perritos, rehabilitan, adoptan) vs aliados
+// de apoyo (foro, cultura, necesidades). El tipo viene de organizations.org_type.
+export const FULL_CYCLE_ORG_TYPES = ['veterinary', 'shelter'];
+export function isFullCycleOrg(orgType: string): boolean {
+  return FULL_CYCLE_ORG_TYPES.includes(orgType);
+}
+
 export type AllyContext = {
   organizationId: string;
   organizationName: string;
+  orgType: string;
   role: AllyRole;
   preview: boolean;
 };
+
+// El backend distingue el rol dentro de la organización como role_in_org
+// (admin|veterinarian|assistant en BD). Aquí lo reducimos a owner|vet: el
+// responsable (admin) es owner; el resto, vet.
+function normalizeAllyRole(raw: unknown): AllyRole {
+  const value = String(raw ?? 'owner').toLowerCase();
+  return value === 'owner' || value === 'admin' ? 'owner' : 'vet';
+}
 
 export async function getMyOrganization(): Promise<AllyContext | null> {
   try {
@@ -693,11 +709,12 @@ export async function getMyOrganization(): Promise<AllyContext | null> {
         : null;
     const id = orgObj ? String(orgObj.id ?? orgObj._id ?? '') : '';
     if (id) {
-      const roleRaw = String((raw as Record<string, unknown>).role ?? 'owner');
+      const record = raw as Record<string, unknown>;
       return {
         organizationId: id,
         organizationName: String(orgObj?.name ?? 'Mi organización'),
-        role: roleRaw === 'vet' ? 'vet' : 'owner',
+        orgType: String(orgObj?.orgType ?? orgObj?.org_type ?? 'veterinary'),
+        role: normalizeAllyRole(record.role ?? record.roleInOrg ?? record.role_in_org),
         preview: false,
       };
     }
@@ -710,6 +727,7 @@ export async function getMyOrganization(): Promise<AllyContext | null> {
     return {
       organizationId: mockAllies[0].id,
       organizationName: mockAllies[0].name,
+      orgType: mockAllies[0].orgType,
       role: 'owner',
       preview: true,
     };

@@ -323,11 +323,18 @@ export async function deleteAdminOrganization(id: string): Promise<void> {
 // Equipo (veterinarios) de un aliado. Cada vet tiene su cuenta y el aliado lo
 // vincula por correo. El endpoint lo hará Isabel (spec en pendientes-isabel.md,
 // sección 11.1); el cliente ya está listo y es tolerante a la forma de respuesta.
+// El backend usa role_in_org (admin|veterinarian|assistant en BD); el front venía
+// usando owner|vet. Aceptamos ambos vocabularios para no romper al conectar.
 const orgMemberRoleLabels: Record<string, string> = {
   owner: 'Responsable',
+  admin: 'Responsable',
   vet: 'Veterinario',
-  admin: 'Administrador',
+  veterinarian: 'Veterinario',
+  assistant: 'Asistente',
 };
+
+// Rol dentro de la organización que el admin puede asignar al vincular por correo.
+export type OrgMemberRole = 'admin' | 'veterinarian';
 
 export type AdminOrgMember = {
   userId: string;
@@ -366,11 +373,20 @@ export async function getAdminOrgTeam(orgId: string): Promise<AdminOrgMember[]> 
   return (data ?? []).map(mapOrgMember);
 }
 
-export async function addAdminOrgTeamMember(orgId: string, email: string): Promise<void> {
+export async function addAdminOrgTeamMember(
+  orgId: string,
+  email: string,
+  roleInOrg: OrgMemberRole = 'veterinarian',
+): Promise<void> {
   await adminFetch(`/admin/organizations/${orgId}/team`, {
     method: 'POST',
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({ email, roleInOrg }),
   });
+}
+
+// Un miembro es el responsable si su rol es admin/owner (ambos vocabularios).
+export function isOrgResponsable(role: string): boolean {
+  return role === 'owner' || role === 'admin';
 }
 
 export async function removeAdminOrgTeamMember(orgId: string, userId: string): Promise<void> {
