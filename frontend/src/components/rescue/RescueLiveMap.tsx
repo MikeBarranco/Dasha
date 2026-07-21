@@ -23,6 +23,19 @@ const baseStyle: StyleSpecification = {
   layers: [{ id: 'carto', type: 'raster', source: 'carto' }],
 };
 
+// Un punto solo sirve si sus dos coordenadas son números reales. Si el backend
+// manda null, texto vacío o un dato a medias (pasa con una asignación recién
+// creada), maplibre lanza una excepción al dibujar el marcador y se cae toda la
+// pantalla. Aquí lo descartamos antes de llegar a eso.
+function validPoint(
+  point: { lat: number; lng: number } | null | undefined,
+): { lat: number; lng: number } | null {
+  if (!point) return null;
+  const lat = Number(point.lat);
+  const lng = Number(point.lng);
+  return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+}
+
 function lineFeature(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
   return {
     type: 'Feature' as const,
@@ -64,23 +77,25 @@ export function RescueLiveMap({ assignment, position }: Props) {
 
     map.on('load', () => {
       const bounds = new maplibregl.LngLatBounds();
+      const origin = validPoint(assignment.origin);
+      const destination = validPoint(assignment.destination);
 
-      if (assignment.origin) {
+      if (origin) {
         new maplibregl.Marker({ color: '#9CA3AF' })
-          .setLngLat([assignment.origin.lng, assignment.origin.lat])
+          .setLngLat([origin.lng, origin.lat])
           .addTo(map);
-        bounds.extend([assignment.origin.lng, assignment.origin.lat]);
+        bounds.extend([origin.lng, origin.lat]);
       }
-      if (assignment.destination) {
+      if (destination) {
         new maplibregl.Marker({ color: '#1C4E80' })
-          .setLngLat([assignment.destination.lng, assignment.destination.lat])
+          .setLngLat([destination.lng, destination.lat])
           .addTo(map);
-        bounds.extend([assignment.destination.lng, assignment.destination.lat]);
+        bounds.extend([destination.lng, destination.lat]);
       }
-      if (assignment.origin && assignment.destination) {
+      if (origin && destination) {
         map.addSource('rescue-route', {
           type: 'geojson',
-          data: lineFeature(assignment.origin, assignment.destination),
+          data: lineFeature(origin, destination),
         });
         map.addLayer({
           id: 'rescue-route-line',
@@ -112,13 +127,14 @@ export function RescueLiveMap({ assignment, position }: Props) {
   // Mueve el marcador del voluntario conforme llega su posición.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !position) return;
+    const point = validPoint(position);
+    if (!map || !point) return;
     if (!volunteerRef.current) {
       volunteerRef.current = new maplibregl.Marker({ color: '#F2780B' })
-        .setLngLat([position.lng, position.lat])
+        .setLngLat([point.lng, point.lat])
         .addTo(map);
     } else {
-      volunteerRef.current.setLngLat([position.lng, position.lat]);
+      volunteerRef.current.setLngLat([point.lng, point.lat]);
     }
   }, [position]);
 
