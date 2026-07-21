@@ -231,7 +231,7 @@ export function OrgTeamSheet({ org, onClose }: OrgTeamSheetProps) {
                       {member.roleLabel}
                     </span>
 
-                    {isOrgResponsable(member.role) ? null : confirmId === member.userId ? (
+                    {confirmId === member.userId ? (
                       <div className="flex flex-shrink-0 items-center gap-2">
                         <button
                           type="button"
