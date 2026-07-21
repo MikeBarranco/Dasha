@@ -103,7 +103,7 @@ export class RescueAssignmentController {
           gen_random_uuid(), 
           ${assignment.reportId}::uuid, 
           ${userId ? userId : null}::uuid, 
-          'status_change'::"ActionType", 
+          'status_changed'::"ActionType", 
           ${'Cambio de estado del rescate a: ' + status}, 
           NOW()
         );
