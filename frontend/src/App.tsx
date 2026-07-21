@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ScrollToTop } from './components/layout/ScrollToTop';
 import { AnalyticsTracker } from './components/layout/AnalyticsTracker';
 import { AppLayout } from './components/layout/AppLayout';
+import { ErrorBoundary } from './components/layout/ErrorBoundary';
 import { LandingPage } from './pages/LandingPage';
 import { MapaPage } from './pages/MapaPage';
 import { ReportarPage } from './pages/ReportarPage';
@@ -61,7 +62,8 @@ function App() {
     <BrowserRouter>
       <ScrollToTop />
       <AnalyticsTracker />
-      <Routes>
+      <ErrorBoundary>
+        <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="registro" element={<RegistroPage />} />
@@ -107,7 +109,8 @@ function App() {
           <Route path="donaciones" element={<PortalDonacionesPage />} />
           <Route path="necesidades" element={<PortalNecesidadesPage />} />
         </Route>
-      </Routes>
+        </Routes>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }
