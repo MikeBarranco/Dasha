@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { useAuth } from '../../lib/useAuth';
-import { getMyOrganization, type AllyContext } from '../../lib/api';
+import { getMyOrganization, isFullCycleOrg, type AllyContext } from '../../lib/api';
 import { Onboarding } from '../onboarding/Onboarding';
 import { allySteps } from '../onboarding/onboardingSteps';
 import {
@@ -26,15 +26,17 @@ import {
   ONBOARDING_OPEN_EVENT,
 } from '../../lib/onboarding';
 
+// `fullCycleOnly`: secciones que solo aplican a veterinaria/refugio (reciben y
+// rehabilitan animales). Un aliado de apoyo (asociación/educativo) no las ve.
 const portalSections = [
-  { to: '/portal', label: 'Inicio', icon: LayoutDashboard, end: true },
-  { to: '/portal/rescates', label: 'Rescates', icon: Ambulance, end: false },
-  { to: '/portal/perfil', label: 'Mi perfil', icon: UserRound, end: false },
-  { to: '/portal/equipo', label: 'Mi equipo', icon: Users, end: false },
-  { to: '/portal/perritos', label: 'Mis perritos', icon: PawPrint, end: false },
-  { to: '/portal/adopciones', label: 'Adopciones', icon: Home, end: false },
-  { to: '/portal/donaciones', label: 'Donaciones', icon: HeartHandshake, end: false },
-  { to: '/portal/necesidades', label: 'Necesidades', icon: HandHeart, end: false },
+  { to: '/portal', label: 'Inicio', icon: LayoutDashboard, end: true, fullCycleOnly: false },
+  { to: '/portal/rescates', label: 'Rescates', icon: Ambulance, end: false, fullCycleOnly: true },
+  { to: '/portal/perfil', label: 'Mi perfil', icon: UserRound, end: false, fullCycleOnly: false },
+  { to: '/portal/equipo', label: 'Mi equipo', icon: Users, end: false, fullCycleOnly: false },
+  { to: '/portal/perritos', label: 'Mis perritos', icon: PawPrint, end: false, fullCycleOnly: true },
+  { to: '/portal/adopciones', label: 'Adopciones', icon: Home, end: false, fullCycleOnly: true },
+  { to: '/portal/donaciones', label: 'Donaciones', icon: HeartHandshake, end: false, fullCycleOnly: false },
+  { to: '/portal/necesidades', label: 'Necesidades', icon: HandHeart, end: false, fullCycleOnly: false },
 ];
 
 export function PortalLayout() {
@@ -89,8 +91,13 @@ export function PortalLayout() {
   // real la impone el backend (cada /me/organization/* valida rol y organización).
   if (context === null) return <Navigate to="/mapa" replace />;
 
-  const current =
-    portalSections.find((section) => location.pathname === section.to) ?? portalSections[0];
+  // Aliado de apoyo (asociación/educativo): se ocultan rescates, perritos y
+  // adopciones; su portal se centra en perfil, equipo, donaciones y necesidades.
+  const sections = isFullCycleOrg(context.orgType)
+    ? portalSections
+    : portalSections.filter((section) => !section.fullCycleOnly);
+
+  const current = sections.find((section) => location.pathname === section.to) ?? sections[0];
 
   return (
     <div className="flex min-h-screen flex-col bg-lino">
@@ -163,7 +170,7 @@ export function PortalLayout() {
                   transition={{ duration: 0.15, ease: 'easeOut' }}
                   className="absolute inset-x-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-lg"
                 >
-                  {portalSections.map((section) => (
+                  {sections.map((section) => (
                     <NavLink
                       key={section.to}
                       to={section.to}
@@ -190,7 +197,7 @@ export function PortalLayout() {
 
         {/* Escritorio: pastillas */}
         <nav className="mb-5 hidden gap-2 sm:flex">
-          {portalSections.map((section) => (
+          {sections.map((section) => (
             <NavLink
               key={section.to}
               to={section.to}
