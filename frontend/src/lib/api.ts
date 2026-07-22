@@ -1800,6 +1800,17 @@ export async function updateRescueAssignmentStatus(
   });
 }
 
+// El voluntario cancela un rescate que ya no puede hacer (no encontró al
+// animalito, le surgió algo). El backend debe LIBERAR el reporte a `active` para
+// que otro voluntario lo tome (spec en pendientes-isabel.md, sección 19l).
+export async function cancelRescueAssignment(id: string, reason?: string): Promise<void> {
+  const clean = reason?.trim();
+  await authedRaw(`/rescue-assignments/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(clean ? { status: 'cancelled', cancelReason: clean } : { status: 'cancelled' }),
+  });
+}
+
 // El voluntario comparte su GPS cada pocos segundos. POST /rescue-assignments/:id/location
 export async function postRescueLocation(id: string, location: LatLng): Promise<void> {
   await authedRaw(`/rescue-assignments/${id}/location`, {

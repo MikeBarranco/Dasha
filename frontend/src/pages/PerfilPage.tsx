@@ -249,6 +249,26 @@ export function PerfilPage() {
           </div>
         ))}
 
+      {realRole === 'volunteer' && (
+        <button
+          type="button"
+          onClick={() => navigate('/voluntario')}
+          className="w-full rounded-2xl bg-gradient-to-br from-cobalto to-purpura p-5 text-left text-white transition-opacity hover:opacity-95"
+        >
+          <div className="flex items-center gap-2">
+            <Radio className="h-5 w-5" />
+            <h2 className="font-display text-lg font-bold">Tu panel de voluntario</h2>
+          </div>
+          <p className="mt-1 text-sm text-white/85">
+            Actívate como disponible para recibir emergencias cercanas y seguir tus rescates en
+            curso. Aquí es donde recibes los avisos.
+          </p>
+          <span className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-cobalto">
+            Abrir mi panel <ChevronRight className="h-4 w-4" />
+          </span>
+        </button>
+      )}
+
       <MyReports />
 
       <MyContributions />
