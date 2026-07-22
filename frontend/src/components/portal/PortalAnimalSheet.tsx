@@ -40,6 +40,8 @@ const medInput =
 type PortalAnimalSheetProps = {
   animal: Animal;
   preview: boolean;
+  // Cuando un admin ve el portal de un aliado, acota las escrituras a esa org.
+  orgId?: string;
   onClose: () => void;
   onStatusChanged: (id: string, status: AnimalStatus) => void;
 };
@@ -47,6 +49,7 @@ type PortalAnimalSheetProps = {
 export function PortalAnimalSheet({
   animal,
   preview,
+  orgId,
   onClose,
   onStatusChanged,
 }: PortalAnimalSheetProps) {
@@ -69,7 +72,7 @@ export function PortalAnimalSheet({
 
   const changeSterilized = (value: boolean) => {
     setSterilized(value);
-    if (!preview) setMyOrgAnimalSterilized(animal.id, value).catch(() => {});
+    if (!preview) setMyOrgAnimalSterilized(animal.id, value, orgId).catch(() => {});
   };
 
   const addEntry = () => {
@@ -89,18 +92,22 @@ export function PortalAnimalSheet({
     setNewNotes('');
     setAdding(false);
     if (!preview) {
-      addMyOrgMedicalEntry(animal.id, {
-        type: entry.type,
-        title: entry.title,
-        date: entry.date,
-        notes: entry.notes,
-      }).catch(() => {});
+      addMyOrgMedicalEntry(
+        animal.id,
+        {
+          type: entry.type,
+          title: entry.title,
+          date: entry.date,
+          notes: entry.notes,
+        },
+        orgId,
+      ).catch(() => {});
     }
   };
 
   const removeEntry = (id: string) => {
     setEntries((current) => current.filter((item) => item.id !== id));
-    if (!preview) removeMyOrgMedicalEntry(animal.id, id).catch(() => {});
+    if (!preview) removeMyOrgMedicalEntry(animal.id, id, orgId).catch(() => {});
   };
 
   const save = async () => {
@@ -112,7 +119,7 @@ export function PortalAnimalSheet({
     }
     setSaving(true);
     try {
-      await updateMyOrgAnimalStatus(animal.id, statusToSlug[status]);
+      await updateMyOrgAnimalStatus(animal.id, statusToSlug[status], orgId);
       onStatusChanged(animal.id, status);
       setSaved(true);
     } catch (err) {

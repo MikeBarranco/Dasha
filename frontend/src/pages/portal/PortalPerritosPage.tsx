@@ -34,7 +34,7 @@ export function PortalPerritosPage() {
   useEffect(() => {
     if (ctx.preview) return;
     let active = true;
-    getMyOrgAnimals()
+    getMyOrgAnimals(ctx.adminOrgId)
       .then((data) => {
         if (!active) return;
         setAnimals(data);
@@ -48,7 +48,7 @@ export function PortalPerritosPage() {
     return () => {
       active = false;
     };
-  }, [ctx.preview]);
+  }, [ctx.preview, ctx.adminOrgId]);
 
   const onStatusChanged = (id: string, status: AnimalStatus) => {
     setAnimals((current) =>
@@ -139,6 +139,7 @@ export function PortalPerritosPage() {
           <PortalAnimalSheet
             animal={selected}
             preview={ctx.preview}
+            orgId={ctx.adminOrgId}
             onClose={() => setSelectedId(null)}
             onStatusChanged={onStatusChanged}
           />
