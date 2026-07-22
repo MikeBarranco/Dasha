@@ -19,6 +19,7 @@ import { useAuth } from '../lib/useAuth';
 import {
   rescueStatusLabels,
   updateRescueAssignmentStatus,
+  cancelRescueAssignment,
   postRescueLocation,
   addRescuePhoto,
   type RescueStatus,
@@ -71,6 +72,9 @@ export function RescateEnVivoPage() {
   const [photoStep, setPhotoStep] = useState<RescuePhotoKind | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelling, setCancelling] = useState(false);
 
   const realAssignment = assignment ?? null;
   const isDriver = Boolean(
@@ -150,6 +154,20 @@ export function RescateEnVivoPage() {
       // Silencioso: si falla, el socket sigue escuchando el cambio.
     } finally {
       setRefreshing(false);
+    }
+  };
+
+  // El voluntario cancela un rescate que ya no puede hacer. El reporte se libera
+  // (backend) para que otro lo tome; volvemos al panel del voluntario.
+  const handleCancel = async () => {
+    if (cancelling) return;
+    setCancelling(true);
+    try {
+      await cancelRescueAssignment(assignment.id, cancelReason);
+      navigate('/voluntario');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'No se pudo cancelar el rescate.');
+      setCancelling(false);
     }
   };
 
@@ -251,6 +269,50 @@ export function RescateEnVivoPage() {
               Compartiendo tu ubicación en vivo…
             </p>
           )}
+
+          {isDriver && (currentStatus === 'accepted' || currentStatus === 'on_the_way') &&
+            (cancelOpen ? (
+              <div className="mt-3 rounded-xl border border-alerta/20 bg-alerta/5 p-3">
+                <p className="text-sm font-medium text-neutral-700">¿Cancelar este rescate?</p>
+                <p className="mt-0.5 text-xs text-neutral-500">
+                  El reporte volverá a estar disponible para que otro voluntario lo tome.
+                </p>
+                <textarea
+                  value={cancelReason}
+                  onChange={(event) => setCancelReason(event.target.value)}
+                  maxLength={160}
+                  rows={2}
+                  placeholder="Motivo (opcional): no lo encontré, ya no puedo ir…"
+                  className="mt-2 w-full resize-none rounded-lg border border-neutral-200 px-3 py-2 text-sm text-neutral-700 outline-none focus:ring-2 focus:ring-cobalto/30"
+                />
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCancelOpen(false)}
+                    disabled={cancelling}
+                    className="flex-1 rounded-lg border border-neutral-200 py-2 text-sm font-medium text-neutral-600 transition-colors hover:bg-neutral-50 disabled:opacity-60"
+                  >
+                    No
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    disabled={cancelling}
+                    className="flex-1 rounded-lg bg-alerta py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                  >
+                    {cancelling ? 'Cancelando…' : 'Sí, cancelar'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setCancelOpen(true)}
+                className="mt-2 w-full py-1 text-center text-xs font-medium text-neutral-400 transition-colors hover:text-alerta"
+              >
+                Cancelar rescate
+              </button>
+            ))}
 
           {isDriver && currentStatus === 'arrived' && (
             <div className="mt-3 rounded-xl border border-cobalto/20 bg-cobalto/5 p-3 text-center">
