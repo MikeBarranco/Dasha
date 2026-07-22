@@ -139,7 +139,7 @@ export class ReportService {
    */
   static async getAllActiveReports(filters?: { species?: string; condition?: string; urgency?: string; size?: string; }) {
     const conditions = [
-      Prisma.sql`r.status = 'active'::"ReportStatus"`, 
+      Prisma.sql`r.status IN ('active'::"ReportStatus", 'in_progress'::"ReportStatus")`, 
       Prisma.sql`r.location IS NOT NULL`,
       Prisma.sql`NOT EXISTS (SELECT 1 FROM lost_pets lp WHERE lp.report_id = r.id)`
     ];

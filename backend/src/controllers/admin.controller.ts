@@ -427,6 +427,84 @@ export class AdminController {
   }
 
   // ==========================================
+  // EQUIPO DE ORGANIZACIONES (ALIADOS)
+  // ==========================================
+  
+  static async getOrganizationTeam(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      const team = await prisma.organizationEmployee.findMany({
+        where: { organizationId: id },
+        include: {
+          user: { select: { id: true, name: true, email: true, avatarUrl: true } }
+        }
+      });
+      res.status(200).json(team);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async addOrganizationTeamMember(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      const { email, roleInOrg } = req.body;
+
+      if (!email || !roleInOrg) {
+        res.status(400).json({ error: 'Faltan campos requeridos (email, roleInOrg)' });
+        return;
+      }
+
+      // Buscar al usuario por correo
+      const user = await prisma.user.findUnique({ where: { email } });
+      if (!user) {
+        res.status(404).json({ error: 'Usuario no encontrado con ese correo' });
+        return;
+      }
+
+      const newMember = await prisma.organizationEmployee.create({
+        data: {
+          organizationId: id,
+          userId: user.id,
+          roleInOrg,
+          isVerified: true // Admin directly adds them, so they are verified
+        },
+        include: {
+          user: { select: { id: true, name: true, email: true, avatarUrl: true } }
+        }
+      });
+
+      res.status(201).json(newMember);
+    } catch (error: any) {
+      if (error.code === 'P2002') {
+        res.status(400).json({ error: 'El usuario ya pertenece a esta organización' });
+      } else {
+        next(error);
+      }
+    }
+  }
+
+  static async removeOrganizationTeamMember(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      const userId = req.params.userId as string;
+
+      await prisma.organizationEmployee.delete({
+        where: {
+          organizationId_userId: {
+            organizationId: id,
+            userId: userId
+          }
+        }
+      });
+
+      res.status(200).json({ message: 'Miembro eliminado correctamente' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ==========================================
   // ANIMALES EN REHABILITACIÓN
   // ==========================================
   static async getAllAnimals(req: Request, res: Response, next: NextFunction) {

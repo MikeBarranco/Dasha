@@ -3,6 +3,7 @@ import { v2 as cloudinary } from 'cloudinary';
 import { ReportService } from '../services/report.service';
 import { analyzeAnimalPhoto } from '../services/animalAnalysis.service';
 import { AchievementService } from '../services/achievement.service';
+import { NotificationService } from '../services/notification.service';
 import { prisma } from '../config/db';
 
 // Configurar Cloudinary (toma las credenciales de process.env automáticamente)
@@ -55,7 +56,7 @@ export class ReportController {
       if (data.urgency === 'high' || data.urgency === 'critical') {
         (async () => {
           try {
-            const { NotificationService } = await import('../services/notification.service.js');
+            // El NotificationService ya está importado arriba
             // Buscar voluntarios disponibles cercanos al reporte (dentro de su search_radius_km)
             const nearbyVolunteers: any[] = await prisma.$queryRaw`
               SELECT id, search_radius_km
@@ -186,11 +187,8 @@ export class ReportController {
 
       const result = await ReportService.acceptRescueCase(id, userId);
       
-      res.status(200).json({
-        status: 'success',
-        message: 'Caso de rescate aceptado exitosamente',
-        data: result
-      });
+      // Devolver el assignment directamente para que el frontend pueda leer el ID
+      res.status(200).json(result.assignment);
     } catch (error: any) {
       if (error.message === 'Reporte no encontrado') {
         res.status(404).json({ error: error.message });
@@ -259,15 +257,14 @@ export class ReportController {
 
       await prisma.$executeRaw`
         INSERT INTO case_actions (
-          id, report_id, actor_id, action_type, description, photo_url, location, created_at
+          id, report_id, actor_id, action_type, description, metadata, created_at
         ) VALUES (
           gen_random_uuid(), 
           ${id}::uuid, 
           ${userId ? userId : null}::uuid, 
           'sighting_added'::"ActionType", 
           ${description || 'Nuevo avistamiento reportado'}, 
-          ${photoUrl || null}, 
-          ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326), 
+          ${JSON.stringify({ photoUrl, lat, lng })}::jsonb, 
           NOW()
         );
       `;

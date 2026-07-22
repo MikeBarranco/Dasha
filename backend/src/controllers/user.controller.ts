@@ -156,6 +156,38 @@ export class UserController {
     }
   }
 
+  static async getMyOrganization(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        res.status(401).json({ error: 'No autorizado' });
+        return;
+      }
+
+      // Buscar si el usuario pertenece a alguna organización a través de organization_employees
+      const employee = await prisma.organizationEmployee.findFirst({
+        where: { userId },
+        include: {
+          organization: true
+        }
+      });
+
+      if (!employee) {
+        res.status(404).json({ error: 'No perteneces a ninguna organización' });
+        return;
+      }
+
+      // Devolver la organización + su rol
+      res.status(200).json({
+        ...employee.organization,
+        roleInOrg: employee.roleInOrg,
+        isVerifiedEmployee: employee.isVerified
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async getMyReports(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = (req as any).user?.id;
@@ -230,6 +262,28 @@ export class UserController {
         needs: needContributions,
         donations
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getMyAdopted(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        res.status(401).json({ error: 'No autorizado' });
+        return;
+      }
+
+      const adoptedAnimals = await prisma.animalProfile.findMany({
+        where: { adoptedByUserId: userId },
+        include: {
+          organization: { select: { name: true } },
+          photos: true
+        }
+      });
+
+      res.status(200).json(adoptedAnimals);
     } catch (error) {
       next(error);
     }

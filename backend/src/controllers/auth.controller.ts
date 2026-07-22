@@ -7,11 +7,12 @@ export class AuthController {
       const data = req.body;
       const result = await AuthService.register(data);
 
-      const isProd = process.env.NODE_ENV === 'production';
+      const isProd = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging' || process.env.CORS_ORIGIN?.includes('dashamx');
       res.cookie('token', result.token, {
         httpOnly: true,
         secure: isProd,
         sameSite: 'lax',
+        domain: isProd ? '.dashamx.me' : undefined,
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
 
@@ -34,11 +35,12 @@ export class AuthController {
       const data = req.body;
       const result = await AuthService.login(data);
 
-      const isProd = process.env.NODE_ENV === 'production';
+      const isProd = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging' || process.env.CORS_ORIGIN?.includes('dashamx');
       res.cookie('token', result.token, {
         httpOnly: true,
         secure: isProd,
         sameSite: 'lax',
+        domain: isProd ? '.dashamx.me' : undefined,
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
 
@@ -58,11 +60,12 @@ export class AuthController {
 
   static async logout(req: Request, res: Response, next: NextFunction) {
     try {
-      const isProd = process.env.NODE_ENV === 'production';
+      const isProd = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging' || process.env.CORS_ORIGIN?.includes('dashamx');
       res.clearCookie('token', {
         httpOnly: true,
         secure: isProd,
         sameSite: 'lax',
+        domain: isProd ? '.dashamx.me' : undefined,
       });
       res.status(200).json({
         status: 'success',

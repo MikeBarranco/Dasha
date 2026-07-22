@@ -80,7 +80,7 @@ export class ForumController {
   static async createPost(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = (req as any).user?.id;
-      const { title, content, category, text } = req.body;
+      const { title, content, category, text, images } = req.body;
       
       const postContent = content || text;
 
@@ -97,7 +97,8 @@ export class ForumController {
           userId,
           title: postTitle,
           content: postContent,
-          category: postCategory as any
+          category: postCategory as any,
+          images: Array.isArray(images) ? images : []
         }
       });
 

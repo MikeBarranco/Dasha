@@ -105,7 +105,10 @@ io.on('connection', (socket) => {
         where: { id: rescueId },
         include: { report: true }
       });
-      if (!assignment) return;
+      if (!assignment) {
+        socket.emit('error', { message: 'Asignación no encontrada' });
+        return;
+      }
       
       const isVolunteer = assignment.volunteerId === user.id;
       const isReporter = assignment.report.userId === user.id;
@@ -115,10 +118,12 @@ io.on('connection', (socket) => {
         socket.join(`rescue:${rescueId}`);
         console.log(`Socket ${socket.id} joined room rescue:${rescueId}`);
       } else {
+        socket.emit('error', { message: 'No tienes permiso para ver este rescate' });
         console.log(`Socket ${socket.id} denied access to rescue:${rescueId}`);
       }
     } catch(err) {
       console.error('Error verifying join_rescue permissions:', err);
+      socket.emit('error', { message: 'Error interno del servidor' });
     }
   });
 
