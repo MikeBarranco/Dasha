@@ -1,11 +1,11 @@
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Camera, Check, HeartHandshake, X } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { cn } from '../lib/cn';
 import { useAuth } from '../lib/useAuth';
 import { useVolunteerStatus } from '../lib/useVolunteerStatus';
-import { postVolunteerApplication, updateMe } from '../lib/api';
+import { postVolunteerApplication, updateMe, getColoniesByCp, type Colonia } from '../lib/api';
 import { compressImage } from '../lib/image';
 import { CameraCapture } from '../components/map/CameraCapture';
 
@@ -109,13 +109,18 @@ function CaptureField({
               <X className="h-5 w-5" />
             </button>
           </div>
-          <div className="flex-1 p-4">
-            <CameraCapture
-              fill
-              frame={frame}
-              initialFacing={facing}
-              onCapture={(file) => handleCapture(file)}
-            />
+          <div className="flex flex-1 items-center justify-center overflow-hidden p-4">
+            {/* En escritorio el modal es enorme; acotamos la cámara a un cuadro
+                centrado para que no se estire y el botón de tomar foto siempre
+                quede visible. En móvil ocupa el ancho igual que antes. */}
+            <div className="flex h-full max-h-[70vh] w-full max-w-md flex-col">
+              <CameraCapture
+                fill
+                frame={frame}
+                initialFacing={facing}
+                onCapture={(file) => handleCapture(file)}
+              />
+            </div>
           </div>
           {busy && <p className="pb-4 text-center text-sm text-white/80">Procesando…</p>}
         </div>
@@ -130,6 +135,11 @@ export function SerVoluntarioPage() {
   const { apply } = useVolunteerStatus();
   const [phone, setPhone] = useState('');
   const [zone, setZone] = useState('');
+  const [cp, setCp] = useState('');
+  const [colonies, setColonies] = useState<Colonia[] | null>(null);
+  const [coloniesLoading, setColoniesLoading] = useState(false);
+  const [coloniesError, setColoniesError] = useState(false);
+  const cpReqRef = useRef('');
   const [ayuda, setAyuda] = useState<string[]>([]);
   const [dispo, setDispo] = useState<string[]>([]);
   const [motivation, setMotivation] = useState('');
@@ -179,6 +189,30 @@ export function SerVoluntarioPage() {
 
   const toggle = (list: string[], setList: (value: string[]) => void, value: string) => {
     setList(list.includes(value) ? list.filter((item) => item !== value) : [...list, value]);
+  };
+
+  // La zona ya no es texto libre: se escribe el código postal y se elige la colonia
+  // real de ese CP (getColoniesByCp). Así solo se guarda una colonia válida.
+  const handleCpChange = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 5);
+    setCp(digits);
+    setZone('');
+    setColonies(null);
+    setColoniesError(false);
+    if (digits.length === 5) {
+      cpReqRef.current = digits;
+      setColoniesLoading(true);
+      getColoniesByCp(digits)
+        .then((list) => {
+          if (cpReqRef.current === digits) setColonies(list);
+        })
+        .catch(() => {
+          if (cpReqRef.current === digits) setColoniesError(true);
+        })
+        .finally(() => {
+          if (cpReqRef.current === digits) setColoniesLoading(false);
+        });
+    }
   };
 
   const handleSubmit = async (event: FormEvent) => {
@@ -267,11 +301,40 @@ export function SerVoluntarioPage() {
           </label>
           <input
             type="text"
-            value={zone}
-            onChange={(event) => setZone(event.target.value)}
-            placeholder="Colonia o municipio"
+            inputMode="numeric"
+            value={cp}
+            onChange={(event) => handleCpChange(event.target.value)}
+            placeholder="Código postal (5 dígitos)"
             className={inputClass}
           />
+          {cp.length === 5 && (
+            <div className="mt-2">
+              {coloniesLoading ? (
+                <p className="text-xs text-neutral-400">Buscando colonias…</p>
+              ) : coloniesError ? (
+                <p className="text-xs text-alerta">
+                  No pudimos cargar las colonias de ese código postal.
+                </p>
+              ) : colonies && colonies.length > 0 ? (
+                <select
+                  value={zone}
+                  onChange={(event) => setZone(event.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Elige tu colonia</option>
+                  {colonies.map((colonia) => (
+                    <option key={`${colonia.name}-${colonia.postalCode}`} value={colonia.name}>
+                      {colonia.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <p className="text-xs text-neutral-400">
+                  No encontramos colonias para ese código postal.
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         <div>

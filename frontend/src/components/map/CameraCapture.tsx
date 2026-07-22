@@ -110,7 +110,13 @@ export function CameraCapture({
         ref={videoRef}
         playsInline
         muted
-        className="h-full w-full object-cover"
+        // Con la cámara frontal espejamos SOLO la vista previa (se siente natural,
+        // como un espejo: mover a la derecha va a la derecha). La captura se hace
+        // desde el frame crudo del video, sin espejo, así el texto de la ID queda
+        // legible en la foto guardada.
+        className={
+          'h-full w-full object-cover' + (facing === 'user' ? ' -scale-x-100' : '')
+        }
       />
 
       {status === 'ready' && frame && (
