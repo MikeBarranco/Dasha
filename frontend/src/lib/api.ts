@@ -72,6 +72,18 @@ export function setStoredUserAvatar(url: string | null): void {
   localStorage.setItem(USER_KEY, JSON.stringify({ ...user, avatarUrl: url }));
 }
 
+// Mantiene el rol del usuario en sesión al día con lo que dice el backend. Al
+// aprobar una solicitud de voluntario, el rol cambia en el backend pero el perfil
+// guardado seguía diciendo "citizen" hasta cerrar y volver a entrar. Al detectar
+// el cambio lo actualizamos y avisamos a la UI (así el panel de voluntario y los
+// accesos aparecen sin tener que reingresar).
+export function syncStoredUserRole(role: string): void {
+  const user = getStoredUser();
+  if (!user || !role || user.role === role) return;
+  localStorage.setItem(USER_KEY, JSON.stringify({ ...user, role }));
+  window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
+}
+
 type Envelope<T> = {
   status: string;
   message?: string;
@@ -641,11 +653,16 @@ export async function getMe(): Promise<MeProfile> {
     })
     .filter((item) => item.name || item.image);
 
+  // El backend manda el rol vigente: si cambió (p. ej. lo aprobaron como
+  // voluntario), lo reflejamos en la sesión guardada sin pedir reingresar.
+  const role = String(raw.role ?? 'citizen');
+  syncStoredUserRole(role);
+
   return {
     id: String(raw.id ?? ''),
     name: String(raw.name ?? ''),
     email: String(raw.email ?? ''),
-    role: String(raw.role ?? 'citizen'),
+    role,
     phone: String(raw.phone ?? ''),
     avatarUrl: typeof raw.avatarUrl === 'string' && raw.avatarUrl ? raw.avatarUrl : null,
     level: Number(raw.level ?? 1),
