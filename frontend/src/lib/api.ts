@@ -832,6 +832,27 @@ export async function removeMyOrgTeamMember(userId: string, orgId?: string): Pro
   await authedRaw(`/me/organization/team/${userId}${orgScope(orgId)}`, { method: 'DELETE' });
 }
 
+// Solicitud pública para unirse como aliado (Camino B): una veterinaria/refugio
+// que descubre Dasha manda sus datos y un admin la aprueba. Backend:
+// POST /organization-applications (spec en pendientes-isabel.md, sección 19i).
+export type OrgApplicationInput = {
+  name: string;
+  orgType: string; // veterinary | shelter | ngo | educational
+  address: string;
+  phone: string;
+  whatsapp?: string;
+  website?: string;
+  description: string;
+  contactName: string;
+};
+
+export async function submitOrganizationApplication(input: OrgApplicationInput): Promise<void> {
+  await authedRaw('/organization-applications', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
 export async function postVolunteerApplication(data: {
   idDocBase64: string;
   idSelfieBase64: string;
