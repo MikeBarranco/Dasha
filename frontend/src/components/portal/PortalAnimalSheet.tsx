@@ -1,15 +1,20 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { X, Stethoscope, Check, Plus, Trash2 } from 'lucide-react';
+import { X, Stethoscope, Check, Plus, Trash2, ImagePlus, Loader2 } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 import {
   updateMyOrgAnimalStatus,
+  updateMyOrgAnimalDetails,
+  addMyOrgAnimalPhoto,
   setMyOrgAnimalSterilized,
   addMyOrgMedicalEntry,
   removeMyOrgMedicalEntry,
 } from '../../lib/api';
+import { compressImage } from '../../lib/image';
 import type { Animal, AnimalStatus, MedicalEntry, MedicalEntryType } from '../../data/mockAnimals';
+
+const PLACEHOLDER = '/placeholder-animal.svg';
 
 const statusOptions: AnimalStatus[] = ['En tratamiento', 'Recuperándose', 'Buscando hogar'];
 
@@ -43,7 +48,8 @@ type PortalAnimalSheetProps = {
   // Cuando un admin ve el portal de un aliado, acota las escrituras a esa org.
   orgId?: string;
   onClose: () => void;
-  onStatusChanged: (id: string, status: AnimalStatus) => void;
+  // Refleja en la lista los cambios hechos aquí (estatus, nombre, fotos…).
+  onUpdated: (id: string, patch: Partial<Animal>) => void;
 };
 
 export function PortalAnimalSheet({
@@ -51,7 +57,7 @@ export function PortalAnimalSheet({
   preview,
   orgId,
   onClose,
-  onStatusChanged,
+  onUpdated,
 }: PortalAnimalSheetProps) {
   useLockBodyScroll();
   const [status, setStatus] = useState<AnimalStatus>(animal.status);
@@ -60,6 +66,70 @@ export function PortalAnimalSheet({
   const [error, setError] = useState<string | null>(null);
   const timeline = animal.timeline ?? [];
   const changed = status !== animal.status;
+
+  // Datos del caso editables: nombre provisional y padecimientos.
+  const [name, setName] = useState(animal.name);
+  const [diagnosis, setDiagnosis] = useState(animal.diagnosis);
+  const [savingDetails, setSavingDetails] = useState(false);
+  const [detailsSaved, setDetailsSaved] = useState(false);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
+  const detailsChanged = name.trim() !== animal.name || diagnosis.trim() !== animal.diagnosis;
+
+  // Galería del caso: fotos del reporte, del voluntario y del aliado. El aliado
+  // suma fotos de progreso. Filtramos el placeholder para saber si hay fotos reales.
+  const [photos, setPhotos] = useState<string[]>(
+    () => animal.photos.filter((url) => url !== PLACEHOLDER),
+  );
+  const [heroIndex, setHeroIndex] = useState(0);
+  const [addingPhoto, setAddingPhoto] = useState(false);
+  const hero = photos[heroIndex] ?? PLACEHOLDER;
+
+  const saveDetails = async () => {
+    setDetailsError(null);
+    const cleanName = name.trim();
+    const cleanDiagnosis = diagnosis.trim();
+    if (cleanName.length < 2) {
+      setDetailsError('El nombre no puede quedar vacío.');
+      return;
+    }
+    setSavingDetails(true);
+    try {
+      if (!preview) {
+        await updateMyOrgAnimalDetails(
+          animal.id,
+          { name: cleanName, diagnosis: cleanDiagnosis },
+          orgId,
+        );
+      }
+      onUpdated(animal.id, { name: cleanName, diagnosis: cleanDiagnosis });
+      setDetailsSaved(true);
+    } catch (err) {
+      setDetailsError(err instanceof Error ? err.message : 'No se pudieron guardar los datos.');
+    } finally {
+      setSavingDetails(false);
+    }
+  };
+
+  const pickPhoto = async (files: FileList | null) => {
+    if (!files || files.length === 0 || addingPhoto) return;
+    setAddingPhoto(true);
+    setDetailsError(null);
+    try {
+      const dataUrl = await compressImage(files[0]);
+      // La mostramos de una vez (la data URL sirve como src); la subida es best-effort.
+      const next = [...photos, dataUrl];
+      setPhotos(next);
+      setHeroIndex(next.length - 1);
+      onUpdated(animal.id, { photos: next });
+      if (!preview) {
+        addMyOrgAnimalPhoto(animal.id, dataUrl, '', orgId).catch(() => {});
+      }
+    } catch {
+      setDetailsError('No se pudo procesar la imagen.');
+    } finally {
+      setAddingPhoto(false);
+    }
+  };
 
   // Cartilla médica editable.
   const [sterilized, setSterilized] = useState(animal.medical?.sterilized ?? false);
@@ -113,14 +183,14 @@ export function PortalAnimalSheet({
   const save = async () => {
     setError(null);
     if (preview) {
-      onStatusChanged(animal.id, status);
+      onUpdated(animal.id, { status });
       setSaved(true);
       return;
     }
     setSaving(true);
     try {
       await updateMyOrgAnimalStatus(animal.id, statusToSlug[status], orgId);
-      onStatusChanged(animal.id, status);
+      onUpdated(animal.id, { status });
       setSaved(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo actualizar. Intenta de nuevo.');
@@ -148,11 +218,11 @@ export function PortalAnimalSheet({
       >
         <div className="relative">
           <img
-            src={animal.photos[animal.photos.length - 1]}
-            alt={animal.name}
+            src={hero}
+            alt={name}
             onError={(event) => {
               event.currentTarget.onerror = null;
-              event.currentTarget.src = '/placeholder-animal.svg';
+              event.currentTarget.src = PLACEHOLDER;
             }}
             className="h-52 w-full object-cover"
           />
@@ -168,18 +238,118 @@ export function PortalAnimalSheet({
 
         <div className="p-5">
           <div className="flex items-center justify-between gap-2">
-            <h2 className="font-display text-2xl font-bold text-cobalto">{animal.name}</h2>
+            <h2 className="font-display text-2xl font-bold text-cobalto">{name || 'Sin nombre'}</h2>
             <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-500">
               {animal.species === 'perro' ? 'Perro' : 'Gato'}
             </span>
           </div>
 
-          {animal.diagnosis && (
-            <p className="mt-3 flex items-center gap-2 text-sm text-neutral-600">
-              <Stethoscope className="h-4 w-4 text-cobalto" /> {animal.diagnosis}
+          {/* Fotos del caso: reporte, voluntario y aliado; el aliado suma progreso. */}
+          <div className="mt-4">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-semibold text-cobalto">Fotos del caso</p>
+              <label className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-cobalto/30 px-2.5 py-1.5 text-xs font-medium text-cobalto transition-colors hover:bg-cobalto/5">
+                {addingPhoto ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <ImagePlus className="h-3.5 w-3.5" />
+                )}
+                {addingPhoto ? 'Subiendo…' : 'Agregar foto'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={addingPhoto}
+                  onChange={(event) => pickPhoto(event.target.files)}
+                />
+              </label>
+            </div>
+            {photos.length === 0 ? (
+              <p className="mt-2 rounded-xl border border-dashed border-neutral-200 px-3 py-4 text-center text-xs text-neutral-400">
+                Aún no hay fotos. Agrega la primera para ir contando su historia.
+              </p>
+            ) : (
+              <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+                {photos.map((url, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => setHeroIndex(index)}
+                    className={cn(
+                      'h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg border-2 transition-colors',
+                      index === heroIndex ? 'border-cobalto' : 'border-transparent',
+                    )}
+                  >
+                    <img
+                      src={url}
+                      alt=""
+                      onError={(event) => {
+                        event.currentTarget.onerror = null;
+                        event.currentTarget.src = PLACEHOLDER;
+                      }}
+                      className="h-full w-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Datos del caso: nombre provisional + padecimientos. */}
+          <div className="mt-4 space-y-3 rounded-2xl border border-neutral-200 p-3">
+            <p className="flex items-center gap-1.5 text-sm font-semibold text-cobalto">
+              <Stethoscope className="h-4 w-4" /> Datos del caso
             </p>
-          )}
-          {animal.story && <p className="mt-2 text-sm text-neutral-600">{animal.story}</p>}
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-neutral-600">
+                Nombre provisional
+              </span>
+              <input
+                value={name}
+                onChange={(event) => {
+                  setName(event.target.value);
+                  setDetailsSaved(false);
+                }}
+                maxLength={40}
+                className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm text-neutral-700 outline-none focus:ring-2 focus:ring-cobalto/30"
+                placeholder="Ej. Solovino"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-neutral-600">
+                Padecimientos / diagnóstico
+              </span>
+              <textarea
+                value={diagnosis}
+                onChange={(event) => {
+                  setDiagnosis(event.target.value);
+                  setDetailsSaved(false);
+                }}
+                maxLength={200}
+                rows={2}
+                className="w-full resize-none rounded-lg border border-neutral-200 px-3 py-2 text-sm text-neutral-700 outline-none focus:ring-2 focus:ring-cobalto/30"
+                placeholder="Qué tiene y qué tratamiento lleva"
+              />
+            </label>
+            {detailsError && <p className="text-xs text-alerta">{detailsError}</p>}
+            {detailsSaved && !detailsChanged && (
+              <p className="flex items-center gap-1.5 text-xs font-medium text-exito">
+                <Check className="h-3.5 w-3.5" /> Datos guardados{preview ? ' (vista previa)' : ''}.
+              </p>
+            )}
+            {detailsChanged && (
+              <button
+                type="button"
+                onClick={saveDetails}
+                disabled={savingDetails}
+                className="w-full rounded-lg bg-cobalto py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+              >
+                {savingDetails ? 'Guardando…' : 'Guardar datos'}
+              </button>
+            )}
+          </div>
+
+          {animal.story && <p className="mt-4 text-sm text-neutral-600">{animal.story}</p>}
 
           <div className="mt-5">
             <label className="mb-1.5 block text-sm font-medium text-neutral-700">Estatus</label>

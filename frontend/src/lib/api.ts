@@ -1176,6 +1176,35 @@ export async function updateMyOrgAnimalStatus(
   });
 }
 
+// El aliado edita el nombre provisional y los padecimientos/diagnóstico del
+// animalito. Mismo PATCH /me/organization/animals/:id (acepta campos parciales).
+export async function updateMyOrgAnimalDetails(
+  id: string,
+  details: { name?: string; diagnosis?: string },
+  orgId?: string,
+): Promise<void> {
+  await authedRaw(`/me/organization/animals/${id}${orgScope(orgId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(details),
+  });
+}
+
+// El aliado sube una foto de progreso del animalito (se va sumando a la galería
+// del caso). Backend: POST /me/organization/animals/:id/photos { photoBase64,
+// caption? } (spec en pendientes-isabel.md). Best-effort: la UI ya muestra la
+// foto localmente; si el endpoint aún no existe, no bloquea.
+export async function addMyOrgAnimalPhoto(
+  animalId: string,
+  photoBase64: string,
+  caption: string,
+  orgId?: string,
+): Promise<void> {
+  await authedRaw(`/me/organization/animals/${animalId}/photos${orgScope(orgId)}`, {
+    method: 'POST',
+    body: JSON.stringify({ photoBase64, caption: caption.trim() || undefined }),
+  });
+}
+
 // Cartilla médica del animal (esterilización + registros clínicos). El aliado la
 // edita desde su portal. Backend: /me/organization/animals/:id/medical (spec en
 // pendientes-isabel.md, cartilla médica). Se usa best-effort; si el endpoint aún
