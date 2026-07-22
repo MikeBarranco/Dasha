@@ -131,7 +131,7 @@ export function PortalPerfilPage() {
     }
 
     try {
-      await updateMyOrganization(input);
+      await updateMyOrganization(input, ctx.adminOrgId);
       setSaved(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo guardar. Intenta de nuevo.');

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Navigate, Outlet, Link, NavLink, useLocation } from 'react-router-dom';
+import { Navigate, Outlet, Link, NavLink, useLocation, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import {
   Store,
@@ -17,7 +17,12 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { useAuth } from '../../lib/useAuth';
-import { getMyOrganization, type AllyContext } from '../../lib/api';
+import {
+  getMyOrganization,
+  getOrganizationForAdmin,
+  isFullCycleOrg,
+  type AllyContext,
+} from '../../lib/api';
 import { Onboarding } from '../onboarding/Onboarding';
 import { allySteps } from '../onboarding/onboardingSteps';
 import {
@@ -26,33 +31,50 @@ import {
   ONBOARDING_OPEN_EVENT,
 } from '../../lib/onboarding';
 
+// `fullCycleOnly`: secciones que solo aplican a veterinaria/refugio (reciben y
+// rehabilitan animales). Un aliado de apoyo (asociación/educativo) no las ve.
 const portalSections = [
-  { to: '/portal', label: 'Inicio', icon: LayoutDashboard, end: true },
-  { to: '/portal/rescates', label: 'Rescates', icon: Ambulance, end: false },
-  { to: '/portal/perfil', label: 'Mi perfil', icon: UserRound, end: false },
-  { to: '/portal/equipo', label: 'Mi equipo', icon: Users, end: false },
-  { to: '/portal/perritos', label: 'Mis perritos', icon: PawPrint, end: false },
-  { to: '/portal/adopciones', label: 'Adopciones', icon: Home, end: false },
-  { to: '/portal/donaciones', label: 'Donaciones', icon: HeartHandshake, end: false },
-  { to: '/portal/necesidades', label: 'Necesidades', icon: HandHeart, end: false },
+  { to: '/portal', label: 'Inicio', icon: LayoutDashboard, end: true, fullCycleOnly: false },
+  { to: '/portal/rescates', label: 'Rescates', icon: Ambulance, end: false, fullCycleOnly: true },
+  { to: '/portal/perfil', label: 'Mi perfil', icon: UserRound, end: false, fullCycleOnly: false },
+  { to: '/portal/equipo', label: 'Mi equipo', icon: Users, end: false, fullCycleOnly: false },
+  { to: '/portal/perritos', label: 'Mis perritos', icon: PawPrint, end: false, fullCycleOnly: true },
+  { to: '/portal/adopciones', label: 'Adopciones', icon: Home, end: false, fullCycleOnly: true },
+  { to: '/portal/donaciones', label: 'Donaciones', icon: HeartHandshake, end: false, fullCycleOnly: false },
+  { to: '/portal/necesidades', label: 'Necesidades', icon: HandHeart, end: false, fullCycleOnly: false },
 ];
 
 export function PortalLayout() {
   const { user } = useAuth();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const [menuOpen, setMenuOpen] = useState(false);
   // undefined = cargando; null = no es aliado; objeto = contexto de aliado.
   const [context, setContext] = useState<AllyContext | null | undefined>(undefined);
   const [showAllyOnboarding, setShowAllyOnboarding] = useState(false);
 
+  // Un administrador puede abrir el portal de un aliado con ?orgId=. En ese caso
+  // el portal se acota a esa organización (datos reales, no de ejemplo). Un aliado
+  // normal no trae orgId y ve su propia organización desde la sesión.
+  const isAdmin = user?.role === 'admin';
+  const adminOrgId = isAdmin ? searchParams.get('orgId') : null;
+
   useEffect(() => {
+    // Admin que aún no elige aliado: no cargamos nada; el render lo redirige a la
+    // lista de aliados (no dejamos que vea datos de ejemplo).
+    if (isAdmin && !adminOrgId) return;
     let active = true;
-    getMyOrganization()
+    const hint = (location.state as { name?: string; orgType?: string } | null) ?? undefined;
+    const load = adminOrgId
+      ? getOrganizationForAdmin(adminOrgId, hint)
+      : getMyOrganization();
+    load
       .then((ctx) => {
         if (!active) return;
         setContext(ctx);
-        // Al entrar por primera vez a su portal, mostramos el onboarding de aliado.
-        if (ctx && !hasSeenOnboarding('ally')) setShowAllyOnboarding(true);
+        // El onboarding de aliado solo para el dueño real la primera vez, no cuando
+        // un admin está inspeccionando el portal de alguien más.
+        if (ctx && !ctx.adminOrgId && !hasSeenOnboarding('ally')) setShowAllyOnboarding(true);
       })
       .catch(() => {
         if (active) setContext(null);
@@ -60,7 +82,7 @@ export function PortalLayout() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [adminOrgId, isAdmin, location.state]);
 
   useEffect(() => {
     const open = (event: Event) => {
@@ -77,6 +99,10 @@ export function PortalLayout() {
 
   if (!user) return <Navigate to="/login" replace />;
 
+  // Un admin sin aliado elegido no ve datos de ejemplo: lo mandamos a la lista de
+  // aliados para que elija uno y abra su portal real.
+  if (isAdmin && !adminOrgId) return <Navigate to="/admin/aliados" replace />;
+
   if (context === undefined) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-lino">
@@ -89,8 +115,15 @@ export function PortalLayout() {
   // real la impone el backend (cada /me/organization/* valida rol y organización).
   if (context === null) return <Navigate to="/mapa" replace />;
 
-  const current =
-    portalSections.find((section) => location.pathname === section.to) ?? portalSections[0];
+  // Aliado de apoyo (asociación/educativo): se ocultan rescates, perritos y
+  // adopciones; su portal se centra en perfil, equipo, donaciones y necesidades.
+  const sections = isFullCycleOrg(context.orgType)
+    ? portalSections
+    : portalSections.filter((section) => !section.fullCycleOnly);
+
+  const current = sections.find((section) => location.pathname === section.to) ?? sections[0];
+  // Conservar ?orgId= al navegar entre secciones cuando un admin ve el portal.
+  const linkSearch = adminOrgId ? `?orgId=${adminOrgId}` : '';
 
   return (
     <div className="flex min-h-screen flex-col bg-lino">
@@ -108,21 +141,22 @@ export function PortalLayout() {
             </div>
           </div>
           <Link
-            to="/mapa"
+            to={context.adminOrgId ? '/admin/aliados' : '/mapa'}
             className="flex flex-shrink-0 items-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">Volver a la app</span>
+            <span className="hidden sm:inline">
+              {context.adminOrgId ? 'Volver a aliados' : 'Volver a la app'}
+            </span>
           </Link>
         </div>
       </header>
 
-      {context.preview && (
-        <div className="border-b border-naranja/20 bg-naranja/5">
-          <div className="mx-auto flex w-full max-w-3xl items-center gap-2 px-4 py-2 text-xs text-naranja md:px-6">
+      {context.adminOrgId && (
+        <div className="border-b border-info/20 bg-info/5">
+          <div className="mx-auto flex w-full max-w-3xl items-center gap-2 px-4 py-2 text-xs text-info md:px-6">
             <Eye className="h-3.5 w-3.5 flex-shrink-0" />
-            Vista previa con datos de ejemplo. Se conectará a la organización real cuando el backend
-            lo exponga.
+            Estás viendo el portal de {context.organizationName} como administrador.
           </div>
         </div>
       )}
@@ -163,10 +197,10 @@ export function PortalLayout() {
                   transition={{ duration: 0.15, ease: 'easeOut' }}
                   className="absolute inset-x-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-lg"
                 >
-                  {portalSections.map((section) => (
+                  {sections.map((section) => (
                     <NavLink
                       key={section.to}
-                      to={section.to}
+                      to={{ pathname: section.to, search: linkSearch }}
                       end={section.end}
                       onClick={() => setMenuOpen(false)}
                       className={({ isActive }) =>
@@ -190,10 +224,10 @@ export function PortalLayout() {
 
         {/* Escritorio: pastillas */}
         <nav className="mb-5 hidden gap-2 sm:flex">
-          {portalSections.map((section) => (
+          {sections.map((section) => (
             <NavLink
               key={section.to}
-              to={section.to}
+              to={{ pathname: section.to, search: linkSearch }}
               end={section.end}
               className={({ isActive }) =>
                 cn(

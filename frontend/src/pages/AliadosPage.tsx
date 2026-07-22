@@ -9,6 +9,7 @@ import {
   RefreshCw,
   HeartHandshake,
   ArrowRight,
+  Store,
 } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { cn } from '../lib/cn';
@@ -189,6 +190,22 @@ export function AliadosPage() {
           ))}
         </div>
       )}
+
+      <Link
+        to="/ser-aliado"
+        className="mt-6 flex items-center gap-3 rounded-2xl border border-naranja/30 bg-naranja/5 p-4 transition-colors hover:bg-naranja/10"
+      >
+        <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-naranja text-white">
+          <Store className="h-5 w-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-base font-bold text-naranja">
+            ¿Tienes una veterinaria o refugio?
+          </p>
+          <p className="text-xs text-neutral-500">Únete como aliado de Dasha y ayúdanos a rescatar.</p>
+        </div>
+        <ArrowRight className="h-5 w-5 flex-shrink-0 text-naranja" />
+      </Link>
     </div>
   );
 }

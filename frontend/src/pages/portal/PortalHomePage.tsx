@@ -40,6 +40,9 @@ function StatCard({
 export function PortalHomePage() {
   const ctx = useAllyPortal();
   const [ally, setAlly] = useState<Ally | null | undefined>(undefined);
+  // En modo admin (viendo el portal de un aliado) conservamos ?orgId= al navegar
+  // entre secciones para no perder de qué organización se trata.
+  const q = ctx.adminOrgId ? `?orgId=${ctx.adminOrgId}` : '';
 
   useEffect(() => {
     let active = true;
@@ -120,7 +123,7 @@ export function PortalHomePage() {
       </section>
 
       <Link
-        to="/portal/rescates"
+        to={`/portal/rescates${q}`}
         className="flex items-center gap-3 rounded-2xl border border-cobalto/20 bg-cobalto/5 p-4 transition-colors hover:bg-cobalto/10"
       >
         <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-cobalto text-white">
@@ -161,7 +164,7 @@ export function PortalHomePage() {
           )}
         </div>
         <Link
-          to="/portal/perfil"
+          to={`/portal/perfil${q}`}
           className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
         >
           <Pencil className="h-4 w-4" /> Editar perfil
@@ -172,7 +175,7 @@ export function PortalHomePage() {
         <div className="flex items-center justify-between gap-2">
           <h2 className="font-display text-base font-bold text-cobalto">Mi equipo</h2>
           <Link
-            to="/portal/equipo"
+            to={`/portal/equipo${q}`}
             className="text-xs font-medium text-cobalto hover:underline"
           >
             Gestionar
@@ -202,7 +205,7 @@ export function PortalHomePage() {
       <section>
         <div className="mb-3 flex items-center justify-between gap-2">
           <h2 className="font-display text-base font-bold text-cobalto">Mis perritos</h2>
-          <Link to="/portal/perritos" className="text-xs font-medium text-cobalto hover:underline">
+          <Link to={`/portal/perritos${q}`} className="text-xs font-medium text-cobalto hover:underline">
             Gestionar
           </Link>
         </div>
@@ -247,7 +250,7 @@ export function PortalHomePage() {
             <HeartHandshake className="h-4 w-4" /> Donaciones y transferencias
           </h2>
           <Link
-            to="/portal/donaciones"
+            to={`/portal/donaciones${q}`}
             className="text-xs font-medium text-cobalto hover:underline"
           >
             Ver

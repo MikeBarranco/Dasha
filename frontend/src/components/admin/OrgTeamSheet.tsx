@@ -7,9 +7,12 @@ import {
   getAdminOrgTeam,
   addAdminOrgTeamMember,
   removeAdminOrgTeamMember,
+  isOrgResponsable,
   type AdminOrg,
   type AdminOrgMember,
+  type OrgMemberRole,
 } from '../../lib/adminApi';
+import { cn } from '../../lib/cn';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -23,9 +26,12 @@ export function OrgTeamSheet({ org, onClose }: OrgTeamSheetProps) {
   const [team, setTeam] = useState<AdminOrgMember[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState('');
+  const [role, setRole] = useState<OrgMemberRole>('veterinarian');
   const [adding, setAdding] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+
+  const hasResponsable = (team ?? []).some((member) => isOrgResponsable(member.role));
 
   useEffect(() => {
     let active = true;
@@ -66,8 +72,9 @@ export function OrgTeamSheet({ org, onClose }: OrgTeamSheetProps) {
     setAdding(true);
     setFormError(null);
     try {
-      await addAdminOrgTeamMember(org.id, clean);
+      await addAdminOrgTeamMember(org.id, clean, role);
       setEmail('');
+      setRole('veterinarian');
       refetch();
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'No se pudo vincular. Intenta de nuevo.');
@@ -122,8 +129,37 @@ export function OrgTeamSheet({ org, onClose }: OrgTeamSheetProps) {
         <div className="p-5">
           <form onSubmit={submitAdd} className="space-y-2">
             <p className="text-sm text-neutral-600">
-              Vincula veterinarios por su correo. Cada uno debe tener su cuenta en Dasha.
+              Vincula al responsable y a los veterinarios por su correo. Cada uno debe tener su
+              cuenta en Dasha.
             </p>
+            <div className="flex gap-2">
+              {(
+                [
+                  { value: 'admin', label: 'Responsable' },
+                  { value: 'veterinarian', label: 'Veterinario' },
+                ] as const
+              ).map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setRole(option.value)}
+                  disabled={option.value === 'admin' && hasResponsable}
+                  className={cn(
+                    'flex-1 rounded-xl border px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40',
+                    role === option.value
+                      ? 'border-cobalto bg-cobalto/5 text-cobalto'
+                      : 'border-neutral-200 text-neutral-600 hover:border-cobalto/40',
+                  )}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            {role === 'admin' && (
+              <p className="text-xs text-neutral-500">
+                El responsable administra el negocio y a su equipo. Solo puede haber uno.
+              </p>
+            )}
             <div className="flex gap-2">
               <input
                 type="email"
@@ -164,9 +200,10 @@ export function OrgTeamSheet({ org, onClose }: OrgTeamSheetProps) {
 
             {team !== null && !error && team.length === 0 && (
               <div className="rounded-2xl border border-dashed border-neutral-300 bg-white/60 px-6 py-10 text-center">
-                <p className="font-semibold text-neutral-700">Sin veterinarios aún</p>
+                <p className="font-semibold text-neutral-700">Sin equipo aún</p>
                 <p className="mt-1 text-sm text-neutral-500">
-                  Agrega al primero con su correo arriba.
+                  Empieza vinculando al responsable con su correo arriba. Después él agrega a su
+                  equipo desde su portal.
                 </p>
               </div>
             )}
@@ -190,11 +227,11 @@ export function OrgTeamSheet({ org, onClose }: OrgTeamSheetProps) {
                       )}
                     </div>
                     <span className="flex flex-shrink-0 items-center gap-1 rounded-full bg-cobalto/10 px-2 py-0.5 text-xs font-medium text-cobalto">
-                      {member.role === 'owner' && <ShieldCheck className="h-3 w-3" />}
+                      {isOrgResponsable(member.role) && <ShieldCheck className="h-3 w-3" />}
                       {member.roleLabel}
                     </span>
 
-                    {member.role === 'owner' ? null : confirmId === member.userId ? (
+                    {confirmId === member.userId ? (
                       <div className="flex flex-shrink-0 items-center gap-2">
                         <button
                           type="button"

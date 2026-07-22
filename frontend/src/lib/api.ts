@@ -8,7 +8,6 @@ import type {
   MedicalEntryType,
 } from '../data/mockAnimals';
 import type { Ally, AllyType, AllyMember, AllyAnimal, AllyPaymentInfo } from '../data/mockAllies';
-import { mockAllies } from '../data/mockAllies';
 import {
   type Need,
   type NeedType,
@@ -677,12 +676,39 @@ export async function updateMe(data: {
 // lo previsualice con datos de ejemplo (preview) para poder construir y probar.
 export type AllyRole = 'owner' | 'vet';
 
+// Aliados de ciclo completo (reciben perritos, rehabilitan, adoptan) vs aliados
+// de apoyo (foro, cultura, necesidades). El tipo viene de organizations.org_type.
+export const FULL_CYCLE_ORG_TYPES = ['veterinary', 'shelter'];
+export function isFullCycleOrg(orgType: string): boolean {
+  return FULL_CYCLE_ORG_TYPES.includes(orgType);
+}
+
 export type AllyContext = {
   organizationId: string;
   organizationName: string;
+  orgType: string;
   role: AllyRole;
   preview: boolean;
+  // Presente SOLO cuando un administrador está viendo el portal de un aliado que
+  // no es suyo. Acota cada llamada /me/organization/* a esa organización con
+  // ?organizationId=. Un aliado real lo deja en undefined (su org sale de la sesión).
+  adminOrgId?: string;
 };
+
+// Sufijo de consulta para acotar una llamada /me/organization/* a una organización
+// concreta. Solo lo usa un administrador viendo el portal de un aliado; backend
+// ?organizationId= (pendientes-isabel.md, sección 15, opción A).
+function orgScope(orgId?: string): string {
+  return orgId ? `?organizationId=${encodeURIComponent(orgId)}` : '';
+}
+
+// El backend distingue el rol dentro de la organización como role_in_org
+// (admin|veterinarian|assistant en BD). Aquí lo reducimos a owner|vet: el
+// responsable (admin) es owner; el resto, vet.
+function normalizeAllyRole(raw: unknown): AllyRole {
+  const value = String(raw ?? 'owner').toLowerCase();
+  return value === 'owner' || value === 'admin' ? 'owner' : 'vet';
+}
 
 export async function getMyOrganization(): Promise<AllyContext | null> {
   try {
@@ -693,28 +719,49 @@ export async function getMyOrganization(): Promise<AllyContext | null> {
         : null;
     const id = orgObj ? String(orgObj.id ?? orgObj._id ?? '') : '';
     if (id) {
-      const roleRaw = String((raw as Record<string, unknown>).role ?? 'owner');
+      const record = raw as Record<string, unknown>;
       return {
         organizationId: id,
         organizationName: String(orgObj?.name ?? 'Mi organización'),
-        role: roleRaw === 'vet' ? 'vet' : 'owner',
+        orgType: String(orgObj?.orgType ?? orgObj?.org_type ?? 'veterinary'),
+        role: normalizeAllyRole(record.role ?? record.roleInOrg ?? record.role_in_org),
         preview: false,
       };
     }
   } catch {
     // El endpoint /me/organization aún no existe en el backend.
   }
-
-  const user = getStoredUser();
-  if (user?.role === 'admin') {
-    return {
-      organizationId: mockAllies[0].id,
-      organizationName: mockAllies[0].name,
-      role: 'owner',
-      preview: true,
-    };
-  }
   return null;
+}
+
+// Contexto para que un ADMINISTRADOR abra el portal de un aliado por su id. No hay
+// datos de ejemplo: el nombre/tipo salen del aliado real (getAlly), con una pista
+// del listado del panel como respaldo para poder pintar el marco aunque ese dato
+// tarde. Cada sección se llena con ?organizationId= y muestra su propio error si
+// el backend aún no lo expone.
+export async function getOrganizationForAdmin(
+  orgId: string,
+  hint?: { name?: string; orgType?: string },
+): Promise<AllyContext> {
+  let organizationName = hint?.name ?? 'Aliado';
+  let orgType = hint?.orgType ?? 'veterinary';
+  try {
+    const ally = await getAlly(orgId);
+    if (ally) {
+      organizationName = ally.name;
+      orgType = ally.orgType;
+    }
+  } catch {
+    // Usamos la pista del listado; el marco del portal se pinta igual.
+  }
+  return {
+    organizationId: orgId,
+    organizationName,
+    orgType,
+    role: 'owner',
+    preview: false,
+    adminOrgId: orgId,
+  };
 }
 
 // Edición de la ficha del aliado por su propio responsable (scopeada a SU
@@ -733,8 +780,11 @@ export type MyOrgInput = {
   coverBase64?: string;
 };
 
-export async function updateMyOrganization(input: MyOrgInput): Promise<void> {
-  await authedRaw('/me/organization', { method: 'PATCH', body: JSON.stringify(input) });
+export async function updateMyOrganization(input: MyOrgInput, orgId?: string): Promise<void> {
+  await authedRaw(`/me/organization${orgScope(orgId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
 }
 
 // Equipo (veterinarios) del propio aliado. Backend: /me/organization/team
@@ -764,17 +814,43 @@ function mapTeamMember(raw: Record<string, unknown>): TeamMember {
   };
 }
 
-export async function getMyOrgTeam(): Promise<TeamMember[]> {
-  const data = await authedRaw<Record<string, unknown>[]>('/me/organization/team');
+export async function getMyOrgTeam(orgId?: string): Promise<TeamMember[]> {
+  const data = await authedRaw<Record<string, unknown>[]>(
+    `/me/organization/team${orgScope(orgId)}`,
+  );
   return (data ?? []).map(mapTeamMember);
 }
 
-export async function addMyOrgTeamMember(email: string): Promise<void> {
-  await authedRaw('/me/organization/team', { method: 'POST', body: JSON.stringify({ email }) });
+export async function addMyOrgTeamMember(email: string, orgId?: string): Promise<void> {
+  await authedRaw(`/me/organization/team${orgScope(orgId)}`, {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
 }
 
-export async function removeMyOrgTeamMember(userId: string): Promise<void> {
-  await authedRaw(`/me/organization/team/${userId}`, { method: 'DELETE' });
+export async function removeMyOrgTeamMember(userId: string, orgId?: string): Promise<void> {
+  await authedRaw(`/me/organization/team/${userId}${orgScope(orgId)}`, { method: 'DELETE' });
+}
+
+// Solicitud pública para unirse como aliado (Camino B): una veterinaria/refugio
+// que descubre Dasha manda sus datos y un admin la aprueba. Backend:
+// POST /organization-applications (spec en pendientes-isabel.md, sección 19i).
+export type OrgApplicationInput = {
+  name: string;
+  orgType: string; // veterinary | shelter | ngo | educational
+  address: string;
+  phone: string;
+  whatsapp?: string;
+  website?: string;
+  description: string;
+  contactName: string;
+};
+
+export async function submitOrganizationApplication(input: OrgApplicationInput): Promise<void> {
+  await authedRaw('/organization-applications', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
 }
 
 export async function postVolunteerApplication(data: {
@@ -1084,15 +1160,48 @@ export async function addAdoptedMoment(
 // Animales que atiende el propio aliado. Backend: /me/organization/animals
 // (spec en pendientes-isabel.md, 11.5). El cambio de estatus va a
 // PATCH /me/organization/animals/:id { status } con el enum del backend.
-export async function getMyOrgAnimals(): Promise<Animal[]> {
-  const data = await authedRaw<RawAnimal[]>('/me/organization/animals');
+export async function getMyOrgAnimals(orgId?: string): Promise<Animal[]> {
+  const data = await authedRaw<RawAnimal[]>(`/me/organization/animals${orgScope(orgId)}`);
   return (data ?? []).map(mapAnimal);
 }
 
-export async function updateMyOrgAnimalStatus(id: string, status: string): Promise<void> {
-  await authedRaw(`/me/organization/animals/${id}`, {
+export async function updateMyOrgAnimalStatus(
+  id: string,
+  status: string,
+  orgId?: string,
+): Promise<void> {
+  await authedRaw(`/me/organization/animals/${id}${orgScope(orgId)}`, {
     method: 'PATCH',
     body: JSON.stringify({ status }),
+  });
+}
+
+// El aliado edita el nombre provisional y los padecimientos/diagnóstico del
+// animalito. Mismo PATCH /me/organization/animals/:id (acepta campos parciales).
+export async function updateMyOrgAnimalDetails(
+  id: string,
+  details: { name?: string; diagnosis?: string },
+  orgId?: string,
+): Promise<void> {
+  await authedRaw(`/me/organization/animals/${id}${orgScope(orgId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(details),
+  });
+}
+
+// El aliado sube una foto de progreso del animalito (se va sumando a la galería
+// del caso). Backend: POST /me/organization/animals/:id/photos { photoBase64,
+// caption? } (spec en pendientes-isabel.md). Best-effort: la UI ya muestra la
+// foto localmente; si el endpoint aún no existe, no bloquea.
+export async function addMyOrgAnimalPhoto(
+  animalId: string,
+  photoBase64: string,
+  caption: string,
+  orgId?: string,
+): Promise<void> {
+  await authedRaw(`/me/organization/animals/${animalId}/photos${orgScope(orgId)}`, {
+    method: 'POST',
+    body: JSON.stringify({ photoBase64, caption: caption.trim() || undefined }),
   });
 }
 
@@ -1107,8 +1216,12 @@ export type MedicalEntryInput = {
   notes?: string;
 };
 
-export async function setMyOrgAnimalSterilized(id: string, sterilized: boolean): Promise<void> {
-  await authedRaw(`/me/organization/animals/${id}`, {
+export async function setMyOrgAnimalSterilized(
+  id: string,
+  sterilized: boolean,
+  orgId?: string,
+): Promise<void> {
+  await authedRaw(`/me/organization/animals/${id}${orgScope(orgId)}`, {
     method: 'PATCH',
     body: JSON.stringify({ sterilized }),
   });
@@ -1117,15 +1230,20 @@ export async function setMyOrgAnimalSterilized(id: string, sterilized: boolean):
 export async function addMyOrgMedicalEntry(
   animalId: string,
   input: MedicalEntryInput,
+  orgId?: string,
 ): Promise<void> {
-  await authedRaw(`/me/organization/animals/${animalId}/medical`, {
+  await authedRaw(`/me/organization/animals/${animalId}/medical${orgScope(orgId)}`, {
     method: 'POST',
     body: JSON.stringify(input),
   });
 }
 
-export async function removeMyOrgMedicalEntry(animalId: string, entryId: string): Promise<void> {
-  await authedRaw(`/me/organization/animals/${animalId}/medical/${entryId}`, {
+export async function removeMyOrgMedicalEntry(
+  animalId: string,
+  entryId: string,
+  orgId?: string,
+): Promise<void> {
+  await authedRaw(`/me/organization/animals/${animalId}/medical/${entryId}${orgScope(orgId)}`, {
     method: 'DELETE',
   });
 }
@@ -1163,13 +1281,15 @@ function mapDonation(raw: Record<string, unknown>): Donation {
   };
 }
 
-export async function getMyOrgDonations(): Promise<Donation[]> {
-  const data = await authedRaw<Record<string, unknown>[]>('/me/organization/donations');
+export async function getMyOrgDonations(orgId?: string): Promise<Donation[]> {
+  const data = await authedRaw<Record<string, unknown>[]>(
+    `/me/organization/donations${orgScope(orgId)}`,
+  );
   return (data ?? []).map(mapDonation);
 }
 
-export async function approveMyOrgDonation(id: string): Promise<void> {
-  await authedRaw(`/me/organization/donations/${id}`, {
+export async function approveMyOrgDonation(id: string, orgId?: string): Promise<void> {
+  await authedRaw(`/me/organization/donations/${id}${orgScope(orgId)}`, {
     method: 'PATCH',
     body: JSON.stringify({ received: true }),
   });
@@ -1281,19 +1401,22 @@ function mapAdoptionRequest(raw: Record<string, unknown>): AdoptionRequest {
   };
 }
 
-export async function getMyOrgAdoptionRequests(): Promise<AdoptionRequest[]> {
-  const data = await authedRaw<Record<string, unknown>[]>('/me/organization/adoption-requests');
+export async function getMyOrgAdoptionRequests(orgId?: string): Promise<AdoptionRequest[]> {
+  const data = await authedRaw<Record<string, unknown>[]>(
+    `/me/organization/adoption-requests${orgScope(orgId)}`,
+  );
   return (data ?? []).map(mapAdoptionRequest);
 }
 
 export async function updateMyOrgAdoptionRequest(
   id: string,
   status: 'accepted' | 'rejected',
+  orgId?: string,
 ): Promise<void> {
   // El backend espera 'approved'/'rejected'. Internamente la UI usa 'accepted'
   // para la etiqueta "Aceptada", así que traducimos solo al momento de enviar.
   const backendStatus = status === 'accepted' ? 'approved' : 'rejected';
-  await authedRaw(`/me/organization/adoption-requests/${id}`, {
+  await authedRaw(`/me/organization/adoption-requests/${id}${orgScope(orgId)}`, {
     method: 'PATCH',
     body: JSON.stringify({ status: backendStatus }),
   });
@@ -1677,6 +1800,17 @@ export async function updateRescueAssignmentStatus(
   });
 }
 
+// El voluntario cancela un rescate que ya no puede hacer (no encontró al
+// animalito, le surgió algo). El backend debe LIBERAR el reporte a `active` para
+// que otro voluntario lo tome (spec en pendientes-isabel.md, sección 19l).
+export async function cancelRescueAssignment(id: string, reason?: string): Promise<void> {
+  const clean = reason?.trim();
+  await authedRaw(`/rescue-assignments/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(clean ? { status: 'cancelled', cancelReason: clean } : { status: 'cancelled' }),
+  });
+}
+
 // El voluntario comparte su GPS cada pocos segundos. POST /rescue-assignments/:id/location
 export async function postRescueLocation(id: string, location: LatLng): Promise<void> {
   await authedRaw(`/rescue-assignments/${id}/location`, {
@@ -1868,9 +2002,9 @@ function mapIncomingRescue(raw: Record<string, unknown>): IncomingRescue {
 
 // Rescates que un voluntario lleva EN CAMINO hacia esta organización.
 // GET /organizations/portal/incoming-rescues (token del aliado).
-export async function getIncomingRescues(): Promise<IncomingRescue[]> {
+export async function getIncomingRescues(orgId?: string): Promise<IncomingRescue[]> {
   const data = await authedRaw<Record<string, unknown>[]>(
-    '/organizations/portal/incoming-rescues',
+    `/organizations/portal/incoming-rescues${orgScope(orgId)}`,
   );
   return (data ?? []).map(mapIncomingRescue);
 }
@@ -1886,12 +2020,16 @@ export type ReceptionInfo = {
 
 // El aliado confirma la recepción: el reporte pasa a rehabilitación y se abre su
 // ficha. POST /me/organization/reports/:id/intake { conditionOnArrival?, receivedBy?, notes? }
-export async function intakeReport(reportId: string, reception?: ReceptionInfo): Promise<void> {
+export async function intakeReport(
+  reportId: string,
+  reception?: ReceptionInfo,
+  orgId?: string,
+): Promise<void> {
   const payload: Record<string, string> = {};
   if (reception?.conditionOnArrival) payload.conditionOnArrival = reception.conditionOnArrival;
   if (reception?.receivedBy?.trim()) payload.receivedBy = reception.receivedBy.trim();
   if (reception?.notes?.trim()) payload.notes = reception.notes.trim();
-  await authedRaw(`/me/organization/reports/${reportId}/intake`, {
+  await authedRaw(`/me/organization/reports/${reportId}/intake${orgScope(orgId)}`, {
     method: 'POST',
     body: Object.keys(payload).length > 0 ? JSON.stringify(payload) : undefined,
   });

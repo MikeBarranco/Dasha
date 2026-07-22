@@ -36,6 +36,9 @@ import { AdminUsersPage } from './pages/admin/AdminUsersPage';
 import { AdminForumPage } from './pages/admin/AdminForumPage';
 import { AdminDenunciasPage } from './pages/admin/AdminDenunciasPage';
 import { AdminVolunteersPage } from './pages/admin/AdminVolunteersPage';
+import { AdminOrgApplicationsPage } from './pages/admin/AdminOrgApplicationsPage';
+import { SolicitudAliadoPage } from './pages/SolicitudAliadoPage';
+import { NotFoundPage } from './pages/NotFoundPage';
 import { PortalLayout } from './components/portal/PortalLayout';
 import { PortalHomePage } from './pages/portal/PortalHomePage';
 import { PortalPerfilPage } from './pages/portal/PortalPerfilPage';
@@ -78,6 +81,7 @@ function App() {
           <Route path="perfil" element={<PerfilPage />} />
           <Route path="novedades" element={<NovedadesPage />} />
           <Route path="ser-voluntario" element={<SerVoluntarioPage />} />
+          <Route path="ser-aliado" element={<SolicitudAliadoPage />} />
           <Route path="voluntario" element={<PanelVoluntarioPage />} />
           <Route path="aliados" element={<AliadosPage />} />
           <Route path="aliados/:id" element={<AllyProfilePage />} />
@@ -98,6 +102,7 @@ function App() {
           <Route path="foro" element={<AdminForumPage />} />
           <Route path="denuncias" element={<AdminDenunciasPage />} />
           <Route path="voluntarios" element={<AdminVolunteersPage />} />
+          <Route path="solicitudes-aliado" element={<AdminOrgApplicationsPage />} />
         </Route>
         <Route path="portal" element={<PortalLayout />}>
           <Route index element={<PortalHomePage />} />
@@ -109,6 +114,7 @@ function App() {
           <Route path="donaciones" element={<PortalDonacionesPage />} />
           <Route path="necesidades" element={<PortalNecesidadesPage />} />
         </Route>
+        <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </ErrorBoundary>
     </BrowserRouter>

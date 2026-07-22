@@ -45,7 +45,7 @@ export function PortalEquipoPage() {
   useEffect(() => {
     if (ctx.preview) return;
     let active = true;
-    getMyOrgTeam()
+    getMyOrgTeam(ctx.adminOrgId)
       .then((data) => {
         if (!active) return;
         setTeam(data);
@@ -59,7 +59,7 @@ export function PortalEquipoPage() {
     return () => {
       active = false;
     };
-  }, [ctx.preview, ctx.organizationId]);
+  }, [ctx.preview, ctx.organizationId, ctx.adminOrgId]);
 
   const submitAdd = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -88,9 +88,9 @@ export function PortalEquipoPage() {
 
     setAdding(true);
     try {
-      await addMyOrgTeamMember(clean);
+      await addMyOrgTeamMember(clean, ctx.adminOrgId);
       setEmail('');
-      const data = await getMyOrgTeam();
+      const data = await getMyOrgTeam(ctx.adminOrgId);
       setTeam(data);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'No se pudo vincular. Intenta de nuevo.');
@@ -106,7 +106,7 @@ export function PortalEquipoPage() {
       return;
     }
     try {
-      await removeMyOrgTeamMember(userId);
+      await removeMyOrgTeamMember(userId, ctx.adminOrgId);
       setTeam((current) => (current ? current.filter((m) => m.userId !== userId) : current));
       setConfirmId(null);
     } catch (err) {

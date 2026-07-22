@@ -59,7 +59,7 @@ export function PortalAdopcionesPage() {
   useEffect(() => {
     if (ctx.preview) return;
     let active = true;
-    getMyOrgAdoptionRequests()
+    getMyOrgAdoptionRequests(ctx.adminOrgId)
       .then((data) => {
         if (!active) return;
         setRequests(data);
@@ -73,7 +73,7 @@ export function PortalAdopcionesPage() {
     return () => {
       active = false;
     };
-  }, [ctx.preview]);
+  }, [ctx.preview, ctx.adminOrgId]);
 
   const decide = async (id: string, status: 'accepted' | 'rejected') => {
     if (ctx.preview) {
@@ -84,7 +84,7 @@ export function PortalAdopcionesPage() {
     }
     setBusyId(id);
     try {
-      await updateMyOrgAdoptionRequest(id, status);
+      await updateMyOrgAdoptionRequest(id, status, ctx.adminOrgId);
       setRequests((current) =>
         current ? current.map((item) => (item.id === id ? { ...item, status } : item)) : current,
       );

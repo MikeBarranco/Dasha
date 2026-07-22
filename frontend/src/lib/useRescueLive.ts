@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getRescueAssignment, type RescueAssignment, type RescueStatus } from './api';
 import { connectRescueRoom, type RescueLivePosition } from './rescueSocket';
 
@@ -10,6 +10,9 @@ export type RescueLiveState = {
   connected: boolean;
   // true cuando la posición viene de la simulación (no de un GPS real).
   simulated: boolean;
+  // Vuelve a consultar la asignación (para el botón "Actualizar" mientras el
+  // voluntario espera que el aliado confirme la recepción).
+  refresh: () => Promise<void>;
 };
 
 // Si en unos segundos no llega GPS real y hay ruta, animamos al voluntario para
@@ -31,6 +34,13 @@ export function useRescueLive(assignmentId: string | undefined): RescueLiveState
   const [simulated, setSimulated] = useState(false);
 
   const gotRealPositionRef = useRef(false);
+
+  const refresh = useCallback(async () => {
+    if (!assignmentId) return;
+    const data = await getRescueAssignment(assignmentId);
+    setAssignment(data);
+    if (data) setStatus(data.status);
+  }, [assignmentId]);
 
   useEffect(() => {
     if (!assignmentId) return;
@@ -104,5 +114,5 @@ export function useRescueLive(assignmentId: string | undefined): RescueLiveState
     };
   }, [assignmentId]);
 
-  return { assignment, position, status, connected, simulated };
+  return { assignment, position, status, connected, simulated, refresh };
 }

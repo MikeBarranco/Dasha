@@ -10,6 +10,7 @@ import {
   MessagesSquare,
   Flag as FlagIcon,
   BadgeCheck,
+  Store,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -46,6 +47,12 @@ export const adminSections: AdminSection[] = [
     label: 'Aliados',
     description: 'Veterinarias, refugios y asociaciones',
     icon: Building2,
+  },
+  {
+    to: '/admin/solicitudes-aliado',
+    label: 'Solicitudes de aliado',
+    description: 'Postulaciones para unirse como aliado',
+    icon: Store,
   },
   {
     to: '/admin/eventos',

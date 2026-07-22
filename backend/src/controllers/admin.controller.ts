@@ -742,9 +742,7 @@ export class AdminController {
       const formatted = applications.map(app => ({
         ...app,
         idDocUrl: app.ineFrontUrl,
-        idSelfieUrl: app.selfieUrl,
-        ineFrontUrl: undefined,
-        selfieUrl: undefined
+        idSelfieUrl: app.selfieUrl
       }));
 
       res.status(200).json(formatted);

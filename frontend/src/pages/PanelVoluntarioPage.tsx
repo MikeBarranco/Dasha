@@ -186,10 +186,16 @@ export function PanelVoluntarioPage() {
     setAcceptingId(report.id);
     try {
       const assignment = await acceptReport(report.id);
-      if (assignment) {
-        navigate(`/rescate/${assignment.id}`);
+      const rescueId = assignment?.id ? String(assignment.id).trim() : '';
+      if (rescueId) {
+        navigate(`/rescate/${rescueId}`);
       } else {
+        // El caso quedó aceptado pero el backend no devolvió un rescate abrible:
+        // NO navegamos a "/rescate/" (que no existe y deja la pantalla en blanco).
         setNearby((current) => current?.filter((item) => item.id !== report.id) ?? null);
+        alert(
+          'Aceptaste el caso, pero aún no se pudo abrir el rescate en vivo. Lo encuentras en "Mis casos activos".',
+        );
       }
     } catch (err) {
       alert(err instanceof Error ? err.message : 'No se pudo aceptar el caso.');

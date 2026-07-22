@@ -323,11 +323,18 @@ export async function deleteAdminOrganization(id: string): Promise<void> {
 // Equipo (veterinarios) de un aliado. Cada vet tiene su cuenta y el aliado lo
 // vincula por correo. El endpoint lo hará Isabel (spec en pendientes-isabel.md,
 // sección 11.1); el cliente ya está listo y es tolerante a la forma de respuesta.
+// El backend usa role_in_org (admin|veterinarian|assistant en BD); el front venía
+// usando owner|vet. Aceptamos ambos vocabularios para no romper al conectar.
 const orgMemberRoleLabels: Record<string, string> = {
   owner: 'Responsable',
+  admin: 'Responsable',
   vet: 'Veterinario',
-  admin: 'Administrador',
+  veterinarian: 'Veterinario',
+  assistant: 'Asistente',
 };
+
+// Rol dentro de la organización que el admin puede asignar al vincular por correo.
+export type OrgMemberRole = 'admin' | 'veterinarian';
 
 export type AdminOrgMember = {
   userId: string;
@@ -366,15 +373,93 @@ export async function getAdminOrgTeam(orgId: string): Promise<AdminOrgMember[]> 
   return (data ?? []).map(mapOrgMember);
 }
 
-export async function addAdminOrgTeamMember(orgId: string, email: string): Promise<void> {
+export async function addAdminOrgTeamMember(
+  orgId: string,
+  email: string,
+  roleInOrg: OrgMemberRole = 'veterinarian',
+): Promise<void> {
   await adminFetch(`/admin/organizations/${orgId}/team`, {
     method: 'POST',
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({ email, roleInOrg }),
   });
+}
+
+// Un miembro es el responsable si su rol es admin/owner (ambos vocabularios).
+export function isOrgResponsable(role: string): boolean {
+  return role === 'owner' || role === 'admin';
 }
 
 export async function removeAdminOrgTeamMember(orgId: string, userId: string): Promise<void> {
   await adminFetch(`/admin/organizations/${orgId}/team/${userId}`, { method: 'DELETE' });
+}
+
+// Solicitudes públicas para unirse como aliado (Camino B). El admin las revisa y
+// aprueba/rechaza; al aprobar, el backend crea la organización y deja al
+// solicitante como responsable. Backend en pendientes-isabel.md, sección 19i.
+export type OrgApplication = {
+  id: string;
+  name: string;
+  orgType: string;
+  orgTypeLabel: string;
+  address: string;
+  phone: string;
+  whatsapp: string;
+  website: string;
+  description: string;
+  contactName: string;
+  contactEmail: string;
+  status: 'pending' | 'approved' | 'rejected';
+  statusLabel: string;
+  requestedAgo: string;
+};
+
+const applicationStatusLabels: Record<string, string> = {
+  pending: 'Pendiente',
+  approved: 'Aprobada',
+  rejected: 'Rechazada',
+};
+
+function mapOrgApplication(raw: Raw): OrgApplication {
+  const typeRaw = asString(pick(raw, ['orgType', 'org_type', 'type']), 'ngo');
+  const statusRaw = asString(pick(raw, ['status']), 'pending');
+  const status =
+    statusRaw === 'approved' || statusRaw === 'rejected' ? statusRaw : 'pending';
+  const user = pick(raw, ['user', 'applicant']);
+  const nested = user && typeof user === 'object' ? (user as Raw) : null;
+  return {
+    id: asString(pick(raw, ['id', '_id'])),
+    name: asString(pick(raw, ['name'])),
+    orgType: typeRaw,
+    orgTypeLabel: orgTypeLabels[typeRaw] ?? typeRaw,
+    address: asString(pick(raw, ['address'])),
+    phone: asString(pick(raw, ['phone'])),
+    whatsapp: asString(pick(raw, ['whatsapp'])),
+    website: asString(pick(raw, ['website'])),
+    description: asString(pick(raw, ['description'])),
+    contactName: asString(pick(raw, ['contactName', 'contact_name']) ?? (nested ? pick(nested, ['name']) : '')),
+    contactEmail: asString(pick(raw, ['contactEmail', 'contact_email']) ?? (nested ? pick(nested, ['email']) : '')),
+    status,
+    statusLabel: applicationStatusLabels[status] ?? status,
+    requestedAgo: formatDate(asString(pick(raw, ['createdAt', 'created_at']))),
+  };
+}
+
+export async function getOrganizationApplications(): Promise<OrgApplication[]> {
+  const data = await adminFetch<Raw[]>('/admin/organization-applications');
+  return (data ?? []).map(mapOrgApplication);
+}
+
+export async function updateOrganizationApplication(
+  id: string,
+  status: 'approved' | 'rejected',
+  rejectionReason?: string,
+): Promise<void> {
+  await adminFetch(`/admin/organization-applications/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(
+      status === 'rejected' && rejectionReason ? { status, rejectionReason } : { status },
+    ),
+  });
 }
 
 const roleLabels: Record<string, string> = {
