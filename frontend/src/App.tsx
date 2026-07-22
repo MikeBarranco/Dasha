@@ -38,6 +38,7 @@ import { AdminDenunciasPage } from './pages/admin/AdminDenunciasPage';
 import { AdminVolunteersPage } from './pages/admin/AdminVolunteersPage';
 import { AdminOrgApplicationsPage } from './pages/admin/AdminOrgApplicationsPage';
 import { SolicitudAliadoPage } from './pages/SolicitudAliadoPage';
+import { NotFoundPage } from './pages/NotFoundPage';
 import { PortalLayout } from './components/portal/PortalLayout';
 import { PortalHomePage } from './pages/portal/PortalHomePage';
 import { PortalPerfilPage } from './pages/portal/PortalPerfilPage';
@@ -113,6 +114,7 @@ function App() {
           <Route path="donaciones" element={<PortalDonacionesPage />} />
           <Route path="necesidades" element={<PortalNecesidadesPage />} />
         </Route>
+        <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </ErrorBoundary>
     </BrowserRouter>
