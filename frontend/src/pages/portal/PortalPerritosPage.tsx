@@ -3,7 +3,7 @@ import { AnimatePresence } from 'motion/react';
 import { PawPrint, AlertCircle, ChevronRight } from 'lucide-react';
 import { PortalAnimalSheet } from '../../components/portal/PortalAnimalSheet';
 import { getMyOrgAnimals } from '../../lib/api';
-import { mockAnimals, type Animal, type AnimalStatus } from '../../data/mockAnimals';
+import { mockAnimals, type Animal } from '../../data/mockAnimals';
 import { mockAllies as allies } from '../../data/mockAllies';
 import { useAllyPortal } from '../../lib/useAllyPortal';
 
@@ -50,9 +50,9 @@ export function PortalPerritosPage() {
     };
   }, [ctx.preview, ctx.adminOrgId]);
 
-  const onStatusChanged = (id: string, status: AnimalStatus) => {
+  const onUpdated = (id: string, patch: Partial<Animal>) => {
     setAnimals((current) =>
-      current ? current.map((animal) => (animal.id === id ? { ...animal, status } : animal)) : current,
+      current ? current.map((animal) => (animal.id === id ? { ...animal, ...patch } : animal)) : current,
     );
   };
 
@@ -141,7 +141,7 @@ export function PortalPerritosPage() {
             preview={ctx.preview}
             orgId={ctx.adminOrgId}
             onClose={() => setSelectedId(null)}
-            onStatusChanged={onStatusChanged}
+            onUpdated={onUpdated}
           />
         )}
       </AnimatePresence>
