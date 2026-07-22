@@ -66,7 +66,7 @@ export function PortalRescatesPage() {
   useEffect(() => {
     if (ctx.preview) return;
     let active = true;
-    getIncomingRescues()
+    getIncomingRescues(ctx.adminOrgId)
       .then((data) => {
         if (!active) return;
         setRescues(data);
@@ -80,7 +80,7 @@ export function PortalRescatesPage() {
     return () => {
       active = false;
     };
-  }, [ctx.preview]);
+  }, [ctx.preview, ctx.adminOrgId]);
 
   const ingresar = async (rescue: IncomingRescue, reception: ReceptionInfo) => {
     if (ctx.preview) {
@@ -91,7 +91,7 @@ export function PortalRescatesPage() {
     }
     setIntakingId(rescue.reportId);
     try {
-      await intakeReport(rescue.reportId, reception);
+      await intakeReport(rescue.reportId, reception, ctx.adminOrgId);
       setRescues((current) => current?.filter((item) => item.reportId !== rescue.reportId) ?? null);
       setConfirmingId(null);
       setDoneName(rescue.species === 'gato' ? 'el gatito' : 'el perrito');
@@ -118,7 +118,7 @@ export function PortalRescatesPage() {
           <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
           <span>
             Ingresaste a {doneName}. Ya aparece en{' '}
-            <Link to="/portal/perritos" className="font-semibold underline">
+            <Link to={`/portal/perritos${ctx.adminOrgId ? `?orgId=${ctx.adminOrgId}` : ''}`} className="font-semibold underline">
               Mis perritos
             </Link>
             .

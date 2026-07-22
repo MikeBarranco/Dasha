@@ -57,7 +57,7 @@ export function PortalDonacionesPage() {
   useEffect(() => {
     if (ctx.preview) return;
     let active = true;
-    getMyOrgDonations()
+    getMyOrgDonations(ctx.adminOrgId)
       .then((data) => {
         if (!active) return;
         setDonations(data);
@@ -71,7 +71,7 @@ export function PortalDonacionesPage() {
     return () => {
       active = false;
     };
-  }, [ctx.preview]);
+  }, [ctx.preview, ctx.adminOrgId]);
 
   const approve = async (id: string) => {
     if (ctx.preview) {
@@ -84,7 +84,7 @@ export function PortalDonacionesPage() {
     }
     setApprovingId(id);
     try {
-      await approveMyOrgDonation(id);
+      await approveMyOrgDonation(id, ctx.adminOrgId);
       setDonations((current) =>
         current
           ? current.map((item) => (item.id === id ? { ...item, status: 'approved' } : item))

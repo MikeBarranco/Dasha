@@ -1,6 +1,17 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AnimatePresence } from 'motion/react';
-import { Plus, Pencil, Trash2, AlertCircle, RefreshCw, BadgeCheck, Building2, Users } from 'lucide-react';
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  AlertCircle,
+  RefreshCw,
+  BadgeCheck,
+  Building2,
+  Users,
+  Store,
+} from 'lucide-react';
 import { OrgFormSheet } from '../../components/admin/OrgFormSheet';
 import { OrgTeamSheet } from '../../components/admin/OrgTeamSheet';
 import {
@@ -10,6 +21,7 @@ import {
 } from '../../lib/adminApi';
 
 export function AdminOrganizationsPage() {
+  const navigate = useNavigate();
   const [orgs, setOrgs] = useState<AdminOrg[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -172,6 +184,18 @@ export function AdminOrganizationsPage() {
                 </div>
               ) : (
                 <div className="flex flex-shrink-0 items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      navigate(`/portal?orgId=${org.id}`, {
+                        state: { name: org.name, orgType: org.orgType },
+                      })
+                    }
+                    aria-label="Ver portal del aliado"
+                    className="rounded-lg p-2 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-cobalto"
+                  >
+                    <Store className="h-4 w-4" />
+                  </button>
                   <button
                     type="button"
                     onClick={() => setTeamOrg(org)}
