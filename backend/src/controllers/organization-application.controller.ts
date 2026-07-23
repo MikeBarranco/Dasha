@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
+import { NotificationService } from '../services/notification.service';
 
 export class OrganizationApplicationController {
   
@@ -60,7 +61,7 @@ export class OrganizationApplicationController {
         include: {
           employees: {
             where: { roleInOrg: 'admin' },
-            include: { user: { select: { name: true, email: true, phone: true } } }
+            include: { user: { select: { id: true, name: true, email: true, phone: true } } }
           }
         },
         orderBy: { createdAt: 'desc' }
@@ -75,13 +76,23 @@ export class OrganizationApplicationController {
   static async updateApplication(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
-      const { status } = req.body; // 'approved' o 'rejected'
+      const { status, rejectionReason } = req.body; // 'approved' o 'rejected'
 
-      const org = await prisma.organization.findUnique({ where: { id } });
+      const org = await prisma.organization.findUnique({ 
+        where: { id },
+        include: {
+          employees: {
+            where: { roleInOrg: 'admin' },
+            take: 1
+          }
+        }
+      });
       if (!org) {
         res.status(404).json({ error: 'Organización no encontrada' });
         return;
       }
+
+      const applicantId = org.employees[0]?.userId;
 
       if (status === 'approved') {
         await prisma.$transaction(async (tx) => {
@@ -94,16 +105,47 @@ export class OrganizationApplicationController {
             data: { isVerified: true }
           });
         });
+        
+        if (applicantId) {
+          await NotificationService.sendNotification({
+            userId: applicantId,
+            title: '¡Postulación Aprobada!',
+            body: `Tu organización ${org.name} ha sido aprobada. ¡Bienvenido a la red!`,
+            type: 'system_alert',
+            link: '/portal'
+          });
+        }
+        
         res.status(200).json({ message: 'Postulación aprobada' });
       } else if (status === 'rejected') {
-        // En este caso, simplemente borramos la postulación y el employee (cascade no está por defecto en employee, así que lo borramos a mano si hace falta)
-        await prisma.$transaction(async (tx) => {
-          await tx.organizationEmployee.deleteMany({ where: { organizationId: id } });
-          await tx.organization.delete({ where: { id } });
+        // Solo la marcamos como rechazada (isActive: false) y guardamos el motivo
+        await prisma.organization.update({
+          where: { id },
+          data: { 
+            isActive: false,
+            isVerified: false,
+            rejectionReason: rejectionReason || 'No cumple con los requisitos'
+          }
         });
-        res.status(200).json({ message: 'Postulación rechazada y eliminada' });
+        // Desactivar también al empleado temporal
+        await prisma.organizationEmployee.updateMany({
+          where: { organizationId: id },
+          data: { isVerified: false }
+        });
+        
+        if (applicantId) {
+          await NotificationService.sendNotification({
+            userId: applicantId,
+            title: 'Postulación Rechazada',
+            body: `Tu solicitud para ${org.name} fue rechazada: ${rejectionReason || 'No cumple con los requisitos.'}`,
+            type: 'system_alert',
+            link: '/'
+          });
+        }
+        
+        res.status(200).json({ message: 'Postulación rechazada' });
       } else {
-        res.status(400).json({ error: 'Status inválido. Use approved o rejected.' });
+        res.status(400).json({ error: 'Status inválido' });
       }
     } catch (error) {
       next(error);

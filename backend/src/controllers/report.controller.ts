@@ -50,6 +50,14 @@ export class ReportController {
           where: { id: data.userId },
           data: { experiencePoints: { increment: 10 } }
         }).catch((err: any) => console.error('Error granting XP for report:', err));
+        
+        prisma.reputationEvent.create({
+          data: {
+            userId: data.userId,
+            reason: 'report',
+            points: 10
+          }
+        }).catch((err: any) => console.error('Error creating reputation event:', err));
       }
 
       // DSH-29: Notificar a voluntarios cercanos si es urgencia alta o crítica

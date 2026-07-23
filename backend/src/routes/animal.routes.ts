@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { AnimalController } from '../controllers/animal.controller';
 import { requireAuth } from '../middlewares/auth.middleware';
 import { validate } from '../middlewares/validate';
-import { createAnimalSchema, addMedicalRecordSchema } from '../schemas/animal.schema';
+import { createAnimalSchema, addMedicalRecordSchema, donateToAnimalSchema } from '../schemas/animal.schema';
 
 const router = Router();
 
@@ -34,6 +34,6 @@ router.delete('/:id/follow', requireAuth, AnimalController.unfollowAnimal);
 router.post('/:id/adopt', requireAuth, AnimalController.requestAdoption);
 
 // POST /api/v1/animals/:id/donations (Protegida, enviar donativo de dinero o especie)
-router.post('/:id/donations', requireAuth, AnimalController.donateToAnimal);
+router.post('/:id/donations', requireAuth, validate(donateToAnimalSchema), AnimalController.donateToAnimal);
 
 export default router;

@@ -642,7 +642,26 @@ export class OrganizationController {
           });
         }
         
-        // Finalizar asignaciones activas
+        // Finalizar asignaciones activas y dar XP a los voluntarios
+        const activeAssignments = await tx.rescueAssignment.findMany({
+          where: { reportId, status: { in: ['accepted', 'on_the_way', 'arrived'] as any[] } }
+        });
+
+        for (const assignment of activeAssignments) {
+          await tx.user.update({
+            where: { id: assignment.volunteerId },
+            data: { experiencePoints: { increment: 20 } } // 20 XP por rescate completado
+          });
+          
+          await tx.reputationEvent.create({
+            data: {
+              userId: assignment.volunteerId,
+              reason: 'rescue',
+              points: 20
+            }
+          });
+        }
+
         await tx.rescueAssignment.updateMany({
           where: { reportId, status: { in: ['accepted', 'on_the_way', 'arrived'] as any[] } },
           data: { status: 'completed', completedAt: new Date() }

@@ -16,8 +16,14 @@ router.patch('/', requireAuth, UserController.updateProfile);
 // DELETE /api/v1/me (Protegida, desactivar cuenta)
 router.delete('/', requireAuth, UserController.deleteAccount);
 
+// PATCH /api/v1/me/password (Protegida, cambiar contraseña)
+router.patch('/password', requireAuth, UserController.updatePassword);
+
 // GET /api/v1/me/availability
 router.get('/availability', requireAuth, UserController.getAvailability);
+
+// GET /api/v1/me/achievements/available
+router.get('/achievements/available', requireAuth, UserController.getAvailableAchievements);
 
 // PATCH /api/v1/me/availability (Protegida, modo activo voluntario)
 router.patch('/availability', requireAuth, validate(updateAvailabilitySchema), UserController.updateAvailability);
