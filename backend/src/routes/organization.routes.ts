@@ -20,6 +20,8 @@ router.post('/reports/:reportId/intake', requireAuth, OrganizationController.int
 router.get('/portal/incoming-rescues', requireAuth, OrganizationController.getIncomingRescues);
 
 router.post('/portal/animals', requireAuth, OrganizationController.createPortalAnimal);
+router.patch('/portal/animals/:animalId', requireAuth, OrganizationController.updatePortalAnimal);
+router.post('/portal/animals/:animalId/photos', requireAuth, OrganizationController.addPortalAnimalPhoto);
 router.post('/portal/animals/:animalId/records', requireAuth, OrganizationController.addPortalAnimalRecord);
 router.post('/portal/animals/:animalId/timeline', requireAuth, OrganizationController.addPortalTimelineEvent);
 

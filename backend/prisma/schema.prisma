@@ -827,6 +827,7 @@ model LostPet {
   searchRadiusKm   Int                                   @default(3) @map("search_radius_km")
   reward           Decimal?                              @db.Decimal(10, 2)
   contactWhatsapp  String?                               @map("contact_whatsapp") @db.VarChar(20)
+  contactName      String?                               @map("contact_name") @db.VarChar(150)
   isFound          Boolean                               @default(false) @map("is_found")
   createdAt        DateTime                              @default(now()) @map("created_at") @db.Timestamptz
 
@@ -877,6 +878,7 @@ model ForumPost {
   isPinned   Boolean       @default(false) @map("is_pinned")
   isResolved Boolean       @default(false) @map("is_resolved")
   upvotes    Int           @default(0)
+  images     String[]      @default([])
   createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz
   updatedAt  DateTime      @default(now()) @map("updated_at") @db.Timestamptz
 

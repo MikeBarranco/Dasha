@@ -268,6 +268,27 @@ export class UserController {
     }
   }
 
+  static async deleteAccount(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      const { reason } = req.body; // Opcional, para analíticas si el frontend lo envía
+
+      if (!userId) {
+        res.status(401).json({ error: 'No autorizado' });
+        return;
+      }
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: { isActive: false } // Borrado lógico
+      });
+
+      res.status(200).json({ message: 'Cuenta inactivada exitosamente' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async applyForVolunteer(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = (req as any).user?.id;

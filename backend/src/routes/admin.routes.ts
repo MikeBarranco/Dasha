@@ -40,6 +40,9 @@ router.get('/organizations', AdminController.getAllOrganizations);
 router.post('/organizations', AdminController.createOrganization);
 router.patch('/organizations/:id', AdminController.updateOrganization);
 router.delete('/organizations/:id', AdminController.deleteOrganization);
+router.get('/organizations/:id/team', AdminController.getOrganizationTeam);
+router.post('/organizations/:id/team', AdminController.addOrganizationTeamMember);
+router.delete('/organizations/:id/team/:employeeId', AdminController.removeOrganizationTeamMember);
 
 // ==========================================
 // ANIMALES EN REHABILITACIÓN

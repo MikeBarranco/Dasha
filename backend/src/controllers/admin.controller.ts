@@ -427,6 +427,92 @@ export class AdminController {
   }
 
   // ==========================================
+  // EQUIPO DE LA ORGANIZACIÓN (ADMIN)
+  // ==========================================
+  static async getOrganizationTeam(req: Request, res: Response, next: NextFunction) {
+    try {
+      const organizationId = req.params.id as string;
+      const team = await prisma.organizationEmployee.findMany({
+        where: { organizationId },
+        include: {
+          user: { select: { id: true, name: true, email: true, avatarUrl: true, role: true } }
+        }
+      });
+      res.status(200).json(team);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async addOrganizationTeamMember(req: Request, res: Response, next: NextFunction) {
+    try {
+      const organizationId = req.params.id as string;
+      const { email, roleInOrg } = req.body;
+      
+      if (!email || !roleInOrg) {
+        res.status(400).json({ error: 'El email y el rol son obligatorios' });
+        return;
+      }
+
+      const targetUser = await prisma.user.findUnique({ where: { email } });
+      if (!targetUser) {
+        res.status(404).json({ error: 'Usuario no encontrado en la plataforma Dasha' });
+        return;
+      }
+
+      const existingEmployee = await prisma.organizationEmployee.findFirst({
+        where: { userId: targetUser.id }
+      });
+
+      if (existingEmployee) {
+        res.status(400).json({ error: 'Este usuario ya es miembro de una organización' });
+        return;
+      }
+
+      const newMember = await prisma.organizationEmployee.create({
+        data: {
+          organizationId,
+          userId: targetUser.id,
+          roleInOrg: roleInOrg,
+          isVerified: true,
+          invitedEmail: email
+        },
+        include: {
+          user: { select: { id: true, name: true, email: true, avatarUrl: true } }
+        }
+      });
+
+      res.status(201).json({ message: 'Miembro agregado exitosamente', member: newMember });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async removeOrganizationTeamMember(req: Request, res: Response, next: NextFunction) {
+    try {
+      const organizationId = req.params.id as string;
+      const employeeId = req.params.employeeId as string;
+
+      const employeeToRemove = await prisma.organizationEmployee.findUnique({
+        where: { id: employeeId }
+      });
+
+      if (!employeeToRemove || employeeToRemove.organizationId !== organizationId) {
+        res.status(404).json({ error: 'El miembro no pertenece a esta organización' });
+        return;
+      }
+
+      await prisma.organizationEmployee.delete({
+        where: { id: employeeId }
+      });
+
+      res.status(200).json({ message: 'Miembro eliminado del equipo' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ==========================================
   // ANIMALES EN REHABILITACIÓN
   // ==========================================
   static async getAllAnimals(req: Request, res: Response, next: NextFunction) {
