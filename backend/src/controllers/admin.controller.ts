@@ -492,7 +492,7 @@ export class AdminController {
   static async removeOrganizationTeamMember(req: Request, res: Response, next: NextFunction) {
     try {
       const organizationId = req.params.id as string;
-      const paramId = req.params.employeeId || req.params.userId;
+      const paramId = (req.params.employeeId || req.params.userId) as string;
 
       const employeeToRemove = await prisma.organizationEmployee.findFirst({
         where: {
