@@ -7,6 +7,7 @@ const router = Router();
 // Públicas
 router.get('/posts', ForumController.getPosts);
 router.get('/posts/:id', ForumController.getPostDetails);
+router.get('/posts/:id/replies', ForumController.getReplies);
 
 // Requieren sesión
 router.post('/posts', requireAuth, ForumController.createPost);
