@@ -1,8 +1,9 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { Camera, Dog, Cat, ArrowLeft, Check, LifeBuoy, ChevronRight } from 'lucide-react';
 import { guiaSituaciones } from '../data/guiaSituaciones';
+import { GuiaSheet } from '../components/guia/GuiaSheet';
 import { PageHeader } from '../components/ui/PageHeader';
 import { cn } from '../lib/cn';
 import { createReport, getNearbyReports, addSighting, type CreateReportInput } from '../lib/api';
@@ -162,6 +163,7 @@ export function ReportarPage() {
   const [dupes, setDupes] = useState<DuplicateCandidate[] | null>(null);
   const [checking, setChecking] = useState(false);
   const [savingSightingId, setSavingSightingId] = useState<string | null>(null);
+  const [guiaOpen, setGuiaOpen] = useState(false);
 
   const urgency = computeUrgency(conditions);
   // Tip de seguridad contextual: si ve un animal herido o asustado/agresivo,
@@ -542,12 +544,13 @@ export function ReportarPage() {
                     </li>
                   ))}
                 </ul>
-                <Link
-                  to="/guia"
+                <button
+                  type="button"
+                  onClick={() => setGuiaOpen(true)}
                   className="mt-2 flex items-center gap-0.5 text-xs font-semibold text-cobalto"
                 >
                   Ver guía completa <ChevronRight className="h-3.5 w-3.5" />
-                </Link>
+                </button>
               </div>
             )}
           </div>
@@ -667,6 +670,9 @@ export function ReportarPage() {
       </div>
 
       <AnimatePresence>
+        {guiaOpen && (
+          <GuiaSheet defaultOpenId={safetyTip?.id ?? null} onClose={() => setGuiaOpen(false)} />
+        )}
         {dupes && (
           <DuplicateCheckSheet
             newReport={{

@@ -44,6 +44,10 @@ router.get('/organizations/:id/team', AdminController.getOrganizationTeam);
 router.post('/organizations/:id/team', AdminController.addOrganizationTeamMember);
 router.delete('/organizations/:id/team/:employeeId', AdminController.removeOrganizationTeamMember);
 
+router.get('/organizations/:id/team', AdminController.getOrganizationTeam);
+router.post('/organizations/:id/team', AdminController.addOrganizationTeamMember);
+router.delete('/organizations/:id/team/:userId', AdminController.removeOrganizationTeamMember);
+
 // ==========================================
 // ANIMALES EN REHABILITACIÓN
 // ==========================================

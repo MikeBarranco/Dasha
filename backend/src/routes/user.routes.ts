@@ -28,6 +28,9 @@ router.get('/reports', requireAuth, UserController.getMyReports);
 // GET /api/v1/me/contributions (Protegida, mis contribuciones a necesidades y donaciones)
 router.get('/contributions', requireAuth, UserController.getMyContributions);
 
+// GET /api/v1/me/adopted (Protegida, mi álbum privado de mascotas adoptadas)
+router.get('/adopted', requireAuth, UserController.getMyAdopted);
+
 // GET /api/v1/me/rescue-assignments
 router.get('/rescue-assignments', requireAuth, UserController.getMyRescueAssignments);
 
@@ -40,6 +43,9 @@ router.get('/notifications', requireAuth, UserController.getMyNotifications);
 // ==========================================
 // CARTILLA MÉDICA Y PORTAL DE ANIMALES (Frontend specific)
 // ==========================================
+
+// GET /api/v1/me/organization (Portal de Aliado)
+router.get('/organization', requireAuth, UserController.getMyOrganization);
 
 // GET /api/v1/me/organization/animals
 router.get('/organization/animals', requireAuth, OrganizationController.getOrganizationAnimals);

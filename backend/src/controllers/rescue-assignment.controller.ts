@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
+import { NotificationService } from '../services/notification.service';
 
 export class RescueAssignmentController {
   
@@ -115,7 +116,7 @@ export class RescueAssignmentController {
         );
       `;
 
-      const { NotificationService } = await import('../services/notification.service.js');
+      // El NotificationService ya está importado arriba
       
       const statusMap: Record<string, string> = {
         accepted: 'Aceptado',
