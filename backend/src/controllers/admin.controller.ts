@@ -438,7 +438,14 @@ export class AdminController {
           user: { select: { id: true, name: true, email: true, avatarUrl: true, role: true } }
         }
       });
-      res.status(200).json(team);
+      
+      // Alias 'role' para empatar con el frontend de Miguel
+      const mappedTeam = team.map(member => ({
+        ...member,
+        role: member.roleInOrg
+      }));
+
+      res.status(200).json(mappedTeam);
     } catch (error) {
       next(error);
     }
