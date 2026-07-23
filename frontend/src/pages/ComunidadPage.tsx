@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { motion } from 'motion/react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   CalendarDays,
   MapPin,
@@ -13,6 +13,8 @@ import {
   Flag,
   LifeBuoy,
   ChevronRight,
+  Loader2,
+  CornerDownRight,
 } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Avatar } from '../components/ui/Avatar';
@@ -26,8 +28,24 @@ import {
   createForumPost,
   likeForumPost,
   reportForumPost,
+  getForumReplies,
+  createForumReply,
 } from '../lib/api';
-import type { CommunityEvent, ForumPost } from '../data/mockComunidad';
+import type { CommunityEvent, ForumPost, ForumReply } from '../data/mockComunidad';
+
+const REPORTED_STORAGE_KEY = 'dasha:foro:reportados';
+
+// Recuerda qué publicaciones reportó este usuario, para que el "Reportado" siga
+// ahí tras refrescar (el backend aún no expone si el usuario ya reportó).
+function loadReportedIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(REPORTED_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(parsed) ? parsed.map(String) : []);
+  } catch {
+    return new Set();
+  }
+}
 
 type Tab = 'eventos' | 'foro';
 
@@ -36,7 +54,8 @@ const reportReasons = ['Contenido ofensivo', 'Spam o publicidad', 'Información 
 export function ComunidadPage() {
   const navigate = useNavigate();
   const { user: account } = useAuth();
-  const [tab, setTab] = useState<Tab>('eventos');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [tab, setTab] = useState<Tab>(searchParams.get('tab') === 'foro' ? 'foro' : 'eventos');
 
   const [events, setEvents] = useState<CommunityEvent[] | null>(null);
   const [posts, setPosts] = useState<ForumPost[] | null>(null);
@@ -49,7 +68,14 @@ export function ComunidadPage() {
 
   const [reportingId, setReportingId] = useState<string | null>(null);
   const [reportReason, setReportReason] = useState(reportReasons[0]);
-  const [reportedIds, setReportedIds] = useState<Set<string>>(new Set());
+  const [reportDetail, setReportDetail] = useState('');
+  const [reportedIds, setReportedIds] = useState<Set<string>>(loadReportedIds);
+
+  const [openComments, setOpenComments] = useState<string | null>(null);
+  const [repliesByPost, setRepliesByPost] = useState<Record<string, ForumReply[]>>({});
+  const [loadingReplies, setLoadingReplies] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [sendingReply, setSendingReply] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -57,12 +83,43 @@ export function ComunidadPage() {
       .then((data) => active && setEvents(data))
       .catch(() => active && setEvents([]));
     getForumPosts()
-      .then((data) => active && setPosts(data))
+      .then((data) => {
+        if (!active) return;
+        setPosts(data);
+        // Deep link a una publicación concreta (?post=id): abre el foro y sus
+        // comentarios. Se hace aquí (no en un efecto) porque depende de que los
+        // posts ya cargaron.
+        const postId = new URLSearchParams(window.location.search).get('post');
+        const target = postId ? data.find((p) => p.id === postId) : undefined;
+        if (!target) return;
+        setTab('foro');
+        setOpenComments(target.id);
+        setRepliesByPost((current) => ({ ...current, [target.id]: target.replies ?? [] }));
+        setLoadingReplies(target.id);
+        getForumReplies(target.id)
+          .then((list) => {
+            if (!active) return;
+            setRepliesByPost((current) => ({
+              ...current,
+              [target.id]: list.length > 0 ? list : (target.replies ?? current[target.id] ?? []),
+            }));
+          })
+          .finally(() => active && setLoadingReplies(null));
+      })
       .catch(() => active && setPosts([]));
     return () => {
       active = false;
     };
   }, []);
+
+  // Cambia de pestaña y refleja la elección en la URL, para que compartir/enlazar
+  // el foro no lleve a eventos (deep links distintos por pestaña).
+  const changeTab = (option: Tab) => {
+    setTab(option);
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', option);
+    setSearchParams(next, { replace: true });
+  };
 
   const onInterested = (id: string) => {
     if (!account) {
@@ -96,16 +153,92 @@ export function ComunidadPage() {
       return;
     }
     setReportReason(reportReasons[0]);
+    setReportDetail('');
     setReportingId(id);
   };
 
+  const reportNeedsDetail = reportReason === 'Otro';
+  const reportReady = !reportNeedsDetail || reportDetail.trim().length >= 3;
+
   const submitReport = () => {
     const id = reportingId;
-    if (!id) return;
-    setReportedIds((current) => new Set(current).add(id));
-    reportForumPost(id, reportReason).catch(() => {});
+    if (!id || !reportReady) return;
+    const detail = reportDetail.trim();
+    setReportedIds((current) => {
+      const next = new Set(current).add(id);
+      try {
+        localStorage.setItem(REPORTED_STORAGE_KEY, JSON.stringify([...next]));
+      } catch {
+        // sin acceso al almacenamiento: al menos queda marcado en esta sesión
+      }
+      return next;
+    });
+    reportForumPost(id, reportReason, reportNeedsDetail ? detail : undefined).catch(() => {});
     setReportingId(null);
+    setReportDetail('');
   };
+
+  // Trae las respuestas del backend; si el GET aún no existe (devuelve vacío),
+  // conserva las embebidas en la publicación para no borrar lo que ya se veía.
+  const loadReplies = async (post: ForumPost) => {
+    setLoadingReplies(post.id);
+    try {
+      const list = await getForumReplies(post.id);
+      setRepliesByPost((current) => ({
+        ...current,
+        [post.id]: list.length > 0 ? list : (post.replies ?? current[post.id] ?? []),
+      }));
+    } finally {
+      setLoadingReplies(null);
+    }
+  };
+
+  const toggleComments = (post: ForumPost) => {
+    if (openComments === post.id) {
+      setOpenComments(null);
+      return;
+    }
+    setOpenComments(post.id);
+    setReplyText('');
+    // Muestra de inmediato las embebidas y refresca desde el backend.
+    if (!repliesByPost[post.id]) {
+      setRepliesByPost((current) => ({ ...current, [post.id]: post.replies ?? [] }));
+    }
+    void loadReplies(post);
+  };
+
+  const sendReply = async (postId: string) => {
+    if (!account) {
+      navigate('/login');
+      return;
+    }
+    const clean = replyText.trim();
+    if (clean.length < 1 || sendingReply) return;
+    setSendingReply(true);
+    const optimistic: ForumReply = {
+      id: `local-${Date.now()}`,
+      author: account.name ?? 'Tú',
+      role: 'Vecino',
+      timeAgo: 'hace un momento',
+      text: clean,
+    };
+    setRepliesByPost((current) => ({
+      ...current,
+      [postId]: [...(current[postId] ?? []), optimistic],
+    }));
+    setPosts((list) =>
+      list ? list.map((p) => (p.id === postId ? { ...p, comments: p.comments + 1 } : p)) : list,
+    );
+    setReplyText('');
+    try {
+      await createForumReply(postId, clean);
+    } catch {
+      // Pendiente de backend: el comentario queda visible en local.
+    } finally {
+      setSendingReply(false);
+    }
+  };
+
 
   const pickPhoto = async (files: FileList | null) => {
     if (!files || !files[0]) return;
@@ -172,7 +305,7 @@ export function ComunidadPage() {
           <button
             key={option}
             type="button"
-            onClick={() => setTab(option)}
+            onClick={() => changeTab(option)}
             className={cn(
               'rounded-lg px-4 py-1.5 text-sm font-medium transition-colors',
               tab === option ? 'bg-white text-cobalto shadow-sm' : 'text-neutral-500',
@@ -380,9 +513,17 @@ export function ComunidadPage() {
                   >
                     <Heart className={cn('h-4 w-4', isLiked && 'fill-naranja')} /> {post.likes}
                   </button>
-                  <span className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => toggleComments(post)}
+                    aria-expanded={openComments === post.id}
+                    className={cn(
+                      'flex items-center gap-1.5 transition-colors hover:text-cobalto',
+                      openComments === post.id && 'text-cobalto',
+                    )}
+                  >
                     <MessageCircle className="h-4 w-4" /> {post.comments}
-                  </span>
+                  </button>
                   {reportedIds.has(post.id) ? (
                     <span className="ml-auto flex items-center gap-1.5 text-xs text-neutral-400">
                       <Flag className="h-4 w-4" /> Reportado
@@ -398,6 +539,84 @@ export function ComunidadPage() {
                     </button>
                   )}
                 </div>
+
+                <AnimatePresence initial={false}>
+                  {openComments === post.id && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2, ease: 'easeOut' }}
+                      className="overflow-hidden"
+                    >
+                      <div className="mt-3 border-t border-neutral-100 pt-3">
+                        {loadingReplies === post.id && !(repliesByPost[post.id]?.length) ? (
+                          <p className="flex items-center gap-1.5 text-xs text-neutral-400">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Cargando comentarios…
+                          </p>
+                        ) : repliesByPost[post.id]?.length ? (
+                          <ul className="space-y-3">
+                            {repliesByPost[post.id].map((reply) => (
+                              <li key={reply.id} className="flex gap-2">
+                                <CornerDownRight className="mt-1 h-3.5 w-3.5 flex-shrink-0 text-neutral-300" />
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs text-neutral-400">
+                                    <span className="font-semibold text-neutral-600">
+                                      {reply.author}
+                                    </span>{' '}
+                                    · {reply.role} · {reply.timeAgo}
+                                  </p>
+                                  <p className="mt-0.5 text-sm text-neutral-600">{reply.text}</p>
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-xs text-neutral-400">
+                            Sé el primero en comentar esta publicación.
+                          </p>
+                        )}
+
+                        {account ? (
+                          <div className="mt-3 flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={replyText}
+                              onChange={(event) => setReplyText(event.target.value)}
+                              onKeyDown={(event) => {
+                                if (event.key === 'Enter') sendReply(post.id);
+                              }}
+                              maxLength={300}
+                              placeholder="Escribe un comentario…"
+                              className="min-w-0 flex-1 rounded-xl border border-neutral-200 px-3 py-2 text-sm text-neutral-700 outline-none focus:ring-2 focus:ring-cobalto/30"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => sendReply(post.id)}
+                              disabled={replyText.trim().length < 1 || sendingReply}
+                              aria-label="Enviar comentario"
+                              className="flex flex-shrink-0 items-center justify-center rounded-xl bg-cobalto p-2.5 text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                            >
+                              {sendingReply ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Send className="h-4 w-4" />
+                              )}
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => navigate('/login')}
+                            className="mt-3 text-xs font-medium text-cobalto"
+                          >
+                            Inicia sesión para comentar
+                          </button>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.article>
             );
           })}
@@ -444,10 +663,26 @@ export function ComunidadPage() {
                 </button>
               ))}
             </div>
+            {reportNeedsDetail && (
+              <div className="mt-3">
+                <label className="mb-1 block text-xs font-medium text-neutral-500">
+                  Cuéntanos brevemente el motivo
+                </label>
+                <textarea
+                  value={reportDetail}
+                  onChange={(event) => setReportDetail(event.target.value)}
+                  maxLength={280}
+                  rows={3}
+                  placeholder="Describe por qué reportas esta publicación…"
+                  className="w-full resize-none rounded-xl border border-neutral-200 p-3 text-sm text-neutral-700 outline-none focus:ring-2 focus:ring-cobalto/30"
+                />
+              </div>
+            )}
             <button
               type="button"
               onClick={submitReport}
-              className="mt-4 w-full rounded-xl bg-alerta py-3 font-semibold text-white transition-opacity hover:opacity-90"
+              disabled={!reportReady}
+              className="mt-4 w-full rounded-xl bg-alerta py-3 font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               Enviar reporte
             </button>

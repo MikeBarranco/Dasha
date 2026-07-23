@@ -16,7 +16,7 @@ import {
 } from '../data/needs';
 import type { LostPet } from '../data/mockLostPets';
 import { releaseNotes, type ReleaseNote } from '../data/novedades';
-import { type CommunityEvent, type ForumPost } from '../data/mockComunidad';
+import { type CommunityEvent, type ForumPost, type ForumReply } from '../data/mockComunidad';
 
 export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
 // El token de sesión ya no vive en el frontend: viaja en una cookie HttpOnly que
@@ -1533,6 +1533,45 @@ const forumRoleLabels: Record<string, string> = {
   vet: 'Veterinario',
 };
 
+// Primera imagen de una publicación. Toleramos varios nombres de campo y el
+// arreglo `images` (contrato nuevo del backend, que guarda String[]).
+function firstForumImage(raw: Record<string, unknown>): string | undefined {
+  const single = raw.imageUrl ?? raw.image_url ?? raw.image;
+  if (typeof single === 'string' && single) return single;
+  const list = raw.images;
+  if (Array.isArray(list)) {
+    const found = list.find((item) => typeof item === 'string' && item);
+    if (typeof found === 'string') return found;
+  }
+  return undefined;
+}
+
+function mapForumReply(raw: Record<string, unknown>): ForumReply {
+  const user =
+    raw.author && typeof raw.author === 'object'
+      ? (raw.author as Record<string, unknown>)
+      : raw.user && typeof raw.user === 'object'
+        ? (raw.user as Record<string, unknown>)
+        : null;
+  const roleRaw = String(user?.role ?? raw.role ?? '');
+  return {
+    id: String(raw.id ?? raw._id ?? ''),
+    author: String(user?.name ?? raw.authorName ?? 'Anónimo') || 'Anónimo',
+    role: forumRoleLabels[roleRaw] ?? (roleRaw || 'Vecino'),
+    timeAgo: relativeTime(String(raw.createdAt ?? raw.created_at ?? '')),
+    text: String(raw.content ?? raw.text ?? raw.body ?? ''),
+  };
+}
+
+// Extrae las respuestas embebidas en una publicación, si el backend las incluye.
+function embeddedReplies(raw: Record<string, unknown>): ForumReply[] | undefined {
+  const list = raw.replies ?? raw.comments;
+  if (!Array.isArray(list)) return undefined;
+  return list
+    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object')
+    .map(mapForumReply);
+}
+
 function mapForumPost(raw: Record<string, unknown>): ForumPost {
   const user =
     raw.author && typeof raw.author === 'object'
@@ -1541,22 +1580,47 @@ function mapForumPost(raw: Record<string, unknown>): ForumPost {
         ? (raw.user as Record<string, unknown>)
         : null;
   const roleRaw = String(user?.role ?? raw.role ?? '');
-  const photo = raw.imageUrl ?? raw.image_url ?? raw.image;
+  const replies = embeddedReplies(raw);
   return {
     id: String(raw.id ?? raw._id ?? ''),
     author: String(user?.name ?? raw.authorName ?? 'Anónimo') || 'Anónimo',
     role: forumRoleLabels[roleRaw] ?? (roleRaw || 'Vecino'),
     timeAgo: relativeTime(String(raw.createdAt ?? raw.created_at ?? '')),
     text: String(raw.content ?? raw.text ?? raw.body ?? ''),
-    image: typeof photo === 'string' && photo ? photo : undefined,
+    image: firstForumImage(raw),
     likes: Number(raw.likes ?? raw.likesCount ?? nestedCount(raw, 'likes') ?? 0),
-    comments: Number(raw.comments ?? raw.commentsCount ?? nestedCount(raw, 'replies') ?? 0),
+    comments: Number(
+      raw.comments ?? raw.commentsCount ?? replies?.length ?? nestedCount(raw, 'replies') ?? 0,
+    ),
+    replies,
   };
 }
 
 export async function getForumPosts(): Promise<ForumPost[]> {
   const data = await requestRaw<Record<string, unknown>[]>('/forum/posts');
   return Array.isArray(data) ? data.map(mapForumPost) : [];
+}
+
+// Lista las respuestas de una publicación. Tolerante: si el backend aún no expone
+// el GET, devuelve [] para no romper la UI (las respuestas embebidas en el post
+// siguen mostrándose). GET /forum/posts/:id/replies.
+export async function getForumReplies(postId: string): Promise<ForumReply[]> {
+  try {
+    const data = await requestRaw<Record<string, unknown>[]>(`/forum/posts/${postId}/replies`);
+    return Array.isArray(data) ? data.map(mapForumReply) : [];
+  } catch {
+    return [];
+  }
+}
+
+// Publica una respuesta a una publicación. POST /forum/posts/:id/replies.
+// Enviamos content (campo principal del backend) y text de espejo.
+export async function createForumReply(postId: string, text: string): Promise<ForumReply | null> {
+  const raw = await authedRaw<Record<string, unknown> | null>(`/forum/posts/${postId}/replies`, {
+    method: 'POST',
+    body: JSON.stringify({ content: text, text }),
+  });
+  return raw && typeof raw === 'object' ? mapForumReply(raw as Record<string, unknown>) : null;
 }
 
 export async function createForumPost(input: {
@@ -1570,10 +1634,17 @@ export async function likeForumPost(id: string): Promise<void> {
   await authedRaw(`/forum/posts/${id}/like`, { method: 'POST' });
 }
 
-export async function reportForumPost(id: string, reason: string): Promise<void> {
+// Reporta una publicación. reason = categoría; details = texto libre (obligatorio
+// cuando la categoría es "Otro"). POST /forum/posts/:id/report.
+export async function reportForumPost(
+  id: string,
+  reason: string,
+  details?: string,
+): Promise<void> {
+  const clean = details?.trim();
   await authedRaw(`/forum/posts/${id}/report`, {
     method: 'POST',
-    body: JSON.stringify({ reason }),
+    body: JSON.stringify(clean ? { reason, details: clean } : { reason }),
   });
 }
 
