@@ -18,13 +18,32 @@ export class ForumController {
         ? { upvotes: 'desc' } 
         : { createdAt: 'desc' };
 
-      const posts = await prisma.forumPost.findMany({
+      const userId = (req as any).user?.id; // Puede venir si el middleware lo inyecta opcionalmente
+
+      const includeClause: any = {
+        user: { select: { name: true, role: true, avatarUrl: true } },
+        _count: { select: { replies: true } }
+      };
+
+      if (userId) {
+        includeClause.flags = {
+          where: { flaggedBy: userId },
+          select: { id: true }
+        };
+      }
+
+      const postsRaw = await prisma.forumPost.findMany({
         where: whereClause,
         orderBy: orderByClause,
-        include: {
-          user: { select: { name: true, role: true } },
-          _count: { select: { replies: true } }
-        }
+        include: includeClause
+      });
+
+      const posts = postsRaw.map((p: any) => {
+        const { flags, ...rest } = p;
+        return {
+          ...rest,
+          hasReported: flags ? flags.length > 0 : false
+        };
       });
 
       res.status(200).json(posts);
@@ -132,11 +151,31 @@ export class ForumController {
         data: {
           userId,
           postId,
-          content
+          content: replyContent
+        },
+        include: {
+          user: { select: { id: true, name: true, role: true, avatarUrl: true } }
         }
       });
 
       res.status(201).json(reply);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // GET /forum/posts/:id/replies
+  static async getReplies(req: Request, res: Response, next: NextFunction) {
+    try {
+      const postId = req.params.id as string;
+      const replies = await prisma.forumReply.findMany({
+        where: { postId },
+        orderBy: { createdAt: 'asc' },
+        include: {
+          user: { select: { id: true, name: true, role: true, avatarUrl: true } }
+        }
+      });
+      res.status(200).json(replies);
     } catch (error) {
       next(error);
     }
@@ -227,7 +266,7 @@ export class ForumController {
   static async reportPost(req: Request, res: Response, next: NextFunction) {
     try {
       const postId = req.params.id as string;
-      const { reason, notes } = req.body;
+      const { reason, notes, details } = req.body;
       const userId = (req as any).user?.id;
 
       if (!userId) {
@@ -251,7 +290,7 @@ export class ForumController {
           postId,
           flaggedBy: userId,
           reason,
-          notes,
+          notes: details || notes,
           status: 'open'
         }
       });
