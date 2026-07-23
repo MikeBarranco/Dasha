@@ -1870,7 +1870,9 @@ export const availabilityRadiusOptions = [2, 5, 10];
 export async function getVolunteerAvailability(): Promise<VolunteerAvailability> {
   try {
     const raw = await authedRaw<Record<string, unknown>>('/me/availability');
-    const radius = Number(raw?.radiusKm ?? raw?.radius_km ?? raw?.radius);
+    const radius = Number(
+      raw?.searchRadiusKm ?? raw?.search_radius_km ?? raw?.radiusKm ?? raw?.radius_km ?? raw?.radius,
+    );
     return {
       active: Boolean(raw?.isAvailable ?? raw?.active ?? raw?.isActive ?? raw?.available),
       radiusKm: availabilityRadiusOptions.includes(radius) ? radius : 5,
@@ -1883,22 +1885,30 @@ export async function getVolunteerAvailability(): Promise<VolunteerAvailability>
 // Actualiza disponibilidad + radio (+ ubicación al activar, para el filtro por
 // cercanía). PATCH /me/availability. NO es tolerante a propósito: si falla, el
 // panel muestra el error para que se note (y para que Isabel lo detecte).
-// El backend espera isAvailable + coordenadas (PostGIS busca voluntarios cerca de
-// un reporte urgente y les dispara el push). Mandamos isAvailable como campo
-// principal y active de espejo; las coordenadas bajo lat/lng y latitude/longitude
-// para no depender del alias exacto del contrato.
+// El backend espera isAvailable + searchRadiusKm + coordenadas: PostGIS busca
+// voluntarios cerca de un reporte urgente y les dispara el push, así que al
+// activar las coordenadas son OBLIGATORIAS. Mandamos isAvailable como campo
+// principal (active de espejo), el radio como searchRadiusKm (radiusKm de espejo)
+// y las coordenadas bajo lat/lng y latitude/longitude para no depender del alias.
 export async function setVolunteerAvailability(data: {
   active: boolean;
   radiusKm: number;
   lat?: number;
   lng?: number;
 }): Promise<void> {
+  const hasCoords = typeof data.lat === 'number' && typeof data.lng === 'number';
+  // Sin coordenadas, activar devuelve 400 (el backend las exige). Cortamos aquí
+  // con un mensaje claro en vez de mandar una petición que sabemos que fallará.
+  if (data.active && !hasCoords) {
+    throw new Error('Necesitamos tu ubicación para activar el Modo Activo.');
+  }
   const body: Record<string, unknown> = {
     isAvailable: data.active,
     active: data.active,
+    searchRadiusKm: data.radiusKm,
     radiusKm: data.radiusKm,
   };
-  if (typeof data.lat === 'number' && typeof data.lng === 'number') {
+  if (hasCoords) {
     body.lat = data.lat;
     body.lng = data.lng;
     body.latitude = data.lat;
@@ -1917,12 +1927,24 @@ export async function getMyRescueAssignments(status?: RescueStatus): Promise<Res
 
 // El voluntario acepta un reporte y se vuelve el conductor del traslado.
 // POST /reports/:id/accept (sin body). Devuelve la asignación creada.
+// El backend la devuelve directa ({ id, status, ... }; authedRaw ya desenvuelve
+// .data). Buscamos el nodo de la asignación de forma robusta por si el contrato
+// la anida (assignment / report.assignment): si el id sale vacío NO redirigimos
+// al rescate en vivo, el usuario re-clica y el 2º intento da 403.
 export async function acceptReport(reportId: string): Promise<RescueAssignment | null> {
   const raw = await authedRaw<Record<string, unknown> | null>(`/reports/${reportId}/accept`, {
     method: 'POST',
   });
-  if (!raw || typeof raw !== 'object') return null;
-  return mapRescueAssignment(raw as Record<string, unknown>);
+  const asRecord = (value: unknown): Record<string, unknown> | null =>
+    value && typeof value === 'object' && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : null;
+  const top = asRecord(raw);
+  if (!top) return null;
+  const nested = asRecord(top.assignment) ?? asRecord(asRecord(top.report)?.assignment);
+  const node = top.id || top._id ? top : (nested ?? top);
+  const assignment = mapRescueAssignment(node);
+  return assignment.id ? assignment : null;
 }
 
 // Suma un avistamiento a un reporte existente en vez de crear un duplicado.
