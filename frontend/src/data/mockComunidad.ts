@@ -28,4 +28,6 @@ export type ForumPost = {
   comments: number;
   // Respuestas embebidas si el backend las incluye en GET /forum/posts.
   replies?: ForumReply[];
+  // El backend marca si el usuario en sesión ya reportó esta publicación.
+  hasReported?: boolean;
 };

@@ -172,8 +172,19 @@ export function PerfilPage() {
   }
 
   const realRole = me?.role ?? account.role;
+  // Quien pertenece a una organización (responsable o veterinario) es "Aliado"
+  // aunque su rol global siga siendo ciudadano: si no, su perfil decía "Ciudadano"
+  // pese a tener el portal de aliado.
   const roleLabel =
-    realRole === 'admin' ? 'Administrador' : realRole === 'volunteer' ? 'Voluntario' : 'Ciudadano';
+    realRole === 'admin'
+      ? 'Administrador'
+      : realRole === 'volunteer'
+        ? 'Voluntario'
+        : allyContext
+          ? allyContext.role === 'owner'
+            ? 'Responsable de aliado'
+            : 'Aliado'
+          : 'Ciudadano';
   // El estado real del backend manda; si aún no lo envía, usamos la bandera local.
   const volunteerPending =
     me?.volunteerStatus != null ? me.volunteerStatus === 'pending' : volunteerStatus === 'pending';
