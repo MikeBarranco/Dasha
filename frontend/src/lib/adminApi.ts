@@ -378,9 +378,13 @@ export async function addAdminOrgTeamMember(
   email: string,
   roleInOrg: OrgMemberRole = 'veterinarian',
 ): Promise<void> {
+  // El backend lee el campo `role` (Isabel alineó las variables role/userId al
+  // front). Antes mandábamos `roleInOrg`, que el backend ignoraba y por eso el
+  // responsable quedaba como veterinario. Valores: 'admin' (responsable) /
+  // 'veterinarian'. Mandamos ambos nombres por si el contrato acepta cualquiera.
   await adminFetch(`/admin/organizations/${orgId}/team`, {
     method: 'POST',
-    body: JSON.stringify({ email, roleInOrg }),
+    body: JSON.stringify({ email, role: roleInOrg, roleInOrg }),
   });
 }
 

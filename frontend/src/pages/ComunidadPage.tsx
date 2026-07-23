@@ -86,6 +86,12 @@ export function ComunidadPage() {
       .then((data) => {
         if (!active) return;
         setPosts(data);
+        // El backend marca en cada post si el usuario ya lo reportó; lo unimos a
+        // lo que recordamos localmente para que "Reportado" sea consistente.
+        const reported = data.filter((post) => post.hasReported).map((post) => post.id);
+        if (reported.length) {
+          setReportedIds((current) => new Set([...current, ...reported]));
+        }
         // Deep link a una publicación concreta (?post=id): abre el foro y sus
         // comentarios. Se hace aquí (no en un efecto) porque depende de que los
         // posts ya cargaron.
@@ -139,10 +145,20 @@ export function ComunidadPage() {
       navigate('/login');
       return;
     }
-    if (liked.has(id)) return;
-    setLiked((current) => new Set(current).add(id));
+    // El like del backend es un toggle: si ya lo di, este llamado lo quita.
+    const wasLiked = liked.has(id);
+    setLiked((current) => {
+      const next = new Set(current);
+      if (wasLiked) next.delete(id);
+      else next.add(id);
+      return next;
+    });
     setPosts((list) =>
-      list ? list.map((p) => (p.id === id ? { ...p, likes: p.likes + 1 } : p)) : list,
+      list
+        ? list.map((p) =>
+            p.id === id ? { ...p, likes: Math.max(0, p.likes + (wasLiked ? -1 : 1)) } : p,
+          )
+        : list,
     );
     likeForumPost(id).catch(() => {});
   };

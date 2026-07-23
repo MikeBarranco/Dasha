@@ -1239,30 +1239,33 @@ export async function updateMyOrgAnimalStatus(
 
 // El aliado edita el nombre provisional y los padecimientos/diagnóstico del
 // animalito. Mismo PATCH /me/organization/animals/:id (acepta campos parciales).
+// Nombre provisional y diagnóstico del expediente. Ruta del backend:
+// PATCH /portal/animals/:animalId (guia_api_frontend_miguel.md, 3A). El backend
+// valida que el usuario sea vet/admin de la org dueña del animal (el admin global
+// puede cualquiera). Mantenemos orgScope por si el admin necesita acotar.
 export async function updateMyOrgAnimalDetails(
   id: string,
   details: { name?: string; diagnosis?: string },
   orgId?: string,
 ): Promise<void> {
-  await authedRaw(`/me/organization/animals/${id}${orgScope(orgId)}`, {
+  await authedRaw(`/portal/animals/${id}${orgScope(orgId)}`, {
     method: 'PATCH',
     body: JSON.stringify(details),
   });
 }
 
-// El aliado sube una foto de progreso del animalito (se va sumando a la galería
-// del caso). Backend: POST /me/organization/animals/:id/photos { photoBase64,
-// caption? } (spec en pendientes-isabel.md). Best-effort: la UI ya muestra la
-// foto localmente; si el endpoint aún no existe, no bloquea.
+// El aliado sube una foto de progreso del animalito (se suma a la galería del
+// caso). Ruta del backend: POST /portal/animals/:animalId/photos con
+// { photosBase64: [ ... ] } (guia_api_frontend_miguel.md, 3B); el backend las
+// sube a Cloudinary. Best-effort: la UI ya muestra la foto localmente.
 export async function addMyOrgAnimalPhoto(
   animalId: string,
   photoBase64: string,
-  caption: string,
   orgId?: string,
 ): Promise<void> {
-  await authedRaw(`/me/organization/animals/${animalId}/photos${orgScope(orgId)}`, {
+  await authedRaw(`/portal/animals/${animalId}/photos${orgScope(orgId)}`, {
     method: 'POST',
-    body: JSON.stringify({ photoBase64, caption: caption.trim() || undefined }),
+    body: JSON.stringify({ photosBase64: [photoBase64] }),
   });
 }
 
@@ -1637,6 +1640,7 @@ function mapForumPost(raw: Record<string, unknown>): ForumPost {
       raw.comments ?? raw.commentsCount ?? replies?.length ?? nestedCount(raw, 'replies') ?? 0,
     ),
     replies,
+    hasReported: Boolean(raw.hasReported ?? raw.has_reported ?? false),
   };
 }
 
@@ -1667,11 +1671,20 @@ export async function createForumReply(postId: string, text: string): Promise<Fo
   return raw && typeof raw === 'object' ? mapForumReply(raw as Record<string, unknown>) : null;
 }
 
+// Crear publicación. El backend espera `content` + `category` y sube la imagen a
+// Cloudinary desde `imageBase64` (guia_api_frontend_miguel.md, 1A). Recibimos el
+// texto como `text` desde la UI y lo mandamos como `content`.
 export async function createForumPost(input: {
   text: string;
   imageBase64?: string;
+  category?: string;
 }): Promise<void> {
-  await authedRaw('/forum/posts', { method: 'POST', body: JSON.stringify(input) });
+  const body: Record<string, unknown> = {
+    content: input.text,
+    category: input.category ?? 'general',
+  };
+  if (input.imageBase64) body.imageBase64 = input.imageBase64;
+  await authedRaw('/forum/posts', { method: 'POST', body: JSON.stringify(body) });
 }
 
 export async function likeForumPost(id: string): Promise<void> {

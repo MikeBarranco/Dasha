@@ -122,7 +122,7 @@ export function PortalAnimalSheet({
       setHeroIndex(next.length - 1);
       onUpdated(animal.id, { photos: next });
       if (!preview) {
-        addMyOrgAnimalPhoto(animal.id, dataUrl, '', orgId).catch(() => {});
+        addMyOrgAnimalPhoto(animal.id, dataUrl, orgId).catch(() => {});
       }
     } catch {
       setDetailsError('No se pudo procesar la imagen.');
