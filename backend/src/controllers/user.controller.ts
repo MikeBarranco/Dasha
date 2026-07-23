@@ -430,7 +430,7 @@ export class UserController {
       const { 
         idDocBase64, idSelfieBase64, 
         isFoster, fosterCapacity, 
-        phone, zone, availability, helpType, motivation 
+        phone, zone, availability, helpType, motivation, zipCode 
       } = req.body;
 
       if (!idDocBase64 || !idSelfieBase64) {
@@ -457,6 +457,7 @@ export class UserController {
           phone: phone || undefined,
           volunteerPrefs: {
             zone,
+            zipCode,
             availability,
             helpType,
             motivation
