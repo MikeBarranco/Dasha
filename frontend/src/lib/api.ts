@@ -269,11 +269,12 @@ export type Colonia = {
   lng: number;
 };
 
-// GET /colonies?cp=XXXXX -> colonias de ese código postal (backend con 822 sembradas).
-// Se lee tolerante por si el backend cambia nombres de campo.
+// GET /colonies/search?cp=XXXXX -> colonias de ese código postal, con el CENTROIDE
+// (lat/lng) de cada una (api_updates_miguel.md, 7). Se lee tolerante por si el
+// backend cambia nombres de campo.
 export async function getColoniesByCp(cp: string): Promise<Colonia[]> {
   const data = await requestRaw<Record<string, unknown>[]>(
-    `/colonies?cp=${encodeURIComponent(cp)}`,
+    `/colonies/search?cp=${encodeURIComponent(cp)}`,
   );
   return (data ?? [])
     .map((raw) => ({
@@ -983,11 +984,20 @@ export async function getMyReports(): Promise<Report[]> {
     const conditionRaw = String(raw.condition ?? '');
     const urgencyRaw = String(raw.urgency ?? raw.severity ?? '');
     const statusRaw = String(raw.status ?? '');
+    // El backend ya devuelve el objeto `colony` completo (api_updates_miguel.md, 9),
+    // por eso antes salía "Sin colonia": leíamos solo un campo plano.
+    const colonyObj =
+      raw.colony && typeof raw.colony === 'object'
+        ? (raw.colony as Record<string, unknown>)
+        : null;
+    const coloniaName = String(
+      colonyObj?.name ?? raw.colonia ?? raw.colonyName ?? raw.colony_name ?? '',
+    ).trim();
     return {
       id: String(raw.id ?? ''),
       lat: Number(raw.lat ?? 0),
       lng: Number(raw.lng ?? 0),
-      colonia: String(raw.colonia ?? 'Sin colonia'),
+      colonia: coloniaName || 'Sin colonia',
       species: species === 'cat' || species === 'gato' ? 'gato' : 'perro',
       condition: conditionLabels[conditionRaw] ?? conditionRaw,
       severity: (urgencyToSeverity[urgencyRaw] ??
@@ -1037,6 +1047,7 @@ const animalStatusLabels: Record<string, AnimalStatus> = {
   recovering: 'Recuperándose',
   looking_for_foster: 'Buscando hogar',
   looking_for_adoption: 'Buscando hogar',
+  adopted: 'Adoptado',
 };
 
 // Texto legible cuando un evento del timeline no trae descripción propia.
@@ -2118,8 +2129,24 @@ export async function acceptReport(reportId: string): Promise<RescueAssignment |
 
 // Suma un avistamiento a un reporte existente en vez de crear un duplicado.
 // POST /reports/:id/sighting (incrementa seen_count / last_seen_at en el backend).
-export async function addSighting(reportId: string): Promise<void> {
-  await authedRaw(`/reports/${reportId}/sighting`, { method: 'POST' });
+// Contrato del backend (api_updates_miguel.md, 10):
+// { lat, lng, description, photosBase64: [...] }. Mandar dónde y cuándo se vio
+// es el punto del avistamiento: antes iba sin datos y el reporte no se enriquecía.
+export async function addSighting(
+  reportId: string,
+  sighting: { lat: number; lng: number; description?: string; photoBase64?: string },
+): Promise<void> {
+  const body: Record<string, unknown> = {
+    lat: sighting.lat,
+    lng: sighting.lng,
+  };
+  const description = sighting.description?.trim();
+  if (description) body.description = description;
+  if (sighting.photoBase64) body.photosBase64 = [sighting.photoBase64];
+  await authedRaw(`/reports/${reportId}/sighting`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
 }
 
 // --- Intake del aliado (cierre del flujo: reporte -> rehabilitación) ---
