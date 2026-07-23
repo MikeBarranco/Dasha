@@ -428,9 +428,15 @@ export function PerfilPage() {
           <AccountSettingsSheet
             initialName={me?.name ?? account.name}
             initialPhone={me?.phone ?? ''}
+            email={me?.email ?? account.email}
+            canChangePassword={me?.hasPassword ?? true}
             onSaved={({ name, phone }) => {
               setMe((prev) => (prev ? { ...prev, name, phone } : prev));
+            }}
+            onDeleted={() => {
               setSettingsOpen(false);
+              logout();
+              navigate('/');
             }}
             onClose={() => setSettingsOpen(false)}
           />

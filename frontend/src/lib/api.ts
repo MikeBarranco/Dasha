@@ -629,6 +629,10 @@ export type MeProfile = {
   // Estado real de la solicitud de voluntario: 'none' | 'pending' | 'approved' |
   // 'rejected'. null = el backend aún no lo envía (usamos la bandera local).
   volunteerStatus: string | null;
+  // ¿La cuenta tiene contraseña propia? Las de solo-Google no, así que en ajustes
+  // se oculta "cambiar contraseña" para ellas. Si el backend no lo indica,
+  // asumimos que sí (el registro con correo/contraseña existe).
+  hasPassword: boolean;
 };
 
 export async function getMe(): Promise<MeProfile> {
@@ -676,7 +680,21 @@ export async function getMe(): Promise<MeProfile> {
         : typeof raw.volunteer_status === 'string'
           ? raw.volunteer_status
           : null,
+    hasPassword: resolveHasPassword(raw),
   };
+}
+
+// Deducimos si la cuenta tiene contraseña propia. Preferimos una bandera explícita
+// del backend; si no viene, una cuenta con proveedor "google" (o solo googleId) no
+// tiene contraseña. En la duda asumimos que sí (para no ocultar el cambio a quien
+// se registró con correo).
+function resolveHasPassword(raw: Record<string, unknown>): boolean {
+  if (typeof raw.hasPassword === 'boolean') return raw.hasPassword;
+  if (typeof raw.has_password === 'boolean') return raw.has_password;
+  const provider = String(raw.authProvider ?? raw.provider ?? '').toLowerCase();
+  if (provider === 'google') return false;
+  const googleOnly = Boolean(raw.googleId ?? raw.google_id) && !provider;
+  return !googleOnly;
 }
 
 export async function updateMe(data: {
@@ -685,6 +703,32 @@ export async function updateMe(data: {
   avatarUrl?: string;
 }): Promise<void> {
   await authedRaw('/me', { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+// Cambia la contraseña de la cuenta. No es tolerante: si falla (contraseña actual
+// incorrecta, etc.) queremos mostrar el error real. PATCH /me/password.
+export async function changePassword(data: {
+  currentPassword: string;
+  newPassword: string;
+}): Promise<void> {
+  await authedRaw('/me/password', { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+// Elimina la cuenta del usuario (borrado con cascada de sus datos, del lado del
+// backend). Manda el motivo opcional para entender por qué se van. DELETE /me.
+export async function deleteAccount(data?: {
+  reason?: string;
+  feedback?: string;
+}): Promise<void> {
+  const reason = data?.reason?.trim();
+  const feedback = data?.feedback?.trim();
+  const body: Record<string, string> = {};
+  if (reason) body.reason = reason;
+  if (feedback) body.feedback = feedback;
+  await authedRaw('/me', {
+    method: 'DELETE',
+    ...(Object.keys(body).length ? { body: JSON.stringify(body) } : {}),
+  });
 }
 
 // Contexto de aliado del usuario actual: a qué organización pertenece y con qué
