@@ -5,14 +5,10 @@ import { PageHeader } from '../components/ui/PageHeader';
 import { useAuth } from '../lib/useAuth';
 import { submitOrganizationApplication, type OrgApplicationInput } from '../lib/api';
 import { orgTypeOptions } from '../lib/adminApi';
+import { onlyDigits } from '../lib/validation';
 
 const inputClass =
   'w-full rounded-xl border border-neutral-200 px-4 py-3 text-base text-neutral-700 outline-none transition-colors focus:border-cobalto';
-
-// Solo dígitos, 10 posiciones (teléfono MX). Se guarda ya limpio.
-function onlyDigits(value: string): string {
-  return value.replace(/\D/g, '').slice(0, 10);
-}
 
 function Field({
   label,

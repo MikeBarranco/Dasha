@@ -7,6 +7,7 @@ import { useAuth } from '../lib/useAuth';
 import { useVolunteerStatus } from '../lib/useVolunteerStatus';
 import { postVolunteerApplication, updateMe, getColoniesByCp, type Colonia } from '../lib/api';
 import { compressImage } from '../lib/image';
+import { onlyDigits } from '../lib/validation';
 import { CameraCapture } from '../components/map/CameraCapture';
 
 const ayudaOptions = ['Rescate', 'Transporte', 'Hogar temporal', 'Difusión', 'Apoyo veterinario'];
@@ -289,7 +290,8 @@ export function SerVoluntarioPage() {
             type="tel"
             inputMode="numeric"
             value={phone}
-            onChange={(event) => setPhone(event.target.value)}
+            onChange={(event) => setPhone(onlyDigits(event.target.value))}
+            maxLength={10}
             placeholder="10 dígitos"
             className={inputClass}
           />
