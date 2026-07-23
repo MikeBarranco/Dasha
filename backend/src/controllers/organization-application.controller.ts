@@ -47,6 +47,23 @@ export class OrganizationApplicationController {
         }
       });
 
+      // Notificar a todos los administradores
+      const admins = await prisma.user.findMany({
+        where: { role: 'admin' },
+        select: { id: true }
+      });
+      
+      const adminPushPromises = admins.map(admin => 
+        NotificationService.sendNotification({
+          userId: admin.id,
+          title: 'Nueva postulación de aliado',
+          body: `Se ha recibido una nueva postulación para ${org.name}.`,
+          type: 'system_alert',
+          link: '/admin/organizations'
+        })
+      );
+      await Promise.allSettled(adminPushPromises);
+
       res.status(201).json({ message: 'Postulación enviada exitosamente. Un administrador la revisará pronto.', organization: org });
     } catch (error) {
       next(error);

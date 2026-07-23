@@ -854,7 +854,7 @@ export class AdminController {
   static async updateVolunteerStatus(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
-      const { status } = req.body; // 'approved' o 'rejected'
+      const { status, rejectionReason } = req.body; // 'approved' o 'rejected'
 
       if (status !== 'approved' && status !== 'rejected') {
         res.status(400).json({ error: 'El estado debe ser approved o rejected' });
@@ -871,6 +871,8 @@ export class AdminController {
       const dataToUpdate: any = { volunteerStatus: status };
       if (status === 'approved') {
         dataToUpdate.role = 'volunteer';
+      } else if (status === 'rejected') {
+        dataToUpdate.volunteerRejectionReason = rejectionReason || 'No cumple con los requisitos';
       }
 
       // Si aprueban o rechazan, por privacidad destruimos el INE y selfie (tal como pidió Isabel)
@@ -900,6 +902,7 @@ export class AdminController {
           id: true,
           name: true,
           volunteerStatus: true,
+          volunteerRejectionReason: true,
           role: true
         }
       });
@@ -910,14 +913,16 @@ export class AdminController {
           userId: id,
           title: '¡Solicitud aprobada! 🎉',
           body: 'Felicidades, tu solicitud ha sido aprobada. Ahora eres parte de Dasha.',
-          type: 'system'
+          type: 'system',
+          link: '/perfil'
         });
       } else {
         await NotificationService.sendNotification({
           userId: id,
           title: 'Actualización de solicitud',
-          body: 'Tu solicitud de voluntariado no pudo ser aprobada en este momento.',
-          type: 'system'
+          body: `Tu solicitud de voluntariado fue rechazada: ${rejectionReason || 'No cumple con los requisitos.'}`,
+          type: 'system',
+          link: '/perfil'
         });
       }
 

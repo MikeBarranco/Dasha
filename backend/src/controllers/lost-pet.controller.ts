@@ -64,14 +64,18 @@ export class LostPetController {
         const radius = searchRadiusKm || 3;
         const rewardVal = reward ? parseFloat(reward) : null;
         const seenAt = lastSeenAt ? new Date(lastSeenAt) : new Date();
+        const safeContactName = contactName || null;
+        const safeContactWhatsapp = contactWhatsapp || null;
+        const safePetName = petName || null;
+        const safeDistinctiveMarks = distinctiveMarks || null;
         
         const lostPetRes: any[] = await tx.$queryRaw`
           INSERT INTO lost_pets (
             report_id, owner_id, pet_name, distinctive_marks, 
             last_seen_location, last_seen_at, search_radius_km, reward, contact_whatsapp, contact_name, is_found
           ) VALUES (
-            ${report.id}::uuid, ${userId}::uuid, ${petName}, ${distinctiveMarks}, 
-            ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326), ${seenAt}, ${radius}, ${rewardVal}, ${contactWhatsapp}, ${contactName}, false
+            ${report.id}::uuid, ${userId}::uuid, ${safePetName}, ${safeDistinctiveMarks}, 
+            ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326), ${seenAt}, ${radius}, ${rewardVal}, ${safeContactWhatsapp}, ${safeContactName}, false
           ) RETURNING id;
         `;
 
