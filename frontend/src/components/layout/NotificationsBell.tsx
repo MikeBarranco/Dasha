@@ -6,6 +6,9 @@ import { cn } from '../../lib/cn';
 import { useAuth } from '../../lib/useAuth';
 import { getNotifications, markNotificationRead, type AppNotification } from '../../lib/api';
 
+// Cada cuánto vuelve a consultar la campanita (ms).
+const NOTIFICATIONS_POLL_MS = 45000;
+
 export function NotificationsBell() {
   const navigate = useNavigate();
   const { user: account } = useAuth();
@@ -32,6 +35,25 @@ export function NotificationsBell() {
       });
     return () => {
       active = false;
+    };
+  }, [account]);
+
+  // La campanita se refresca sola: si no, un aviso nuevo (por ejemplo "emergencia
+  // cerca de ti") no aparecía hasta recargar la página. Solo consultamos con la
+  // pestaña visible, para no gastar peticiones en segundo plano.
+  useEffect(() => {
+    if (!account) return;
+    const refresh = () => {
+      if (document.visibilityState !== 'visible') return;
+      getNotifications()
+        .then(setItems)
+        .catch(() => {});
+    };
+    const timer = window.setInterval(refresh, NOTIFICATIONS_POLL_MS);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', refresh);
     };
   }, [account]);
 
