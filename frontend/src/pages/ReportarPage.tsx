@@ -361,7 +361,14 @@ export function ReportarPage() {
   const confirmSighting = async (report: Report) => {
     setSavingSightingId(report.id);
     try {
-      await addSighting(report.id);
+      // El avistamiento lleva DÓNDE lo viste (el punto que marcaste) y, si la
+      // tomaste, tu foto: así el reporte existente se enriquece en vez de duplicarse.
+      await addSighting(report.id, {
+        lat,
+        lng,
+        description,
+        photoBase64: photoBase64 ?? undefined,
+      });
       setDupes(null);
       navigate(`/mapa?reporte=${report.id}`);
     } catch (error) {

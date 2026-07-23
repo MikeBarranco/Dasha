@@ -18,11 +18,14 @@ const PLACEHOLDER = '/placeholder-animal.svg';
 
 const statusOptions: AnimalStatus[] = ['En tratamiento', 'Recuperándose', 'Buscando hogar'];
 
-// Etiqueta de nuestro modelo -> enum que espera el backend.
+// Etiqueta de nuestro modelo -> enum que espera el backend. "Adoptado" no está en
+// statusOptions a propósito: ese estado lo fija el flujo de adopción, no se elige
+// a mano desde el expediente.
 const statusToSlug: Record<AnimalStatus, string> = {
   'En tratamiento': 'in_treatment',
   Recuperándose: 'recovering',
   'Buscando hogar': 'looking_for_adoption',
+  Adoptado: 'adopted',
 };
 
 const medTypeLabel: Record<MedicalEntryType, string> = {

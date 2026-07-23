@@ -151,7 +151,19 @@ const animalStatusLabels: Record<string, string> = {
   recovering: 'Recuperándose',
   looking_for_foster: 'Busca hogar temporal',
   looking_for_adoption: 'Busca adopción',
+  adopted: 'Adoptado',
+  rescued: 'Rescatado',
+  deceased: 'Fallecido',
 };
+
+// Último recurso para NO pintar jamás un valor crudo del backend (in_treatment,
+// veterinarian…) en pantalla. Si llega algo que no conocemos, al menos se ve como
+// texto legible y no como código.
+export function humanizeSlug(value: string): string {
+  const clean = value.replace(/[_-]+/g, ' ').trim();
+  if (!clean) return '';
+  return clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
+}
 
 export const animalStatusOptions: { value: string; label: string }[] = [
   { value: 'in_treatment', label: 'En tratamiento' },
@@ -197,7 +209,7 @@ function mapAdminAnimal(raw: Raw): AdminAnimal {
     name: asString(pick(raw, ['name'])),
     species: speciesRaw === 'cat' || speciesRaw === 'gato' ? 'gato' : 'perro',
     status: statusRaw,
-    statusLabel: animalStatusLabels[statusRaw] ?? statusRaw,
+    statusLabel: animalStatusLabels[statusRaw] ?? humanizeSlug(statusRaw),
     history: asString(pick(raw, ['history', 'story'])),
     diagnosis: asString(pick(raw, ['diagnosis'])),
     treatment: asString(pick(raw, ['treatment'])),
@@ -361,7 +373,7 @@ function mapOrgMember(raw: Raw): AdminOrgMember {
     name: asString(pick(source, ['name']), 'Sin nombre'),
     email: asString(pick(source, ['email'])),
     role: roleRaw,
-    roleLabel: orgMemberRoleLabels[roleRaw] ?? roleRaw,
+    roleLabel: orgMemberRoleLabels[roleRaw] ?? humanizeSlug(roleRaw),
     title: asString(pick(raw, ['title'])),
     photoUrl: asString(pick(source, ['photoUrl', 'photo_url', 'avatarUrl', 'avatar_url'])) || null,
     status: asString(pick(raw, ['status']), 'active'),
