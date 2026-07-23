@@ -503,6 +503,7 @@ model Organization {
   clabe         String?                                @db.VarChar(18)
   holderName    String?                                @map("holder_name") @db.VarChar(200)
   isActive      Boolean                                @default(true) @map("is_active")
+  rejectionReason String?                              @map("rejection_reason") @db.VarChar(500)
   createdAt     DateTime                               @default(now()) @map("created_at") @db.Timestamptz
   updatedAt     DateTime                               @default(now()) @map("updated_at") @db.Timestamptz
 

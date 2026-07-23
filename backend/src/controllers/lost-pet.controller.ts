@@ -19,7 +19,7 @@ export class LostPetController {
 
       const { 
         petName, species, primaryColor, color, secondaryColor, size, condition, 
-        distinctiveMarks, lat, lng, searchRadiusKm, reward, contactWhatsapp, contactName, lastSeenAt,
+        distinctiveMarks, description, lat, lng, searchRadiusKm, reward, contactWhatsapp, contactName, lastSeenAt,
         photosBase64 
       } = req.body;
 
@@ -52,7 +52,7 @@ export class LostPetController {
             size,
             condition,
             urgency: 'high', // Las mascotas perdidas son urgentes por defecto
-            description: distinctiveMarks || '',
+            description: description || distinctiveMarks || '',
             status: 'active',
             photos: {
               create: photosData
@@ -68,10 +68,10 @@ export class LostPetController {
         const lostPetRes: any[] = await tx.$queryRaw`
           INSERT INTO lost_pets (
             report_id, owner_id, pet_name, distinctive_marks, 
-            last_seen_location, last_seen_at, search_radius_km, reward, contact_whatsapp, is_found
+            last_seen_location, last_seen_at, search_radius_km, reward, contact_whatsapp, contact_name, is_found
           ) VALUES (
             ${report.id}::uuid, ${userId}::uuid, ${petName}, ${distinctiveMarks}, 
-            ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326), ${seenAt}, ${radius}, ${rewardVal}, ${contactWhatsapp}, false
+            ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326), ${seenAt}, ${radius}, ${rewardVal}, ${contactWhatsapp}, ${contactName}, false
           ) RETURNING id;
         `;
 

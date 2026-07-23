@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { v2 as cloudinary } from 'cloudinary';
+import bcrypt from 'bcrypt';
 
 export class UserController {
   static async getMe(req: Request, res: Response, next: NextFunction) {
@@ -25,6 +26,7 @@ export class UserController {
           reputationScore: true,
           avatarUrl: true,
           volunteerStatus: true,
+          passwordHash: true, // Agregado para evaluar hasPassword
           _count: {
             select: {
               reports: true,
@@ -53,7 +55,61 @@ export class UserController {
         }).catch(err => console.error('Error auto-leveling user:', err));
       }
 
-      res.status(200).json(user);
+      const { passwordHash, ...userWithoutPassword } = user;
+
+      res.status(200).json({
+        ...userWithoutPassword,
+        hasPassword: !!passwordHash
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // PATCH /api/v1/me/password
+  static async updatePassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      if (!userId) {
+        res.status(401).json({ error: 'No autorizado' });
+        return;
+      }
+
+      const { currentPassword, newPassword } = req.body;
+      if (!currentPassword || !newPassword) {
+        res.status(400).json({ error: 'currentPassword y newPassword son requeridos' });
+        return;
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId }
+      });
+
+      if (!user) {
+        res.status(404).json({ error: 'Usuario no encontrado' });
+        return;
+      }
+
+      if (!user.passwordHash) {
+        res.status(400).json({ error: 'El usuario no tiene una contraseña configurada, ingresa a través de tu proveedor social.' });
+        return;
+      }
+
+      const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!isValid) {
+        res.status(400).json({ error: 'La contraseña actual es incorrecta' });
+        return;
+      }
+
+      const salt = await bcrypt.genSalt(10);
+      const newPasswordHash = await bcrypt.hash(newPassword, salt);
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: { passwordHash: newPasswordHash }
+      });
+
+      res.status(200).json({ message: 'Contraseña actualizada correctamente' });
     } catch (error) {
       next(error);
     }
@@ -89,6 +145,18 @@ export class UserController {
         lat: locationRes[0]?.lat || null,
         lng: locationRes[0]?.lng || null
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // GET /api/v1/me/achievements/available
+  static async getAvailableAchievements(req: Request, res: Response, next: NextFunction) {
+    try {
+      const achievements = await prisma.achievement.findMany({
+        orderBy: { pointsReward: 'asc' }
+      });
+      res.status(200).json(achievements);
     } catch (error) {
       next(error);
     }
@@ -329,6 +397,13 @@ export class UserController {
 
       if (!userId) {
         res.status(401).json({ error: 'No autorizado' });
+        return;
+      }
+
+      // Proteger cuentas del Core Team
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (user?.role === 'admin') {
+        res.status(403).json({ error: 'Las cuentas del Core Team no pueden ser eliminadas.' });
         return;
       }
 

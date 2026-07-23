@@ -47,3 +47,25 @@ export const addMedicalRecordSchema = z.object({
     photosBase64: z.array(z.string()).optional()
   })
 });
+
+export const donateToAnimalSchema = z.object({
+  body: z.object({
+    type: z.enum(['money', 'items']),
+    amount: z.number().positive().optional(),
+    amountDeclared: z.number().positive().optional(),
+    proofBase64: z.string().optional(),
+    items: z.string().optional(),
+    itemsDescription: z.string().optional(),
+    notes: z.string().optional(),
+    isAnonymous: z.boolean().optional().default(false)
+  }).refine(data => {
+    if (data.type === 'money') {
+      return (data.amount !== undefined || data.amountDeclared !== undefined) && data.proofBase64 !== undefined;
+    } else {
+      return data.items !== undefined || data.itemsDescription !== undefined;
+    }
+  }, {
+    message: 'Faltan campos requeridos según el tipo de donativo',
+    path: ['type']
+  })
+});
