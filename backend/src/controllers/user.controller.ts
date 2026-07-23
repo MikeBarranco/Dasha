@@ -26,6 +26,7 @@ export class UserController {
           reputationScore: true,
           avatarUrl: true,
           volunteerStatus: true,
+          volunteerRejectionReason: true,
           passwordHash: true, // Agregado para evaluar hasPassword
           _count: {
             select: {
@@ -470,6 +471,24 @@ export class UserController {
           volunteerPrefs: true
         }
       });
+
+      // Notificar a todos los administradores
+      const { NotificationService } = await import('../services/notification.service.js');
+      const admins = await prisma.user.findMany({
+        where: { role: 'admin' },
+        select: { id: true }
+      });
+      
+      const adminPushPromises = admins.map(admin => 
+        NotificationService.sendNotification({
+          userId: admin.id,
+          title: 'Nueva solicitud de voluntario',
+          body: `${updatedUser.name} ha enviado una solicitud de voluntariado.`,
+          type: 'system_alert',
+          link: '/admin/volunteers'
+        })
+      );
+      await Promise.allSettled(adminPushPromises);
 
       res.status(200).json({ message: 'Solicitud enviada correctamente', user: updatedUser });
     } catch (error) {
