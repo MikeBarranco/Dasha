@@ -36,6 +36,11 @@ router.delete('/reports/:id', AdminController.deleteReport);
 // ==========================================
 // ORGANIZACIONES / ALIADOS
 // ==========================================
+import { OrganizationApplicationController } from '../controllers/organization-application.controller';
+
+router.get('/organization-applications', OrganizationApplicationController.getApplications);
+router.patch('/organization-applications/:id', OrganizationApplicationController.updateApplication);
+
 router.get('/organizations', AdminController.getAllOrganizations);
 router.post('/organizations', AdminController.createOrganization);
 router.patch('/organizations/:id', AdminController.updateOrganization);

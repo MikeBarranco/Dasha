@@ -447,10 +447,11 @@ export class AdminController {
   static async addOrganizationTeamMember(req: Request, res: Response, next: NextFunction) {
     try {
       const organizationId = req.params.id as string;
-      const { email, roleInOrg } = req.body;
+      const { email, roleInOrg, role } = req.body;
+      const finalRole = roleInOrg || role || 'veterinarian';
       
-      if (!email || !roleInOrg) {
-        res.status(400).json({ error: 'El email y el rol son obligatorios' });
+      if (!email) {
+        res.status(400).json({ error: 'El email es obligatorio' });
         return;
       }
 
@@ -473,7 +474,7 @@ export class AdminController {
         data: {
           organizationId,
           userId: targetUser.id,
-          roleInOrg: roleInOrg,
+          roleInOrg: finalRole,
           isVerified: true,
           invitedEmail: email
         },
@@ -491,19 +492,25 @@ export class AdminController {
   static async removeOrganizationTeamMember(req: Request, res: Response, next: NextFunction) {
     try {
       const organizationId = req.params.id as string;
-      const employeeId = req.params.employeeId as string;
+      const paramId = (req.params.employeeId || req.params.userId) as string;
 
-      const employeeToRemove = await prisma.organizationEmployee.findUnique({
-        where: { id: employeeId }
+      const employeeToRemove = await prisma.organizationEmployee.findFirst({
+        where: {
+          organizationId,
+          OR: [
+            { id: paramId },
+            { userId: paramId }
+          ]
+        }
       });
 
-      if (!employeeToRemove || employeeToRemove.organizationId !== organizationId) {
+      if (!employeeToRemove) {
         res.status(404).json({ error: 'El miembro no pertenece a esta organización' });
         return;
       }
 
       await prisma.organizationEmployee.delete({
-        where: { id: employeeId }
+        where: { id: employeeToRemove.id }
       });
 
       res.status(200).json({ message: 'Miembro eliminado del equipo' });
