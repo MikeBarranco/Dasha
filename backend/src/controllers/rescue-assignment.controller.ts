@@ -95,6 +95,12 @@ export class RescueAssignmentController {
           where: { id: assignment.volunteerId },
           data: { experiencePoints: { increment: 50 } }
         }).catch((err: any) => console.error('Error granting XP for rescue:', err));
+      } else if (status === 'cancelled') {
+        // Liberar el reporte para que vuelva al radar
+        await prisma.report.update({
+          where: { id: assignment.reportId },
+          data: { status: 'active' } // Vuelve a estar activo
+        });
       }
 
       await prisma.$executeRaw`

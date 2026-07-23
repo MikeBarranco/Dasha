@@ -13,6 +13,9 @@ router.get('/', requireAuth, UserController.getMe);
 // PATCH /api/v1/me (Protegida, actualizar datos del perfil como nombre y teléfono)
 router.patch('/', requireAuth, UserController.updateProfile);
 
+// DELETE /api/v1/me (Protegida, desactivar cuenta)
+router.delete('/', requireAuth, UserController.deleteAccount);
+
 // GET /api/v1/me/availability
 router.get('/availability', requireAuth, UserController.getAvailability);
 

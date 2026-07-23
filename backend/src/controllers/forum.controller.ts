@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { ForumCategory } from '@prisma/client';
+import { v2 as cloudinary } from 'cloudinary';
 
 export class ForumController {
   // GET /forum/posts
@@ -80,13 +81,19 @@ export class ForumController {
   static async createPost(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = (req as any).user?.id;
-      const { title, content, category, text, images } = req.body;
+      const { title, content, category, text, imageBase64 } = req.body;
       
       const postContent = content || text;
 
       if (!postContent) {
         res.status(400).json({ error: 'Faltan campos requeridos: content/text' });
         return;
+      }
+
+      const imageUrls: string[] = [];
+      if (imageBase64) {
+        const uploadRes = await cloudinary.uploader.upload(imageBase64, { folder: 'dasha/forum' });
+        imageUrls.push(uploadRes.secure_url);
       }
 
       const postTitle = title || (postContent.length > 30 ? postContent.substring(0, 30) + '...' : postContent);
@@ -98,7 +105,7 @@ export class ForumController {
           title: postTitle,
           content: postContent,
           category: postCategory as any,
-          images: Array.isArray(images) ? images : []
+          images: imageUrls
         }
       });
 

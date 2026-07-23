@@ -36,7 +36,7 @@ export class StatsController {
 
       // 6. Animales en Búsqueda de Hogar (estado 'looking_for_adoption')
       const animalesEnAdopcion = await prisma.animalProfile.count({
-        where: { status: 'looking_for_adoption' }
+        where: { status: 'looking_for_adoption', isPublic: true }
       });
 
       res.status(200).json({

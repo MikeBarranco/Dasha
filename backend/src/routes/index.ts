@@ -15,6 +15,7 @@ import forumRoutes from './forum.routes';
 import rescueAssignmentRoutes from './rescue-assignment.routes';
 import achievementRoutes from './achievement.routes';
 import needRoutes from './need.routes';
+import organizationApplicationRoutes from './organization-application.routes';
 
 import { authLimiter, publicGetLimiter, standardLimiter } from '../middlewares/rateLimit.middleware';
 
@@ -44,6 +45,7 @@ router.use('/forum', forumRoutes);
 router.use('/rescue-assignments', rescueAssignmentRoutes);
 router.use('/achievements', publicGetLimiter, achievementRoutes);
 router.use('/needs', needRoutes);
+router.use('/organization-applications', organizationApplicationRoutes);
 
 router.get('/health', publicGetLimiter, (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

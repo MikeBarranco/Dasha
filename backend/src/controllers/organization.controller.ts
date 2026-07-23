@@ -202,22 +202,60 @@ export class OrganizationController {
    */
   static async getMyPortalProfile(req: Request, res: Response, next: NextFunction) {
     try {
-      const userId = (req as any).user?.id;
-      
-      const employee = await prisma.organizationEmployee.findFirst({
-        where: { userId },
-        include: { organization: true }
-      });
+      const user = (req as any).user;
+      const organizationIdParam = req.query.organizationId as string;
 
-      if (!employee) {
+      let organization = null;
+      let roleInOrg = 'volunteer';
+      let orgType = null;
+
+      if (user?.role === 'admin' && organizationIdParam) {
+        // Si es admin global y pasa el query param, le damos acceso
+        organization = await prisma.organization.findUnique({ where: { id: organizationIdParam } });
+        roleInOrg = 'admin'; // Le damos rol de admin en la org
+      } else {
+        const employee = await prisma.organizationEmployee.findFirst({
+          where: { userId: user?.id },
+          include: { organization: true }
+        });
+        if (employee) {
+          organization = employee.organization;
+          roleInOrg = employee.roleInOrg;
+        }
+      }
+
+      if (!organization) {
         res.status(403).json({ error: 'No perteneces a ninguna organización aliada' });
         return;
       }
 
-      res.status(200).json(employee.organization);
+      orgType = organization.orgType;
+
+      res.status(200).json({
+        organization,
+        role: roleInOrg,
+        orgType
+      });
     } catch (error) {
       next(error);
     }
+  }
+
+  /**
+   * Helper para resolver la organización activa del portal.
+   * Si es admin global y manda ?organizationId=, devuelve esa organización simulando ser admin local.
+   */
+  static async getPortalContext(req: Request, userId: string) {
+    const user = (req as any).user;
+    const organizationIdParam = req.query.organizationId as string;
+
+    if (user?.role === 'admin' && organizationIdParam) {
+      return { organizationId: organizationIdParam, roleInOrg: 'admin' };
+    }
+
+    return await prisma.organizationEmployee.findFirst({
+      where: { userId }
+    });
   }
 
   /**
@@ -228,9 +266,7 @@ export class OrganizationController {
       const userId = (req as any).user?.id;
       const { logoBase64, lat, lng, ...data } = req.body;
       
-      const myEmployee = await prisma.organizationEmployee.findFirst({
-        where: { userId }
-      });
+      const myEmployee = await OrganizationController.getPortalContext(req, userId);
 
       if (!myEmployee || myEmployee.roleInOrg !== 'admin') {
         res.status(403).json({ error: 'No tienes permisos de administrador en esta organización' });
@@ -275,9 +311,7 @@ export class OrganizationController {
     try {
       const userId = (req as any).user?.id;
       
-      const myEmployee = await prisma.organizationEmployee.findFirst({
-        where: { userId }
-      });
+      const myEmployee = await OrganizationController.getPortalContext(req, userId);
 
       if (!myEmployee) {
         res.status(403).json({ error: 'No perteneces a ninguna organización aliada' });
@@ -310,9 +344,7 @@ export class OrganizationController {
         return;
       }
 
-      const myEmployee = await prisma.organizationEmployee.findFirst({
-        where: { userId: adminId }
-      });
+      const myEmployee = await OrganizationController.getPortalContext(req, adminId);
 
       if (!myEmployee || myEmployee.roleInOrg !== 'admin') {
         res.status(403).json({ error: 'No tienes permisos de administrador en esta organización' });
@@ -363,9 +395,7 @@ export class OrganizationController {
       const adminId = (req as any).user?.id;
       const employeeIdToRemove = req.params.employeeId as string;
 
-      const myEmployee = await prisma.organizationEmployee.findFirst({
-        where: { userId: adminId }
-      });
+      const myEmployee = await OrganizationController.getPortalContext(req, adminId);
 
       if (!myEmployee || myEmployee.roleInOrg !== 'admin') {
         res.status(403).json({ error: 'No tienes permisos de administrador en esta organización' });
@@ -405,9 +435,7 @@ export class OrganizationController {
       const userId = (req as any).user?.id;
       const radiusKm = Number(req.query.radius) || 10;
       
-      const myEmployee = await prisma.organizationEmployee.findFirst({
-        where: { userId }
-      });
+      const myEmployee = await OrganizationController.getPortalContext(req, userId);
 
       if (!myEmployee) {
         res.status(403).json({ error: 'No perteneces a ninguna organización' });
@@ -458,9 +486,7 @@ export class OrganizationController {
       const reportId = req.params.reportId as string;
       const { resourceType, description, estimatedValue } = req.body;
 
-      const myEmployee = await prisma.organizationEmployee.findFirst({
-        where: { userId }
-      });
+      const myEmployee = await OrganizationController.getPortalContext(req, userId);
 
       if (!myEmployee) {
         res.status(403).json({ error: 'No perteneces a ninguna organización' });
@@ -552,10 +578,7 @@ export class OrganizationController {
       const reportId = req.params.reportId as string;
 
       // Buscar org a la que pertenece el usuario
-      const emp = await prisma.organizationEmployee.findFirst({
-        where: { userId, isVerified: true },
-        select: { organizationId: true }
-      });
+      const emp = await OrganizationController.getPortalContext(req, userId);
 
       if (!emp) {
         res.status(403).json({ error: 'No perteneces a una organización' });
@@ -723,6 +746,91 @@ export class OrganizationController {
         message: 'Nota médica agregada exitosamente',
         data: record
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Actualiza expediente básico (nombre y diagnóstico)
+   */
+  static async updatePortalAnimal(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      const animalId = req.params.animalId as string;
+      const { name, diagnosis } = req.body;
+
+      const myEmployee = await OrganizationController.getPortalContext(req, userId);
+
+      if (!myEmployee || (myEmployee.roleInOrg !== 'admin' && myEmployee.roleInOrg !== 'veterinarian')) {
+        res.status(403).json({ error: 'Solo veterinarios o administradores pueden actualizar expedientes' });
+        return;
+      }
+
+      const animal = await prisma.animalProfile.findUnique({ where: { id: animalId } });
+      
+      if (!animal || animal.organizationId !== myEmployee.organizationId) {
+        res.status(404).json({ error: 'Este animal no se encuentra en tu organización' });
+        return;
+      }
+
+      const updatedAnimal = await prisma.animalProfile.update({
+        where: { id: animalId },
+        data: { name, currentDiagnosis: diagnosis }
+      });
+
+      res.status(200).json(updatedAnimal);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Agrega fotos a la galería del animal (progreso)
+   */
+  static async addPortalAnimalPhoto(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      const animalId = req.params.animalId as string;
+      const { photosBase64 } = req.body;
+
+      const myEmployee = await OrganizationController.getPortalContext(req, userId);
+
+      if (!myEmployee || (myEmployee.roleInOrg !== 'admin' && myEmployee.roleInOrg !== 'veterinarian')) {
+        res.status(403).json({ error: 'Solo veterinarios o administradores pueden agregar fotos' });
+        return;
+      }
+
+      const animal = await prisma.animalProfile.findUnique({ where: { id: animalId } });
+      
+      if (!animal || animal.organizationId !== myEmployee.organizationId) {
+        res.status(404).json({ error: 'Este animal no se encuentra en tu organización' });
+        return;
+      }
+
+      if (!photosBase64 || !Array.isArray(photosBase64) || photosBase64.length === 0) {
+        res.status(400).json({ error: 'Se requiere al menos una foto en base64' });
+        return;
+      }
+
+      const uploadedPhotos = [];
+      for (const base64Str of photosBase64) {
+        const uploadResult = await cloudinary.uploader.upload(base64Str, {
+          folder: 'dasha_animals',
+        });
+        const newPhoto = await prisma.animalPhoto.create({
+          data: {
+            animalId,
+            url: uploadResult.secure_url,
+            publicId: uploadResult.public_id,
+            isPrimary: false,
+            orderIndex: 99
+          }
+        });
+        uploadedPhotos.push(newPhoto);
+      }
+
+      res.status(201).json({ message: 'Fotos agregadas exitosamente', photos: uploadedPhotos });
     } catch (error) {
       next(error);
     }

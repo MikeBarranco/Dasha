@@ -427,16 +427,15 @@ export class AdminController {
   }
 
   // ==========================================
-  // EQUIPO DE ORGANIZACIONES (ALIADOS)
+  // EQUIPO DE LA ORGANIZACIÓN (ADMIN)
   // ==========================================
-  
   static async getOrganizationTeam(req: Request, res: Response, next: NextFunction) {
     try {
-      const id = req.params.id as string;
+      const organizationId = req.params.id as string;
       const team = await prisma.organizationEmployee.findMany({
-        where: { organizationId: id },
+        where: { organizationId },
         include: {
-          user: { select: { id: true, name: true, email: true, avatarUrl: true } }
+          user: { select: { id: true, name: true, email: true, avatarUrl: true, role: true } }
         }
       });
       res.status(200).json(team);
@@ -447,58 +446,67 @@ export class AdminController {
 
   static async addOrganizationTeamMember(req: Request, res: Response, next: NextFunction) {
     try {
-      const id = req.params.id as string;
+      const organizationId = req.params.id as string;
       const { email, roleInOrg } = req.body;
-
+      
       if (!email || !roleInOrg) {
-        res.status(400).json({ error: 'Faltan campos requeridos (email, roleInOrg)' });
+        res.status(400).json({ error: 'El email y el rol son obligatorios' });
         return;
       }
 
-      // Buscar al usuario por correo
-      const user = await prisma.user.findUnique({ where: { email } });
-      if (!user) {
-        res.status(404).json({ error: 'Usuario no encontrado con ese correo' });
+      const targetUser = await prisma.user.findUnique({ where: { email } });
+      if (!targetUser) {
+        res.status(404).json({ error: 'Usuario no encontrado en la plataforma Dasha' });
+        return;
+      }
+
+      const existingEmployee = await prisma.organizationEmployee.findFirst({
+        where: { userId: targetUser.id }
+      });
+
+      if (existingEmployee) {
+        res.status(400).json({ error: 'Este usuario ya es miembro de una organización' });
         return;
       }
 
       const newMember = await prisma.organizationEmployee.create({
         data: {
-          organizationId: id,
-          userId: user.id,
-          roleInOrg,
-          isVerified: true // Admin directly adds them, so they are verified
+          organizationId,
+          userId: targetUser.id,
+          roleInOrg: roleInOrg,
+          isVerified: true,
+          invitedEmail: email
         },
         include: {
           user: { select: { id: true, name: true, email: true, avatarUrl: true } }
         }
       });
 
-      res.status(201).json(newMember);
-    } catch (error: any) {
-      if (error.code === 'P2002') {
-        res.status(400).json({ error: 'El usuario ya pertenece a esta organización' });
-      } else {
-        next(error);
-      }
+      res.status(201).json({ message: 'Miembro agregado exitosamente', member: newMember });
+    } catch (error) {
+      next(error);
     }
   }
 
   static async removeOrganizationTeamMember(req: Request, res: Response, next: NextFunction) {
     try {
-      const id = req.params.id as string;
-      const userId = req.params.userId as string;
+      const organizationId = req.params.id as string;
+      const employeeId = req.params.employeeId as string;
 
-      await prisma.organizationEmployee.delete({
-        where: {
-          organizationId_userId: {
-            organizationId: id,
-            userId: userId
-          }
-        }
+      const employeeToRemove = await prisma.organizationEmployee.findUnique({
+        where: { id: employeeId }
       });
 
-      res.status(200).json({ message: 'Miembro eliminado correctamente' });
+      if (!employeeToRemove || employeeToRemove.organizationId !== organizationId) {
+        res.status(404).json({ error: 'El miembro no pertenece a esta organización' });
+        return;
+      }
+
+      await prisma.organizationEmployee.delete({
+        where: { id: employeeId }
+      });
+
+      res.status(200).json({ message: 'Miembro eliminado del equipo' });
     } catch (error) {
       next(error);
     }
