@@ -595,15 +595,18 @@ export async function markNotificationRead(id: string): Promise<void> {
 
 // Guarda la suscripción Web Push de este dispositivo. Enviamos el JSON estándar
 // del navegador (endpoint + keys p256dh/auth) más una etiqueta del dispositivo.
+// Guarda la suscripción Web Push de este dispositivo. Contrato exacto del backend
+// (api_updates_miguel.md, 2): { endpoint, keys: { p256dh, auth } }. Mandamos solo
+// esos campos: el backend valida con Zod y los extras podrían rechazarse.
 export async function savePushSubscription(subscription: PushSubscriptionJSON): Promise<void> {
   await authedRaw('/me/push-subscription', {
     method: 'POST',
     body: JSON.stringify({
       endpoint: subscription.endpoint,
-      keys: subscription.keys,
-      p256dh: subscription.keys?.p256dh,
-      auth: subscription.keys?.auth,
-      device: typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 80) : undefined,
+      keys: {
+        p256dh: subscription.keys?.p256dh,
+        auth: subscription.keys?.auth,
+      },
     }),
   });
 }

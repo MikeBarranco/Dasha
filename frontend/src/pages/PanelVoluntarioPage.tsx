@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Loader2,
@@ -46,6 +46,9 @@ function distanceLabel(meters: number): string {
   return meters < 1000 ? `a ${Math.round(meters)} m` : `a ${(meters / 1000).toFixed(1)} km`;
 }
 
+// Cada cuánto se refrescan solas las emergencias cercanas (ms).
+const NEARBY_POLL_MS = 45000;
+
 const severityRank: Record<string, number> = { critica: 0, media: 1, baja: 2 };
 const severityStyles: Record<string, string> = {
   critica: 'bg-alerta/10 text-alerta',
@@ -84,6 +87,7 @@ export function PanelVoluntarioPage() {
   const [nearbyError, setNearbyError] = useState(false);
   const [assignments, setAssignments] = useState<RescueAssignment[] | null>(null);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const [refreshingNearby, setRefreshingNearby] = useState(false);
 
   useEffect(() => {
     getMe()
@@ -101,8 +105,9 @@ export function PanelVoluntarioPage() {
       .catch(() => setAssignments([]));
   }, []);
 
-  // Trae emergencias cercanas para un radio y ubicación dados.
-  const loadNearby = async (position: LatLng, radiusKm: number) => {
+  // Trae emergencias cercanas para un radio y ubicación dados. En useCallback
+  // porque el refresco automático depende de ella.
+  const loadNearby = useCallback(async (position: LatLng, radiusKm: number) => {
     setNearbyError(false);
     try {
       const reports = await getNearbyReports(position.lat, position.lng, radiusKm);
@@ -120,6 +125,36 @@ export function PanelVoluntarioPage() {
     } catch {
       setNearbyError(true);
       setNearby([]);
+    }
+  }, []);
+
+  // Con el Modo Activo encendido, las emergencias cercanas se refrescan solas: sin
+  // esto, un reporte nuevo no aparecía hasta cambiar el radio a mano. Solo
+  // consultamos con la pestaña visible.
+  useEffect(() => {
+    if (!availability.active || !coords) return;
+    const position = coords;
+    const radiusKm = availability.radiusKm;
+    const refresh = () => {
+      if (document.visibilityState !== 'visible') return;
+      void loadNearby(position, radiusKm);
+    };
+    const timer = window.setInterval(refresh, NEARBY_POLL_MS);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, [availability.active, availability.radiusKm, coords, loadNearby]);
+
+  // Refresco manual (botón "Actualizar").
+  const refreshNearby = async () => {
+    if (!coords || refreshingNearby) return;
+    setRefreshingNearby(true);
+    try {
+      await loadNearby(coords, availability.radiusKm);
+    } finally {
+      setRefreshingNearby(false);
     }
   };
 
@@ -380,9 +415,22 @@ export function PanelVoluntarioPage() {
       )}
 
       <section className="mt-6">
-        <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-cobalto">
-          <Ambulance className="h-4 w-4" /> Emergencias cercanas
-        </h2>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-cobalto">
+            <Ambulance className="h-4 w-4" /> Emergencias cercanas
+          </h2>
+          {availability.active && coords && (
+            <button
+              type="button"
+              onClick={refreshNearby}
+              disabled={refreshingNearby}
+              className="flex items-center gap-1 text-xs font-medium text-cobalto transition-opacity hover:opacity-80 disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${refreshingNearby ? 'animate-spin' : ''}`} />
+              {refreshingNearby ? 'Actualizando…' : 'Actualizar'}
+            </button>
+          )}
+        </div>
 
         {!availability.active && (
           <div className="rounded-2xl border border-dashed border-neutral-300 bg-white/60 px-6 py-10 text-center">
