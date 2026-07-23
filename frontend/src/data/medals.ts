@@ -1,3 +1,5 @@
+import type { Achievement, AvailableAchievement } from '../lib/api';
+
 export type MedalInfo = {
   id: string;
   name: string;
@@ -162,8 +164,70 @@ function normalize(value: string): string {
     .trim();
 }
 
-// Marca como desbloqueadas las medallas cuyo nombre coincide con un logro real.
-export function resolveMedals(unlockedNames: string[]): (MedalInfo & { unlocked: boolean })[] {
-  const set = new Set(unlockedNames.map(normalize));
-  return medalCatalog.map((medal) => ({ ...medal, unlocked: set.has(normalize(medal.name)) }));
+export type Medal = MedalInfo & { unlocked: boolean };
+
+// Arte por tipo de requisito, para logros del backend que no empatan por nombre
+// con nuestro catálogo. Así nunca queda una medalla sin imagen.
+const artByRequirement: Record<string, string> = {
+  report_count: '/medals/medalla-primer-reporte.png',
+  rescue_count: '/medals/medalla-heroe-cuadra.webp',
+  donation_count: '/medals/medalla-corazon-generoso.webp',
+  adoption_count: '/medals/medalla-ciclo-completo.webp',
+};
+const DEFAULT_ART = '/medals/medalla-fundador-dasha.webp';
+
+// Texto legible del requisito, para que el usuario sepa cómo ganarla.
+const requirementNouns: Record<string, [string, string]> = {
+  report_count: ['reporte', 'reportes'],
+  rescue_count: ['rescate', 'rescates'],
+  donation_count: ['donación', 'donaciones'],
+  adoption_count: ['adopción', 'adopciones'],
+};
+
+function pickArt(name: string, iconUrl: string, requirementType: string): string {
+  const local = medalCatalog.find((medal) => normalize(medal.name) === normalize(name));
+  if (local) return local.image;
+  if (/^https?:\/\//i.test(iconUrl)) return iconUrl;
+  return artByRequirement[requirementType] ?? DEFAULT_ART;
+}
+
+function describe(achievement: AvailableAchievement): string {
+  const base = achievement.description.trim();
+  const nouns = requirementNouns[achievement.requirementType];
+  const value = achievement.requirementValue;
+  const requirement =
+    nouns && value > 0 ? `Necesitas ${value} ${value === 1 ? nouns[0] : nouns[1]}.` : '';
+  const points = achievement.pointsReward > 0 ? `Otorga ${achievement.pointsReward} puntos.` : '';
+  return [base, requirement, points].filter(Boolean).join(' ');
+}
+
+// Arma la lista de medallas a partir del catálogo REAL del backend
+// (GET /me/achievements/available) y marca las que el usuario ya desbloqueó.
+// Si el backend aún no responde, mostramos SOLO los logros que el usuario ya
+// tiene: nunca medallas inventadas que jamás se podrían desbloquear.
+export function buildMedals(
+  available: AvailableAchievement[],
+  unlocked: Achievement[],
+): Medal[] {
+  const unlockedCodes = new Set(unlocked.map((item) => item.code).filter(Boolean));
+  const unlockedNames = new Set(unlocked.map((item) => normalize(item.name)));
+
+  if (available.length === 0) {
+    return unlocked.map((item, index) => ({
+      id: item.code || `logro-${index}`,
+      name: item.name,
+      image: pickArt(item.name, item.image, ''),
+      description: item.description,
+      unlocked: true,
+    }));
+  }
+
+  return available.map((item) => ({
+    id: item.code || item.id,
+    name: item.name,
+    image: pickArt(item.name, item.iconUrl, item.requirementType),
+    description: describe(item),
+    unlocked:
+      (Boolean(item.code) && unlockedCodes.has(item.code)) || unlockedNames.has(normalize(item.name)),
+  }));
 }

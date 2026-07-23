@@ -29,11 +29,19 @@ import { useInstallPrompt } from '../lib/useInstallPrompt';
 import { InstallInstructions } from '../components/pwa/InstallInstructions';
 import { SocialLinks } from '../components/ui/SocialLinks';
 import { cn } from '../lib/cn';
-import { resolveMedals } from '../data/medals';
+import { buildMedals } from '../data/medals';
 import { useAvatar, setStoredAvatar } from '../lib/useAvatar';
 import { useAuth } from '../lib/useAuth';
 import { useVolunteerStatus } from '../lib/useVolunteerStatus';
-import { getMe, updateMe, getMyOrganization, type MeProfile, type AllyContext } from '../lib/api';
+import {
+  getMe,
+  updateMe,
+  getMyOrganization,
+  getAvailableAchievements,
+  type MeProfile,
+  type AllyContext,
+  type AvailableAchievement,
+} from '../lib/api';
 
 function StatCard({ value, label }: { value: number; label: string }) {
   return (
@@ -82,6 +90,7 @@ export function PerfilPage() {
   const [focusMedalId, setFocusMedalId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [allyContext, setAllyContext] = useState<AllyContext | null>(null);
+  const [availableAchievements, setAvailableAchievements] = useState<AvailableAchievement[]>([]);
   const [showInstallHelp, setShowInstallHelp] = useState(false);
   const { canPrompt, isIOS, isStandalone, promptInstall } = useInstallPrompt();
 
@@ -122,6 +131,20 @@ export function PerfilPage() {
     };
   }, [account]);
 
+  // Catálogo real de logros (los que de verdad existen y se pueden desbloquear).
+  useEffect(() => {
+    if (!account) return;
+    let active = true;
+    getAvailableAchievements()
+      .then((list) => {
+        if (active) setAvailableAchievements(list);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [account]);
+
   // Reconcilia la bandera local "pendiente" con la realidad: si ya es voluntario/
   // admin, o el backend dice que la solicitud ya no está pendiente, la limpiamos
   // para no quedar atorados en "Solicitud en revisión".
@@ -136,9 +159,10 @@ export function PerfilPage() {
   const xp = me?.experience ?? 0;
   const xpToNext = me ? Math.max(1, me.level * 100) : 100;
   const xpPercent = Math.min(100, Math.round((xp / xpToNext) * 100));
-  // Catálogo completo de medallas; se encienden las que el usuario ya ganó
-  // (los achievements reales de /me).
-  const medals = resolveMedals(me ? me.achievements.map((item) => item.name) : []);
+  // Catálogo REAL de medallas (las que existen en el backend); se encienden las
+  // que el usuario ya ganó. Antes usábamos un catálogo nuestro con medallas que
+  // nunca se podían desbloquear.
+  const medals = buildMedals(availableAchievements, me?.achievements ?? []);
   const unlockedCount = medals.filter((medal) => medal.unlocked).length;
 
   if (!account) {

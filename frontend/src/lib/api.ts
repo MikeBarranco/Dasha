@@ -612,10 +612,47 @@ export async function savePushSubscription(subscription: PushSubscriptionJSON): 
 }
 
 export type Achievement = {
+  // Código del logro en el backend (first_report, etc.). Es la forma fiable de
+  // saber cuál desbloqueó el usuario, más que el nombre.
+  code: string;
   name: string;
   description: string;
   image: string;
 };
+
+// Catálogo REAL de logros que existen, con sus requisitos.
+// GET /me/achievements/available (api_updates_miguel.md, 1).
+export type AvailableAchievement = {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  requirementType: string;
+  requirementValue: number;
+  pointsReward: number;
+  iconUrl: string;
+};
+
+// Tolerante: si el endpoint aún no responde, devolvemos [] y el perfil muestra
+// solo los logros que el usuario YA tiene (nunca medallas inventadas).
+export async function getAvailableAchievements(): Promise<AvailableAchievement[]> {
+  try {
+    const data = await authedRaw<Record<string, unknown>[]>('/me/achievements/available');
+    if (!Array.isArray(data)) return [];
+    return data.map((raw) => ({
+      id: String(raw.id ?? ''),
+      code: String(raw.code ?? ''),
+      name: String(raw.name ?? ''),
+      description: String(raw.description ?? ''),
+      requirementType: String(raw.requirementType ?? raw.requirement_type ?? ''),
+      requirementValue: Number(raw.requirementValue ?? raw.requirement_value ?? 0),
+      pointsReward: Number(raw.pointsReward ?? raw.points_reward ?? 0),
+      iconUrl: String(raw.iconUrl ?? raw.icon_url ?? ''),
+    }));
+  } catch {
+    return [];
+  }
+}
 
 export type MeProfile = {
   id: string;
@@ -653,6 +690,7 @@ export async function getMe(): Promise<MeProfile> {
           : item;
       const obj = nested && typeof nested === 'object' ? (nested as Record<string, unknown>) : {};
       return {
+        code: String(obj.code ?? ''),
         name: String(obj.name ?? ''),
         description: String(obj.description ?? ''),
         image: String(obj.iconUrl ?? obj.image ?? ''),
