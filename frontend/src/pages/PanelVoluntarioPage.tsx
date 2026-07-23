@@ -135,7 +135,12 @@ export function PanelVoluntarioPage() {
       if (next) {
         position = await getCurrentPosition();
         if (position) setCoords(position);
-        else setLocWarning(true);
+        else {
+          // Sin ubicación no podemos activar (el backend la exige). No llamamos la
+          // API: mostramos el aviso y dejamos el switch apagado.
+          setLocWarning(true);
+          return;
+        }
       }
       await setVolunteerAvailability({
         active: next,
@@ -164,15 +169,22 @@ export function PanelVoluntarioPage() {
     setSavingAvail(true);
     setAvailError(null);
     try {
+      // Ya está activo, así que necesitamos coordenadas; si no las tenemos en
+      // memoria las pedimos de nuevo (el backend las exige en cada guardado).
+      let position: LatLng | null = coords;
+      if (!position) {
+        position = await getCurrentPosition();
+        if (position) setCoords(position);
+      }
       await setVolunteerAvailability({
         active: true,
         radiusKm,
-        lat: coords?.lat,
-        lng: coords?.lng,
+        lat: position?.lat,
+        lng: position?.lng,
       });
-      if (coords) {
+      if (position) {
         setNearby(null);
-        await loadNearby(coords, radiusKm);
+        await loadNearby(position, radiusKm);
       }
     } catch (err) {
       setAvailError(err instanceof Error ? err.message : 'No se pudo actualizar el radio.');
@@ -320,10 +332,11 @@ export function PanelVoluntarioPage() {
             <Loader2 className="h-3.5 w-3.5 animate-spin" /> Guardando…
           </p>
         )}
-        {locWarning && availability.active && (
+        {locWarning && (
           <p className="mt-3 flex items-start gap-1.5 text-xs text-naranja">
             <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
-            Activa la ubicación del navegador para ver los casos más cercanos a ti.
+            Activa la ubicación del navegador para poder encender el Modo Activo y ver los casos
+            cercanos a ti.
           </p>
         )}
         {availError && (
