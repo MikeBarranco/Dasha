@@ -90,7 +90,7 @@ export class ForumController {
         return;
       }
 
-      let imageUrls: string[] = [];
+      const imageUrls: string[] = [];
       if (imageBase64) {
         const uploadRes = await cloudinary.uploader.upload(imageBase64, { folder: 'dasha/forum' });
         imageUrls.push(uploadRes.secure_url);
