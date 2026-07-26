@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Search, SlidersHorizontal, AlertCircle, RefreshCw, Heart, ChevronRight } from 'lucide-react';
+import { Search, SlidersHorizontal, Heart, ChevronRight } from 'lucide-react';
+import { ErrorState } from '../components/ui/ErrorState';
 import { PageHeader } from '../components/ui/PageHeader';
 import { ProgressBar } from '../components/ui/ProgressBar';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -257,21 +258,8 @@ export function RehabilitacionPage() {
           ))}
         </div>
       ) : error ? (
-        <div className="mt-8 flex flex-col items-center justify-center rounded-2xl border border-alerta/20 bg-alerta/5 px-6 py-12 text-center">
-          <AlertCircle className="h-8 w-8 text-alerta" />
-          <p className="mt-3 font-semibold text-neutral-700">
-            No pudimos cargar los animalitos
-          </p>
-          <p className="mt-1 max-w-xs text-sm text-neutral-500">
-            Revisa tu conexión e inténtalo de nuevo.
-          </p>
-          <button
-            type="button"
-            onClick={retryLoad}
-            className="mt-4 flex items-center gap-2 rounded-xl bg-cobalto px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-          >
-            <RefreshCw className="h-4 w-4" /> Reintentar
-          </button>
+        <div className="mt-8">
+          <ErrorState title="No pudimos cargar los animalitos" onRetry={retryLoad} />
         </div>
       ) : filtered.length === 0 ? (
         <div className="mt-8">
