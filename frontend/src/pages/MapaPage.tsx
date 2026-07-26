@@ -60,7 +60,15 @@ export function MapaPage() {
   const fetchAll = (isActive: () => boolean) => {
     getReports()
       .then((data) => {
-        if (isActive()) setReports(data);
+        if (!isActive()) return;
+        setReports(data);
+        // Deep link desde "Mis reportes" (`?reporte=id`): además de abrir el
+        // detalle, volamos al pin. Sin esto el mapa abría la ficha pero no se movía.
+        const focusId = new URLSearchParams(window.location.search).get('reporte');
+        if (focusId) {
+          const target = data.find((report) => report.id === focusId);
+          if (target) setFocusReport(target);
+        }
       })
       .catch(() => {
         if (isActive()) {
@@ -125,7 +133,10 @@ export function MapaPage() {
   };
 
   const handleSelectAlly = (ally: Ally) => {
-    navigate(`/aliados?aliado=${ally.id}`);
+    // Tocar un aliado en el mapa abre su ficha. Antes iba a `/aliados?aliado=id`,
+    // pero esa página no lee ese query, así que solo mostraba el listado sin abrir
+    // nada. La ficha vive en `/aliados/:id`.
+    navigate(`/aliados/${ally.id}`);
   };
 
   const openReport = (report: Report) => {
