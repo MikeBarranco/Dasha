@@ -30,25 +30,26 @@ export const appSteps: OnboardingStep[] = [
   },
 ];
 
-// Onboarding para quien acaba de ser aprobado como VOLUNTARIO.
+// Onboarding para quien acaba de ser aprobado como VOLUNTARIO. Le explicamos dónde
+// está su panel y, sobre todo, el Modo Activo (antes nadie sabía que existía).
 export const volunteerSteps: OnboardingStep[] = [
   {
     image: '/illustrations/ilustracion-paso-reportar.webp',
     accent: 'cobalto',
     title: '¡Ya eres voluntario!',
-    text: 'Verás los reportes cercanos en el mapa y podrás responder a los que necesiten ayuda.',
+    text: 'Ahora tienes tu Panel de voluntario en el Perfil. Desde ahí recibes las emergencias cercanas y sigues tus rescates.',
   },
   {
     image: '/illustrations/ilustracion-paso-rescatar.webp',
     accent: 'naranja',
-    title: 'Toma un caso y ayuda',
-    text: 'Acepta un reporte, coordina con la comunidad y lleva al animalito a un aliado.',
+    title: 'Enciende el Modo Activo',
+    text: 'En tu panel, activa el Modo Activo y elige tu radio. Así te avisamos cuando un animalito necesita ayuda cerca de ti.',
   },
   {
     image: '/illustrations/ilustracion-paso-adoptar.webp',
     accent: 'purpura',
-    title: 'Gana medallas',
-    text: 'Cada rescate suma. Desbloquea medallas y sube de nivel por tu ayuda.',
+    title: 'Ayuda y gana medallas',
+    text: 'Da "Voy en camino", lleva al animalito con un aliado y desbloquea medallas por cada rescate.',
   },
 ];
 
