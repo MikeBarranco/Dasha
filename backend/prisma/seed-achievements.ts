@@ -1,6 +1,6 @@
 import * as dotenv from 'dotenv';
 dotenv.config();
-import { prisma } from '../src/config/db';
+import { prisma } from '../src/config/db.js';
 
 const achievements = [
   // Grupo A — contador simple
