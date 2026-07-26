@@ -33,4 +33,13 @@ router.post('/:id/accept', requireAuth, ReportController.acceptCase);
 // POST /api/v1/reports/:id/sighting (Agregar avistamiento a un reporte existente)
 router.post('/:id/sighting', requireAuth, ReportController.addSighting);
 
+// POST /api/v1/reports/:id/follow (Seguir reporte)
+router.post('/:id/follow', requireAuth, ReportController.followReport);
+
+// DELETE /api/v1/reports/:id/follow (Dejar de seguir reporte)
+router.delete('/:id/follow', requireAuth, ReportController.unfollowReport);
+
+// POST /api/v1/reports/:id/report (Reportar/marcar un reporte de calle como falso/inapropiado)
+router.post('/:id/report', requireAuth, ReportController.flagReport);
+
 export default router;

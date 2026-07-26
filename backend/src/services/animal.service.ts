@@ -95,13 +95,15 @@ export class AnimalService {
   /**
    * Obtiene todos los animales públicos en rehabilitación o adopción
    */
-  static async getPublicAnimals() {
+  static async getPublicAnimals(status?: string) {
+    const statusFilter = status === 'deceased' 
+      ? 'deceased' 
+      : { in: ['in_treatment', 'recovering', 'looking_for_foster', 'looking_for_adoption'] };
+
     const animals = await prisma.animalProfile.findMany({
       where: {
         isPublic: true,
-        status: {
-          in: ['in_treatment', 'recovering', 'looking_for_foster', 'looking_for_adoption']
-        }
+        status: statusFilter as any
       },
       include: {
         photos: {

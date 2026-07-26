@@ -158,6 +158,24 @@ export class ForumController {
         }
       });
 
+      try {
+        const { NotificationService } = await import('../services/notification.service.js');
+        const post = await prisma.forumPost.findUnique({ where: { id: postId }, select: { userId: true, title: true } });
+        if (post && post.userId !== userId) {
+          await NotificationService.sendNotification({
+            userId: post.userId,
+            title: 'Nueva respuesta en el foro',
+            body: `${reply.user.name || 'Alguien'} respondió a tu publicación "${post.title}".`,
+            type: 'system',
+            referenceId: postId,
+            referenceType: 'forum_post',
+            link: '/forum/posts/' + postId
+          });
+        }
+      } catch (err) {
+        console.error('Error enviando push por forum reply', err);
+      }
+
       res.status(201).json(reply);
     } catch (error) {
       next(error);
@@ -295,7 +313,46 @@ export class ForumController {
         }
       });
       
-      res.status(200).json({ message: 'Post reportado exitosamente', data: flag });
+      res.status(201).json({ message: 'Publicación reportada', flag });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // POST /forum/replies/:id/report
+  static async reportReply(req: Request, res: Response, next: NextFunction) {
+    try {
+      const replyId = req.params.id as string;
+      const { reason, notes, details } = req.body;
+      const userId = (req as any).user?.id;
+
+      if (!userId) {
+        res.status(401).json({ error: 'No autorizado' });
+        return;
+      }
+
+      if (!reason) {
+        res.status(400).json({ error: 'Debe proporcionar una razón para el reporte' });
+        return;
+      }
+
+      const reply = await prisma.forumReply.findUnique({ where: { id: replyId } });
+      if (!reply) {
+        res.status(404).json({ error: 'Respuesta no encontrada' });
+        return;
+      }
+
+      const flag = await prisma.forumReplyFlag.create({
+        data: {
+          replyId,
+          flaggedBy: userId,
+          reason,
+          notes: details || notes,
+          status: 'open'
+        }
+      });
+
+      res.status(201).json({ message: 'Respuesta reportada', flag });
     } catch (error) {
       next(error);
     }

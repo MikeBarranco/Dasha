@@ -172,6 +172,51 @@ export class ReportController {
       
       // Devolver el reporte actualizado en formato frontend
       const updatedReport = await ReportService.getReportById(id);
+
+      // Notificar al dueño y a followers
+      try {
+        const { NotificationService } = await import('../services/notification.service.js');
+        const reportModel = await prisma.report.findUnique({
+          where: { id },
+          include: { followers: true }
+        });
+
+        if (reportModel) {
+          const statusMap: any = {
+            active: 'Activo',
+            in_progress: 'En progreso (Rescate en camino)',
+            rescued: 'Rescatado',
+            in_treatment: 'En tratamiento médico',
+            recovering: 'En recuperación',
+            looking_for_foster: 'Buscando hogar temporal',
+            in_foster: 'En hogar temporal',
+            looking_for_adoption: 'Buscando adopción',
+            adopted: '¡Adoptado!',
+            closed: 'Cerrado',
+            duplicate: 'Duplicado',
+            not_found: 'No encontrado'
+          };
+          const statusName = statusMap[status] || status;
+
+          const notifyUsers = new Set<string>();
+          if (reportModel.userId) notifyUsers.add(reportModel.userId);
+          reportModel.followers.forEach(f => notifyUsers.add(f.userId));
+
+          for (const uId of notifyUsers) {
+            await NotificationService.sendNotification({
+              userId: uId,
+              title: 'Actualización de reporte',
+              body: `El estado del reporte al que le das seguimiento ha cambiado a: ${statusName}.`,
+              type: 'status_change',
+              referenceId: id,
+              referenceType: 'report',
+              link: '/reports/' + id
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Error enviando push update status', err);
+      }
       
       res.status(200).json(updatedReport);
     } catch (error: any) {
@@ -285,6 +330,94 @@ export class ReportController {
       `;
 
       res.status(201).json({ status: 'success', message: 'Avistamiento sumado exitosamente' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ==========================================
+  // SEGUIMIENTO DE REPORTES
+  // ==========================================
+
+  static async followReport(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      const reportId = req.params.id as string;
+
+      if (!userId) {
+        res.status(401).json({ error: 'No autorizado' });
+        return;
+      }
+
+      await prisma.reportFollower.upsert({
+        where: { userId_reportId: { userId, reportId } },
+        update: {},
+        create: { userId, reportId }
+      });
+
+      res.status(200).json({ message: 'Ahora sigues este reporte' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async unfollowReport(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      const reportId = req.params.id as string;
+
+      if (!userId) {
+        res.status(401).json({ error: 'No autorizado' });
+        return;
+      }
+
+      await prisma.reportFollower.deleteMany({
+        where: { userId, reportId }
+      });
+
+      res.status(200).json({ message: 'Dejaste de seguir este reporte' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ==========================================
+  // REPORTE DE ABUSO O FALSO REPORTE
+  // ==========================================
+  
+  static async flagReport(req: Request, res: Response, next: NextFunction) {
+    try {
+      const reportId = req.params.id as string;
+      const { reason, notes, details } = req.body;
+      const userId = (req as any).user?.id;
+
+      if (!userId) {
+        res.status(401).json({ error: 'No autorizado' });
+        return;
+      }
+
+      if (!reason) {
+        res.status(400).json({ error: 'Debe proporcionar una razón para el reporte' });
+        return;
+      }
+
+      const reportModel = await prisma.report.findUnique({ where: { id: reportId } });
+      if (!reportModel) {
+        res.status(404).json({ error: 'Reporte no encontrado' });
+        return;
+      }
+
+      const flag = await prisma.reportFlag.create({
+        data: {
+          reportId,
+          flaggedBy: userId,
+          reason,
+          notes: details || notes,
+          status: 'open'
+        }
+      });
+
+      res.status(201).json({ message: 'Reporte de calle marcado exitosamente', flag });
     } catch (error) {
       next(error);
     }

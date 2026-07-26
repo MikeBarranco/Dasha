@@ -271,34 +271,34 @@ enum NotifType {
 // -----------------------------------------------------------------------------
 
 model User {
-  id               String                                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email            String                                 @unique @db.VarChar(255)
-  name             String                                 @db.VarChar(150)
-  phone            String?                                @db.VarChar(20)
-  passwordHash     String?                                @map("password_hash") @db.VarChar(255)
-  avatarUrl        String?                                @map("avatar_url")
-  avatarPublicId   String?                                @map("avatar_public_id") @db.VarChar(255)
-  role             Role                                   @default(citizen)
+  id                       String                                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                    String                                 @unique @db.VarChar(255)
+  name                     String                                 @db.VarChar(150)
+  phone                    String?                                @db.VarChar(20)
+  passwordHash             String?                                @map("password_hash") @db.VarChar(255)
+  avatarUrl                String?                                @map("avatar_url")
+  avatarPublicId           String?                                @map("avatar_public_id") @db.VarChar(255)
+  role                     Role                                   @default(citizen)
   volunteerStatus          VolunteerStatus?                       @map("volunteer_status")
   volunteerRejectionReason String?                                @map("volunteer_rejection_reason") @db.VarChar(500)
   ineFrontUrl              String?                                @map("ine_front_url")
-  ineBackUrl       String?                                @map("ine_back_url")
-  selfieUrl        String?                                @map("selfie_url")
-  isFoster         Boolean                                @default(false) @map("is_foster")
-  fosterCapacity   Int?                                   @map("foster_capacity")
-  isActive         Boolean                                @default(true) @map("is_active")
-  isAvailable      Boolean                                @default(false) @map("is_available")
-  searchRadiusKm   Int                                    @default(5) @map("search_radius_km")
-  lastLocation     Unsupported("geography(Point, 4326)")? @map("last_location")
-  lastLocationAt   DateTime?                              @map("last_location_at") @db.Timestamptz
-  level            Int                                    @default(1)
-  experiencePoints Int                                    @default(0) @map("experience_points")
-  reputationScore  Int                                    @default(0) @map("reputation_score")
-  notifPrefs       Json?                                  @map("notif_prefs")
-  volunteerPrefs   Json?                                  @map("volunteer_prefs")
-  createdAt        DateTime                               @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt        DateTime                               @default(now()) @map("updated_at") @db.Timestamptz
-  lastLogin        DateTime?                              @map("last_login") @db.Timestamptz
+  ineBackUrl               String?                                @map("ine_back_url")
+  selfieUrl                String?                                @map("selfie_url")
+  isFoster                 Boolean                                @default(false) @map("is_foster")
+  fosterCapacity           Int?                                   @map("foster_capacity")
+  isActive                 Boolean                                @default(true) @map("is_active")
+  isAvailable              Boolean                                @default(false) @map("is_available")
+  searchRadiusKm           Int                                    @default(5) @map("search_radius_km")
+  lastLocation             Unsupported("geography(Point, 4326)")? @map("last_location")
+  lastLocationAt           DateTime?                              @map("last_location_at") @db.Timestamptz
+  level                    Int                                    @default(1)
+  experiencePoints         Int                                    @default(0) @map("experience_points")
+  reputationScore          Int                                    @default(0) @map("reputation_score")
+  notifPrefs               Json?                                  @map("notif_prefs")
+  volunteerPrefs           Json?                                  @map("volunteer_prefs")
+  createdAt                DateTime                               @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt                DateTime                               @default(now()) @map("updated_at") @db.Timestamptz
+  lastLogin                DateTime?                              @map("last_login") @db.Timestamptz
 
   // Relaciones
   authProviders        AuthProvider[]
@@ -332,11 +332,14 @@ model User {
   forumVotes           ForumVote[]
   forumPostFlags       ForumPostFlag[]        @relation("ForumPostFlaggedByUser")
   forumFlagsReviewed   ForumPostFlag[]        @relation("ForumPostFlagReviewer")
+  forumReplyFlags      ForumReplyFlag[]       @relation("ForumReplyFlaggedByUser")
+  forumReplyFlagsRev   ForumReplyFlag[]       @relation("ForumReplyFlagReviewer")
   pushSubscriptions    PushSubscription[]
   notifications        Notification[]
   discountCodes        DiscountCode[]
   auditLogs            AuditLog[]
   followedAnimals      AnimalFollower[]
+  followedReports      ReportFollower[]
   needContributions    NeedContribution[]
 
   @@map("users")
@@ -371,6 +374,7 @@ model Report {
   id               String                                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId           String                                 @map("user_id") @db.Uuid
   species          Species
+  speciesVerified  Boolean                                @default(false) @map("species_verified")
   primaryColor     String                                 @map("primary_color") @db.VarChar(50)
   secondaryColor   String?                                @map("secondary_color") @db.VarChar(50)
   size             Size
@@ -411,6 +415,7 @@ model Report {
   lostPet          LostPet?
   lostMatches      LostPetMatch[]
   flags            ReportFlag[]
+  followers        ReportFollower[]
 
   @@index([status])
   @@map("reports")
@@ -484,29 +489,29 @@ model RescueAssignment {
 }
 
 model Organization {
-  id            String                                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name          String                                 @db.VarChar(200)
-  description   String?
-  logoUrl       String?                                @map("logo_url")
-  logoPublicId  String?                                @map("logo_public_id") @db.VarChar(255)
-  coverUrl      String?                                @map("cover_url")
-  coverPublicId String?                                @map("cover_public_id") @db.VarChar(255)
-  slogan        String?                                @db.VarChar(255)
-  address       String?                                @db.VarChar(255)
-  phone         String?                                @db.VarChar(20)
-  whatsapp      String?                                @db.VarChar(20)
-  location      Unsupported("geography(Point, 4326)")?
-  website       String?                                @db.VarChar(255)
-  schedule      Json?
-  orgType       OrgType                                @map("org_type")
-  isVerified    Boolean                                @default(false) @map("is_verified")
-  bankName      String?                                @map("bank_name") @db.VarChar(100)
-  clabe         String?                                @db.VarChar(18)
-  holderName    String?                                @map("holder_name") @db.VarChar(200)
-  isActive      Boolean                                @default(true) @map("is_active")
-  rejectionReason String?                              @map("rejection_reason") @db.VarChar(500)
-  createdAt     DateTime                               @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt     DateTime                               @default(now()) @map("updated_at") @db.Timestamptz
+  id              String                                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name            String                                 @db.VarChar(200)
+  description     String?
+  logoUrl         String?                                @map("logo_url")
+  logoPublicId    String?                                @map("logo_public_id") @db.VarChar(255)
+  coverUrl        String?                                @map("cover_url")
+  coverPublicId   String?                                @map("cover_public_id") @db.VarChar(255)
+  slogan          String?                                @db.VarChar(255)
+  address         String?                                @db.VarChar(255)
+  phone           String?                                @db.VarChar(20)
+  whatsapp        String?                                @db.VarChar(20)
+  location        Unsupported("geography(Point, 4326)")?
+  website         String?                                @db.VarChar(255)
+  schedule        Json?
+  orgType         OrgType                                @map("org_type")
+  isVerified      Boolean                                @default(false) @map("is_verified")
+  bankName        String?                                @map("bank_name") @db.VarChar(100)
+  clabe           String?                                @db.VarChar(18)
+  holderName      String?                                @map("holder_name") @db.VarChar(200)
+  isActive        Boolean                                @default(true) @map("is_active")
+  rejectionReason String?                                @map("rejection_reason") @db.VarChar(500)
+  createdAt       DateTime                               @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime                               @default(now()) @map("updated_at") @db.Timestamptz
 
   employees        OrganizationEmployee[]
   events           Event[]
@@ -558,6 +563,8 @@ model AnimalProfile {
   currentFosterId String?       @map("current_foster_id") @db.Uuid
   adoptedByUserId String?       @map("adopted_by_user_id") @db.Uuid
   adoptedAt       DateTime?     @map("adopted_at") @db.Timestamptz
+  deceasedAt      DateTime?     @map("deceased_at") @db.Timestamptz
+  deceasedNotes   String?       @map("deceased_notes")
   isPublic        Boolean       @default(true) @map("is_public")
   createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz
   updatedAt       DateTime      @default(now()) @map("updated_at") @db.Timestamptz
@@ -902,9 +909,10 @@ model ForumReply {
   upvotes          Int      @default(0)
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  post  ForumPost   @relation(fields: [postId], references: [id])
-  user  User        @relation(fields: [userId], references: [id])
+  post  ForumPost        @relation(fields: [postId], references: [id])
+  user  User             @relation(fields: [userId], references: [id])
   votes ForumVote[]
+  flags ForumReplyFlag[]
 
   @@map("forum_replies")
 }
@@ -1048,6 +1056,19 @@ model AnimalFollower {
   @@map("animal_followers")
 }
 
+model ReportFollower {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  reportId  String   @map("report_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, reportId])
+  @@map("report_followers")
+}
+
 model ForumPostFlag {
   id         String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   postId     String     @map("post_id") @db.Uuid
@@ -1065,6 +1086,23 @@ model ForumPostFlag {
   @@map("forum_post_flags")
 }
 
+model ForumReplyFlag {
+  id         String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  replyId    String     @map("reply_id") @db.Uuid
+  flaggedBy  String     @map("flagged_by") @db.Uuid
+  reason     FlagReason
+  notes      String?
+  status     FlagStatus @default(open)
+  reviewedBy String?    @map("reviewed_by") @db.Uuid
+  createdAt  DateTime   @default(now()) @map("created_at") @db.Timestamptz
+
+  reply    ForumReply @relation(fields: [replyId], references: [id], onDelete: Cascade)
+  flagger  User       @relation("ForumReplyFlaggedByUser", fields: [flaggedBy], references: [id])
+  reviewer User?      @relation("ForumReplyFlagReviewer", fields: [reviewedBy], references: [id])
+
+  @@map("forum_reply_flags")
+}
+
 model Need {
   id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   organizationId String       @map("organization_id") @db.Uuid
@@ -1076,7 +1114,7 @@ model Need {
   createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz
   updatedAt      DateTime     @default(now()) @map("updated_at") @db.Timestamptz
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization  Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   contributions NeedContribution[]
 
   @@map("needs")

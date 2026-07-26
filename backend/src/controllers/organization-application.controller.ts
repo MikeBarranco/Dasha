@@ -13,7 +13,10 @@ export class OrganizationApplicationController {
         return;
       }
 
-      const { name, orgType, description, phone, address, lat, lng } = req.body;
+      const { name, orgType, description, phone, address, zipCode, lat, lng } = req.body;
+
+      // Concatenar el zipCode a la dirección si viene
+      const finalAddress = zipCode ? `${address || ''} CP. ${zipCode}`.trim() : address;
 
       // Create the organization unverified
       const org = await prisma.organization.create({
@@ -22,7 +25,7 @@ export class OrganizationApplicationController {
           orgType,
           description,
           phone,
-          address,
+          address: finalAddress,
           isVerified: false,
           isActive: true
         }

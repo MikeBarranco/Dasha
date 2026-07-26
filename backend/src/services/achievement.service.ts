@@ -22,12 +22,14 @@ export class AchievementService {
       // 3. Evaluar reglas
       const codesToGrant: string[] = [];
 
-      if (reportCount >= 1 && !earnedCodes.includes('first_report')) {
-        codesToGrant.push('first_report');
-      }
-      
-      if (reportCount >= 5 && !earnedCodes.includes('active_citizen')) {
-        codesToGrant.push('active_citizen');
+      const availableAchievements = await prisma.achievement.findMany({
+        where: { requirementType: 'reports_count' }
+      });
+
+      for (const ach of availableAchievements) {
+        if (reportCount >= ach.requirementValue && !earnedCodes.includes(ach.code)) {
+          codesToGrant.push(ach.code);
+        }
       }
 
       // 4. Otorgar los logros correspondientes
@@ -74,5 +76,84 @@ export class AchievementService {
       console.error('Error al otorgar logros de reportero:', error);
       // No lanzamos el error para no interrumpir el flujo principal
     }
+  }
+
+  static async checkAndGrantRescuerAchievements(userId: string) {
+    try {
+      const rescueCount = await prisma.rescueAssignment.count({
+        where: { volunteerId: userId, status: 'completed' }
+      });
+
+      const userAchievements = await prisma.userAchievement.findMany({
+        where: { userId },
+        include: { achievement: true }
+      });
+      const earnedCodes = userAchievements.map(ua => ua.achievement.code);
+
+      const availableAchievements = await prisma.achievement.findMany({
+        where: { requirementType: 'rescues_count' }
+      });
+
+      for (const ach of availableAchievements) {
+        if (rescueCount >= ach.requirementValue && !earnedCodes.includes(ach.code)) {
+          await this.grantAchievement(userId, ach);
+        }
+      }
+    } catch (error) {
+      console.error('Error al otorgar logros de rescatista:', error);
+    }
+  }
+
+  static async checkAndGrantDonorAchievements(userId: string) {
+    try {
+      const donationCount = await prisma.donation.count({
+        where: { userId }
+      });
+
+      const userAchievements = await prisma.userAchievement.findMany({
+        where: { userId },
+        include: { achievement: true }
+      });
+      const earnedCodes = userAchievements.map(ua => ua.achievement.code);
+
+      const availableAchievements = await prisma.achievement.findMany({
+        where: { requirementType: 'donations_count' }
+      });
+
+      for (const ach of availableAchievements) {
+        if (donationCount >= ach.requirementValue && !earnedCodes.includes(ach.code)) {
+          await this.grantAchievement(userId, ach);
+        }
+      }
+    } catch (error) {
+      console.error('Error al otorgar logros de donante:', error);
+    }
+  }
+
+  private static async grantAchievement(userId: string, achievement: any) {
+    await prisma.userAchievement.create({
+      data: {
+        userId,
+        achievementId: achievement.id
+      }
+    });
+
+    if (achievement.pointsReward > 0) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { experiencePoints: { increment: achievement.pointsReward } }
+      });
+    }
+
+    const { NotificationService } = await import('./notification.service.js');
+    await NotificationService.sendNotification({
+      userId,
+      title: '¡Nueva Medalla Desbloqueada! 🏆',
+      body: `Has ganado la medalla: ${achievement.name}. ¡Gracias por tu ayuda!`,
+      type: 'achievement',
+      referenceId: achievement.id,
+      referenceType: 'achievement',
+      link: '/perfil'
+    });
   }
 }
