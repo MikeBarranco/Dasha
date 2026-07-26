@@ -947,6 +947,12 @@ export type OrgApplicationInput = {
   website?: string;
   description: string;
   contactName: string;
+  // Ubicación para que el aliado se pinte en el mapa. La obtenemos del centroide
+  // de la colonia (por CP) + un pin que el usuario afina; NUNCA le pedimos que
+  // escriba lat/lng. El backend debe guardarlas al aprobar (pendientes-isabel 19i).
+  zipCode?: string;
+  lat?: number;
+  lng?: number;
 };
 
 export async function submitOrganizationApplication(input: OrgApplicationInput): Promise<void> {
