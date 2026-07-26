@@ -25,7 +25,7 @@ const achievements = [
   { code: 'pack_sage', name: 'Sabio de la manada', description: '10 respuestas en el foro', iconUrl: '/achievements/pack_sage.png', requirementType: 'special', requirementValue: 10, category: 'social', tier: 'silver', pointsReward: 30 },
   { code: 'community_pillar', name: 'Pilar de la comunidad', description: '10 posts en el foro', iconUrl: '/achievements/community_pillar.png', requirementType: 'special', requirementValue: 10, category: 'social', tier: 'silver', pointsReward: 40 },
   
-  { code: 'dasha_founder', name: 'Fundador Dasha', description: 'Eres miembro fundador', iconUrl: '/achievements/dasha_founder.png', requirementType: 'special', requirementValue: 1, category: 'special', tier: 'diamond', pointsReward: 50 },
+  { code: 'dasha_founder', name: 'Fundador Dasha', description: 'Eres miembro fundador', iconUrl: '/achievements/dasha_founder.png', requirementType: 'special', requirementValue: 1, category: 'special', tier: 'special', pointsReward: 50 },
 
   // Grupo B — necesitan un dato o definición
   { code: 'night_watch', name: 'Ronda nocturna', description: 'Reportar entre 10pm y 6am', iconUrl: '/achievements/night_watch.png', requirementType: 'special', requirementValue: 1, category: 'reporter', tier: 'silver', pointsReward: 20 },
