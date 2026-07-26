@@ -273,7 +273,7 @@ export class AnimalController {
         data: { experiencePoints: { increment: 20 } }
       }).catch((err: any) => console.error('Error granting XP for donation:', err));
 
-      const { AchievementService } = await import('../services/achievement.service');
+      const { AchievementService } = await import('../services/achievement.service.js');
       await AchievementService.checkAndGrantDonorAchievements(userId);
 
       res.status(201).json({

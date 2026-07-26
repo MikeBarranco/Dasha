@@ -159,7 +159,7 @@ export class ForumController {
       });
 
       try {
-        const { NotificationService } = await import('../services/notification.service');
+        const { NotificationService } = await import('../services/notification.service.js');
         const post = await prisma.forumPost.findUnique({ where: { id: postId }, select: { userId: true, title: true } });
         if (post && post.userId !== userId) {
           await NotificationService.sendNotification({

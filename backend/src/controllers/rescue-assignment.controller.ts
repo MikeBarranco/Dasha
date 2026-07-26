@@ -106,7 +106,7 @@ export class RescueAssignmentController {
           data: { experiencePoints: { increment: 50 } }
         }).catch((err: any) => console.error('Error granting XP for rescue:', err));
         
-        const { AchievementService } = await import('../services/achievement.service');
+        const { AchievementService } = await import('../services/achievement.service.js');
         await AchievementService.checkAndGrantRescuerAchievements(assignment.volunteerId);
       } else if (status === 'cancelled') {
         // Lógica de "No encontrado"

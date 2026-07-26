@@ -175,7 +175,7 @@ export class ReportController {
 
       // Notificar al dueño y a followers
       try {
-        const { NotificationService } = await import('../services/notification.service');
+        const { NotificationService } = await import('../services/notification.service.js');
         const reportModel = await prisma.report.findUnique({
           where: { id },
           include: { followers: true }

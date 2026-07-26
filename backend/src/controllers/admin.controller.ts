@@ -423,7 +423,7 @@ export class AdminController {
       // Notificar si acaba de ser aprobada
       if (currentOrg && !currentOrg.isVerified && data.isVerified) {
         try {
-          const { NotificationService } = await import('../services/notification.service');
+          const { NotificationService } = await import('../services/notification.service.js');
           for (const emp of currentOrg.employees) {
             await NotificationService.sendNotification({
               userId: emp.userId,
@@ -650,7 +650,7 @@ export class AdminController {
 
         // Notificar a followers
         try {
-          const { NotificationService } = await import('../services/notification.service');
+          const { NotificationService } = await import('../services/notification.service.js');
           const followers = await prisma.animalFollower.findMany({ where: { animalId: id } });
           const statusName = titleMap[data.status] || data.status;
           for (const f of followers) {
