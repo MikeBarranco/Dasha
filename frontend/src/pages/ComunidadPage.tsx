@@ -341,7 +341,12 @@ export function ComunidadPage() {
 
           {events !== null && events.length === 0 && (
             <div className="rounded-2xl border border-dashed border-neutral-300 bg-white/60 px-6 py-14 text-center">
-              <CalendarDays className="mx-auto h-8 w-8 text-neutral-300" />
+              <img
+                src="/illustrations/vacio-eventos.webp"
+                alt=""
+                aria-hidden="true"
+                className="mx-auto h-28 w-28 object-contain"
+              />
               <p className="mt-2 font-semibold text-neutral-700">Aún no hay eventos</p>
               <p className="mt-1 text-sm text-neutral-500">
                 Pronto habrá jornadas y ferias de la comunidad.
