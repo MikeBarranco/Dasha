@@ -81,6 +81,24 @@ export class NeedController {
   static async deleteNeed(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
+      const userId = (req as any).user?.id;
+
+      const need = await prisma.need.findUnique({ where: { id } });
+      if (!need) {
+        res.status(404).json({ error: 'Necesidad no encontrada' });
+        return;
+      }
+
+      // Check if user is admin of this org
+      const employee = await prisma.organizationEmployee.findFirst({
+        where: { userId, organizationId: need.organizationId, roleInOrg: 'admin' }
+      });
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+
+      if (!employee && user?.role !== 'admin') {
+        res.status(403).json({ error: 'Solo los administradores de la organización pueden borrar necesidades' });
+        return;
+      }
 
       await prisma.need.delete({
         where: { id }

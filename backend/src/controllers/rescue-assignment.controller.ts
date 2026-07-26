@@ -73,7 +73,7 @@ export class RescueAssignmentController {
   static async updateStatus(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
-      const { status } = req.body;
+      const { status, cancelledReason, destinationOrgId } = req.body;
       const userId = (req as any).user?.id;
 
       const assignment = await prisma.rescueAssignment.findUnique({ where: { id }, include: { report: true } });
@@ -82,25 +82,68 @@ export class RescueAssignmentController {
         return;
       }
 
+      // 1. Update assignment
       const updated = await prisma.rescueAssignment.update({
         where: { id },
         data: { 
           status,
-          ...(status === 'completed' ? { completedAt: new Date() } : {})
+          ...(status === 'completed' ? { completedAt: new Date() } : {}),
+          ...(cancelledReason ? { cancelledReason } : {})
         }
       });
+
+      // 2. Si eligió destinationOrgId, actualizar el Report
+      if (destinationOrgId) {
+        await prisma.report.update({
+          where: { id: assignment.reportId },
+          data: { destinationOrgId }
+        });
+      }
 
       if (status === 'completed') {
         prisma.user.update({
           where: { id: assignment.volunteerId },
           data: { experiencePoints: { increment: 50 } }
         }).catch((err: any) => console.error('Error granting XP for rescue:', err));
+        
+        const { AchievementService } = await import('../services/achievement.service');
+        await AchievementService.checkAndGrantRescuerAchievements(assignment.volunteerId);
       } else if (status === 'cancelled') {
-        // Liberar el reporte para que vuelva al radar
-        await prisma.report.update({
-          where: { id: assignment.reportId },
-          data: { status: 'active' } // Vuelve a estar activo
-        });
+        // Lógica de "No encontrado"
+        if (cancelledReason === 'not_found') {
+          const notFoundCount = await prisma.rescueAssignment.count({
+            where: { reportId: assignment.reportId, cancelledReason: 'not_found' }
+          });
+          
+          if (notFoundCount >= 2) {
+            await prisma.report.update({
+              where: { id: assignment.reportId },
+              data: { status: 'not_found' }
+            });
+            // Send push notifying the reporter
+            await NotificationService.sendNotification({
+              userId: assignment.report.userId,
+              title: 'Reporte no encontrado',
+              body: 'Varios voluntarios acudieron al lugar pero no encontraron al animal. El reporte ha sido cerrado.',
+              type: 'system',
+              referenceId: assignment.reportId,
+              referenceType: 'report',
+              link: '/reports/' + assignment.reportId
+            });
+          } else {
+            // Liberar para que alguien más vaya
+            await prisma.report.update({
+              where: { id: assignment.reportId },
+              data: { status: 'active' }
+            });
+          }
+        } else {
+          // Cancelación normal: Liberar el reporte
+          await prisma.report.update({
+            where: { id: assignment.reportId },
+            data: { status: 'active' }
+          });
+        }
       }
 
       await prisma.$executeRaw`

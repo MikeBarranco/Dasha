@@ -15,5 +15,6 @@ router.post('/posts/:id/replies', requireAuth, ForumController.createReply);
 router.post('/posts/:id/like', requireAuth, ForumController.toggleLikePost);
 router.post('/posts/:id/report', requireAuth, ForumController.reportPost);
 router.post('/replies/:id/vote', requireAuth, ForumController.voteReply);
+router.post('/replies/:id/report', requireAuth, ForumController.reportReply);
 
 export default router;

@@ -332,9 +332,16 @@ export class AdminController {
   // ==========================================
   static async getAllOrganizations(req: Request, res: Response, next: NextFunction) {
     try {
-      const orgs = await prisma.organization.findMany({
-        orderBy: { createdAt: 'desc' }
-      });
+      const orgs: any[] = await prisma.$queryRaw`
+        SELECT 
+          id, name, description, logo_url as "logoUrl", cover_url as "coverUrl", 
+          address, phone, whatsapp, org_type as "orgType", is_active as "isActive",
+          is_verified as "isVerified", created_at as "createdAt", website,
+          ST_X(location::geometry) as lng,
+          ST_Y(location::geometry) as lat
+        FROM organizations
+        ORDER BY created_at DESC;
+      `;
       res.status(200).json(orgs);
     } catch (error) {
       next(error);
@@ -395,6 +402,11 @@ export class AdminController {
         updateData.logoPublicId = uploadRes.public_id;
       }
 
+      const currentOrg = await prisma.organization.findUnique({
+        where: { id },
+        include: { employees: { where: { roleInOrg: 'admin' }, select: { userId: true } } }
+      });
+
       const updated = await prisma.organization.update({
         where: { id },
         data: updateData
@@ -406,6 +418,24 @@ export class AdminController {
           SET location = ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)
           WHERE id = ${updated.id}::uuid;
         `;
+      }
+
+      // Notificar si acaba de ser aprobada
+      if (currentOrg && !currentOrg.isVerified && data.isVerified) {
+        try {
+          const { NotificationService } = await import('../services/notification.service');
+          for (const emp of currentOrg.employees) {
+            await NotificationService.sendNotification({
+              userId: emp.userId,
+              title: '¡Organización Aprobada!',
+              body: `Felicidades, ${updated.name} ha sido aprobada. Ahora eres un aliado oficial de Dasha.`,
+              type: 'system',
+              link: '/portal'
+            });
+          }
+        } catch (err) {
+          console.error('Error notifying org approval', err);
+        }
       }
 
       res.status(200).json(updated);
@@ -617,6 +647,26 @@ export class AdminController {
             date: new Date()
           }
         });
+
+        // Notificar a followers
+        try {
+          const { NotificationService } = await import('../services/notification.service');
+          const followers = await prisma.animalFollower.findMany({ where: { animalId: id } });
+          const statusName = titleMap[data.status] || data.status;
+          for (const f of followers) {
+            await NotificationService.sendNotification({
+              userId: f.userId,
+              title: 'Actualización de animal',
+              body: `El animal que sigues, ${currentAnimal.name}, ahora está: ${statusName}.`,
+              type: 'status_change',
+              referenceId: id,
+              referenceType: 'animal',
+              link: '/animals/' + id
+            });
+          }
+        } catch (err) {
+          console.error('Error enviando push a followers del animal', err);
+        }
       }
 
       // If new photos are provided, we could append them or replace them.
@@ -1131,7 +1181,7 @@ export class AdminController {
       const adminId = (req as any).user?.id;
       const { audience, title, body, link } = req.body;
       
-      if (!['all', 'citizens', 'volunteers', 'allies'].includes(audience)) {
+      if (!['all', 'citizens', 'volunteers', 'allies', 'admin'].includes(audience)) {
         res.status(400).json({ error: 'Audiencia no válida' });
         return;
       }
@@ -1147,6 +1197,8 @@ export class AdminController {
         whereClause.role = 'volunteer';
       } else if (audience === 'allies') {
         whereClause.role = { in: ['ally_admin', 'ally_staff', 'ally_vet'] };
+      } else if (audience === 'admin') {
+        whereClause.role = 'admin';
       }
 
       const targetUsers = await prisma.user.findMany({ where: whereClause, select: { id: true } });

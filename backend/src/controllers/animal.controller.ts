@@ -80,7 +80,8 @@ export class AnimalController {
 
   static async getPublicAnimals(req: Request, res: Response, next: NextFunction) {
     try {
-      const animals = await AnimalService.getPublicAnimals();
+      const status = req.query.status as string;
+      const animals = await AnimalService.getPublicAnimals(status);
       res.status(200).json(animals);
     } catch (error) {
       next(error);
@@ -271,6 +272,9 @@ export class AnimalController {
         where: { id: userId },
         data: { experiencePoints: { increment: 20 } }
       }).catch((err: any) => console.error('Error granting XP for donation:', err));
+
+      const { AchievementService } = await import('../services/achievement.service');
+      await AchievementService.checkAndGrantDonorAchievements(userId);
 
       res.status(201).json({
         status: 'success',
