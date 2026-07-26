@@ -18,11 +18,14 @@ export function PasswordInput({
 
   return (
     <div className="flex items-center gap-2 rounded-xl border border-neutral-200 px-4 transition-colors focus-within:border-cobalto">
+      {/* Tope de 64: bcrypt solo considera los primeros 72 bytes, así que una
+          contraseña más larga daría una falsa sensación de seguridad. */}
       <input
         type={show ? 'text' : 'password'}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         onBlur={onBlur}
+        maxLength={64}
         placeholder={placeholder}
         className="w-full bg-transparent py-3 text-base text-neutral-700 outline-none placeholder:text-neutral-400"
       />

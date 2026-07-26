@@ -288,7 +288,10 @@ export function ReportarPage() {
   };
 
   const submitReport = async () => {
-    if (!photoBase64) return;
+    // Guarda contra doble envío: submitReport entra desde "Publicar" y desde la
+    // hoja de duplicados ("es otro animal"); sin esto, un doble clic rápido en
+    // ese botón podría crear dos reportes.
+    if (!photoBase64 || isSubmitting) return;
     setDupes(null);
     setIsSubmitting(true);
     try {

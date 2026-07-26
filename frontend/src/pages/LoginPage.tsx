@@ -59,6 +59,7 @@ export function LoginPage() {
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
+            maxLength={255}
             placeholder="Correo"
             className={inputClass}
           />

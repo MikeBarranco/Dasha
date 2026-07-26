@@ -93,10 +93,12 @@ export function RegistroPage() {
           {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
           <Field label="Nombre" error={showError('nombre')}>
+            {/* users.name es VARCHAR(150): nombre + apellidos deben caber ahí. */}
             <input
               value={nombre}
               onChange={(event) => setNombre(event.target.value)}
               onBlur={() => markTouched('nombre')}
+              maxLength={70}
               placeholder="Tu nombre"
               className={inputClass}
             />
@@ -107,6 +109,7 @@ export function RegistroPage() {
               value={apellidos}
               onChange={(event) => setApellidos(event.target.value)}
               onBlur={() => markTouched('apellidos')}
+              maxLength={70}
               placeholder="Tus apellidos"
               className={inputClass}
             />
@@ -118,6 +121,7 @@ export function RegistroPage() {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               onBlur={() => markTouched('email')}
+              maxLength={255}
               placeholder="tucorreo@ejemplo.com"
               className={inputClass}
             />
