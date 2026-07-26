@@ -2,6 +2,14 @@ export const onlyLetters = (value: string) => /^[\p{L}\s]+$/u.test(value.trim())
 
 export const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 
+// Deja SOLO dígitos y recorta al largo máximo. Se usa en el onChange de todos los
+// campos numéricos (teléfono, WhatsApp) para que el usuario no pueda escribir
+// letras, no solo para avisarle después de enviar.
+export const onlyDigits = (value: string, max = 10) => value.replace(/\D/g, '').slice(0, max);
+
+// Teléfono de México: exactamente 10 dígitos.
+export const isValidPhone = (value: string) => /^\d{10}$/.test(value.replace(/\D/g, ''));
+
 export type PasswordRule = {
   id: string;
   label: string;

@@ -10,6 +10,7 @@ import {
   type AdminAnimalInput,
 } from '../../lib/adminApi';
 import { compressImage } from '../../lib/image';
+import { onlyDigits } from '../../lib/validation';
 
 type OrgOption = { id: string; name: string };
 
@@ -243,10 +244,12 @@ export function AnimalFormSheet({ animal, organizations, onClose, onSaved }: Ani
           </Field>
 
           <Field label="Costo estimado (MXN)">
+            {/* La columna es DECIMAL(10,2): máximo 8 dígitos enteros. */}
             <input
               value={cost}
-              onChange={(event) => setCost(event.target.value.replace(/[^0-9]/g, ''))}
+              onChange={(event) => setCost(onlyDigits(event.target.value, 8))}
               inputMode="numeric"
+              maxLength={8}
               className={inputClass}
               placeholder="0"
             />

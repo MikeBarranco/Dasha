@@ -11,6 +11,7 @@ import {
   type AdminOrgInput,
 } from '../../lib/adminApi';
 import { compressImage } from '../../lib/image';
+import { onlyDigits } from '../../lib/validation';
 
 type OrgFormSheetProps = {
   org: AdminOrg | null;
@@ -210,8 +211,9 @@ export function OrgFormSheet({ org, onClose, onSaved }: OrgFormSheetProps) {
             <Field label="Teléfono">
               <input
                 value={phone}
-                onChange={(event) => setPhone(event.target.value)}
-                maxLength={20}
+                onChange={(event) => setPhone(onlyDigits(event.target.value))}
+                inputMode="numeric"
+                maxLength={10}
                 className={inputClass}
                 placeholder="10 dígitos"
               />
@@ -219,8 +221,9 @@ export function OrgFormSheet({ org, onClose, onSaved }: OrgFormSheetProps) {
             <Field label="WhatsApp">
               <input
                 value={whatsapp}
-                onChange={(event) => setWhatsapp(event.target.value)}
-                maxLength={20}
+                onChange={(event) => setWhatsapp(onlyDigits(event.target.value))}
+                inputMode="numeric"
+                maxLength={10}
                 className={inputClass}
                 placeholder="10 dígitos"
               />
