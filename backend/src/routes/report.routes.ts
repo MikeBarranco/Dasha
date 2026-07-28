@@ -42,4 +42,7 @@ router.delete('/:id/follow', requireAuth, ReportController.unfollowReport);
 // POST /api/v1/reports/:id/report (Reportar/marcar un reporte de calle como falso/inapropiado)
 router.post('/:id/report', requireAuth, ReportController.flagReport);
 
+// POST /api/v1/reports/:id/offer (Aliado ofrece recurso/ayuda en un reporte)
+router.post('/:id/offer', requireAuth, ReportController.offerResource);
+
 export default router;

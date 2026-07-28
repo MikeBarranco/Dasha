@@ -422,4 +422,69 @@ export class ReportController {
       next(error);
     }
   }
+
+  // ==========================================
+  // Aliado ofrece recurso en un reporte (POST /reports/:id/offer)
+  // ==========================================
+  
+  static async offerResource(req: Request, res: Response, next: NextFunction) {
+    try {
+      const reportId = req.params.id as string;
+      const userId = (req as any).user?.id;
+      const { title, description, resourceType } = req.body;
+
+      if (!userId) {
+        res.status(401).json({ error: 'No autorizado' });
+        return;
+      }
+
+      if (!title || !resourceType) {
+        res.status(400).json({ error: 'Faltan campos obligatorios: title, resourceType' });
+        return;
+      }
+
+      // Check if report exists
+      const report = await prisma.report.findUnique({ where: { id: reportId } });
+      if (!report) {
+        res.status(404).json({ error: 'Reporte no encontrado' });
+        return;
+      }
+
+      // Check if user is an ally (has organization)
+      const emp = await prisma.organizationEmployee.findFirst({
+        where: { userId, isVerified: true },
+        select: { organizationId: true }
+      });
+
+      const resource = await prisma.resource.create({
+        data: {
+          providerId: userId,
+          organizationId: emp ? emp.organizationId : null,
+          reportId,
+          title,
+          description,
+          resourceType: resourceType || 'medical_service', // default to medical_service
+          status: 'offered'
+        }
+      });
+
+      // Registrar accion
+      await prisma.caseAction.create({
+        data: {
+          reportId,
+          actorId: userId,
+          actionType: 'resource_offered',
+          description: `Oferta de ayuda: ${title}`,
+          metadata: { resourceId: resource.id }
+        }
+      });
+
+      res.status(201).json({
+        message: 'Oferta de ayuda registrada exitosamente',
+        data: resource
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
