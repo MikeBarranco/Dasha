@@ -276,6 +276,7 @@ export type AdminOrg = {
   orgTypeLabel: string;
   isVerified: boolean;
   schedule: string;
+  zipCode: string;
   lat: number;
   lng: number;
 };
@@ -295,6 +296,7 @@ function mapAdminOrg(raw: Raw): AdminOrg {
     orgTypeLabel: orgTypeLabels[typeRaw] ?? typeRaw,
     isVerified: Boolean(pick(raw, ['isVerified', 'is_verified'])),
     schedule: asString(pick(raw, ['schedule'])),
+    zipCode: asString(pick(raw, ['zipCode', 'zip_code', 'postalCode', 'postal_code'])),
     lat: Number(pick(raw, ['lat']) ?? 0),
     lng: Number(pick(raw, ['lng']) ?? 0),
   };
@@ -310,6 +312,7 @@ export type AdminOrgInput = {
   website?: string;
   schedule?: string;
   isVerified?: boolean;
+  zipCode?: string;
   lat?: number;
   lng?: number;
   logoBase64?: string;
