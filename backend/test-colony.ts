@@ -1,0 +1,1 @@
+import { prisma } from './src/config/db'; async function main() { const cp = '72000'; const colonies = await prisma.$queryRaw`SELECT id, name, postal_code as " postalCode\ FROM colonies WHERE postal_code = ${cp} ORDER BY name ASC;`; console.log(colonies); } main().catch(console.error).finally(() => prisma.$disconnect());

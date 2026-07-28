@@ -14,7 +14,7 @@ export class OrganizationController {
       const allies: any[] = await prisma.$queryRaw`
         SELECT 
           id, name, description, logo_url as "logoUrl", address, phone, whatsapp, 
-          org_type as "orgType", is_verified as "isVerified",
+          org_type as "orgType", is_verified as "isVerified", promo,
           ST_X(location::geometry) as lng,
           ST_Y(location::geometry) as lat
         FROM organizations
@@ -89,6 +89,7 @@ export class OrganizationController {
           whatsapp: true,
           website: true,
           schedule: true,
+          promo: true,
           orgType: true,
           isVerified: true,
           bankName: true,
@@ -209,14 +210,47 @@ export class OrganizationController {
       let roleInOrg = 'volunteer';
       let orgType = null;
 
+      const orgSelect = {
+        id: true,
+        name: true,
+        description: true,
+        logoUrl: true,
+        logoPublicId: true,
+        coverUrl: true,
+        coverPublicId: true,
+        slogan: true,
+        address: true,
+        phone: true,
+        whatsapp: true,
+        website: true,
+        schedule: true,
+        promo: true,
+        orgType: true,
+        isVerified: true,
+        bankName: true,
+        clabe: true,
+        holderName: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true
+      };
+
       if (user?.role === 'admin' && organizationIdParam) {
         // Si es admin global y pasa el query param, le damos acceso
-        organization = await prisma.organization.findUnique({ where: { id: organizationIdParam } });
+        organization = await prisma.organization.findUnique({ 
+          where: { id: organizationIdParam },
+          select: orgSelect 
+        });
         roleInOrg = 'admin'; // Le damos rol de admin en la org
       } else {
         const employee = await prisma.organizationEmployee.findFirst({
           where: { userId: user?.id },
-          include: { organization: true }
+          select: {
+            roleInOrg: true,
+            organization: {
+              select: orgSelect
+            }
+          }
         });
         if (employee) {
           organization = employee.organization;
@@ -674,6 +708,29 @@ export class OrganizationController {
     }
   }
 
+  static async getPortalAnimals(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      const myEmployee = await prisma.organizationEmployee.findFirst({
+        where: { userId }
+      });
+
+      if (!myEmployee) {
+        res.status(403).json({ error: 'No autorizado' });
+        return;
+      }
+
+      const animals = await prisma.animalProfile.findMany({
+        where: { organizationId: myEmployee.organizationId },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      res.status(200).json(animals);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   /**
    * Ingresa un nuevo animal a la clínica y crea su perfil
    */
@@ -713,6 +770,77 @@ export class OrganizationController {
       res.status(201).json({
         status: 'success',
         message: 'Animal ingresado correctamente a la clínica',
+        data: animal
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async directIntakeAnimal(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      const { 
+        name, species, gender, breed, ageEstimation, weightKg, color, 
+        features, story, photosBase64, isPublic, size, condition, description 
+      } = req.body;
+      
+      const myEmployee = await prisma.organizationEmployee.findFirst({
+        where: { userId }
+      });
+
+      if (!myEmployee || (myEmployee.roleInOrg !== 'admin' && myEmployee.roleInOrg !== 'veterinarian')) {
+        res.status(403).json({ error: 'Solo veterinarios o administradores pueden ingresar animales' });
+        return;
+      }
+
+      const uploadedPhotos = [];
+      if (photosBase64 && Array.isArray(photosBase64)) {
+        for (const base64Str of photosBase64) {
+          const uploadResult = await cloudinary.uploader.upload(base64Str, {
+            folder: 'dasha_animals',
+          });
+          uploadedPhotos.push({
+            url: uploadResult.secure_url,
+            publicId: uploadResult.public_id
+          });
+        }
+      }
+
+      // Create dummy report
+      const dummyReport = await prisma.report.create({
+        data: {
+          userId,
+          species: species || 'dog',
+          primaryColor: color || 'N/A',
+          size: size || 'medium',
+          condition: condition || 'healthy',
+          description: description || 'Ingreso directo al refugio',
+          status: 'closed',
+          address: 'Ingreso directo'
+        }
+      });
+
+      const animalData = {
+        reportId: dummyReport.id,
+        organizationId: myEmployee.organizationId,
+        name,
+        species: species || 'dog',
+        breed,
+        ageEstimation,
+        weightKg,
+        color: color || '',
+        gender: gender || 'male',
+        story,
+        status: 'in_treatment',
+        isPublic: isPublic !== undefined ? isPublic : true
+      };
+
+      const animal = await AnimalService.createProfile(animalData, uploadedPhotos);
+
+      res.status(201).json({
+        status: 'success',
+        message: 'Animal ingresado directamente',
         data: animal
       });
     } catch (error) {
