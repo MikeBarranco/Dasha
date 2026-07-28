@@ -24,6 +24,7 @@ import {
   addRescuePhoto,
   type RescueStatus,
   type RescuePhotoKind,
+  type CancelReason,
 } from '../lib/api';
 import { Avatar } from '../components/ui/Avatar';
 import { RescuePhotoSheet } from '../components/rescue/RescuePhotoSheet';
@@ -39,6 +40,30 @@ const nextByStatus: Partial<
   accepted: { next: 'on_the_way', label: 'Voy en camino', photo: 'pickup' },
   on_the_way: { next: 'arrived', label: 'Llegué con el aliado', photo: 'delivery' },
 };
+
+// Motivos de cancelación que ve el voluntario. 'unavailable' no manda motivo (el
+// reporte se libera para otro); 'not_found'/'duplicate' son el enum de Isabel.
+const cancelOptions: {
+  value: CancelReason | 'unavailable';
+  label: string;
+  hint: string;
+}[] = [
+  {
+    value: 'unavailable',
+    label: 'Ya no puedo ir',
+    hint: 'El reporte volverá a estar disponible para otro voluntario.',
+  },
+  {
+    value: 'not_found',
+    label: 'No encontré al animalito',
+    hint: 'Se cierra el reporte: ya no está en el lugar.',
+  },
+  {
+    value: 'duplicate',
+    label: 'Ya estaba reportado',
+    hint: 'Es el mismo caso que otro reporte.',
+  },
+];
 
 // Orden del traslado. Sirve para no dejar que el avance optimista local (por
 // ejemplo "arrived") tape un estado real más avanzado que llega por el socket
@@ -73,7 +98,7 @@ export function RescateEnVivoPage() {
   const [showHistory, setShowHistory] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
-  const [cancelReason, setCancelReason] = useState('');
+  const [cancelChoice, setCancelChoice] = useState<CancelReason | 'unavailable' | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
   const realAssignment = assignment ?? null;
@@ -157,13 +182,18 @@ export function RescateEnVivoPage() {
     }
   };
 
-  // El voluntario cancela un rescate que ya no puede hacer. El reporte se libera
-  // (backend) para que otro lo tome; volvemos al panel del voluntario.
+  // El voluntario cancela un rescate que ya no puede hacer, eligiendo un motivo.
+  // "Ya no puedo ir" (unavailable) libera el reporte para otro voluntario; "No
+  // encontré" (not_found) cierra el reporte; "Duplicado" lo marca. Volvemos al
+  // panel del voluntario.
   const handleCancel = async () => {
-    if (cancelling) return;
+    if (cancelling || !cancelChoice) return;
     setCancelling(true);
     try {
-      await cancelRescueAssignment(assignment.id, cancelReason);
+      await cancelRescueAssignment(
+        assignment.id,
+        cancelChoice === 'unavailable' ? undefined : cancelChoice,
+      );
       navigate('/voluntario');
     } catch (err) {
       alert(err instanceof Error ? err.message : 'No se pudo cancelar el rescate.');
@@ -273,34 +303,52 @@ export function RescateEnVivoPage() {
           {isDriver && (currentStatus === 'accepted' || currentStatus === 'on_the_way') &&
             (cancelOpen ? (
               <div className="mt-3 rounded-xl border border-alerta/20 bg-alerta/5 p-3">
-                <p className="text-sm font-medium text-neutral-700">¿Cancelar este rescate?</p>
+                <p className="text-sm font-medium text-neutral-700">¿Por qué cancelas?</p>
                 <p className="mt-0.5 text-xs text-neutral-500">
-                  El reporte volverá a estar disponible para que otro voluntario lo tome.
+                  Elige el motivo para saber qué hacer con el reporte.
                 </p>
-                <textarea
-                  value={cancelReason}
-                  onChange={(event) => setCancelReason(event.target.value)}
-                  maxLength={160}
-                  rows={2}
-                  placeholder="Motivo (opcional): no lo encontré, ya no puedo ir…"
-                  className="mt-2 w-full resize-none rounded-lg border border-neutral-200 px-3 py-2 text-sm text-neutral-700 outline-none focus:ring-2 focus:ring-cobalto/30"
-                />
-                <div className="mt-2 flex gap-2">
+                <div className="mt-2 space-y-2">
+                  {cancelOptions.map((option) => {
+                    const active = cancelChoice === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setCancelChoice(option.value)}
+                        disabled={cancelling}
+                        className={`w-full rounded-lg border px-3 py-2 text-left transition-colors disabled:opacity-60 ${
+                          active
+                            ? 'border-alerta bg-alerta/10'
+                            : 'border-neutral-200 bg-white hover:border-alerta/40'
+                        }`}
+                      >
+                        <span className="block text-sm font-medium text-neutral-700">
+                          {option.label}
+                        </span>
+                        <span className="mt-0.5 block text-xs text-neutral-500">{option.hint}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="mt-3 flex gap-2">
                   <button
                     type="button"
-                    onClick={() => setCancelOpen(false)}
+                    onClick={() => {
+                      setCancelOpen(false);
+                      setCancelChoice(null);
+                    }}
                     disabled={cancelling}
                     className="flex-1 rounded-lg border border-neutral-200 py-2 text-sm font-medium text-neutral-600 transition-colors hover:bg-neutral-50 disabled:opacity-60"
                   >
-                    No
+                    Volver
                   </button>
                   <button
                     type="button"
                     onClick={handleCancel}
-                    disabled={cancelling}
-                    className="flex-1 rounded-lg bg-alerta py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                    disabled={cancelling || !cancelChoice}
+                    className="flex-1 rounded-lg bg-alerta py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
                   >
-                    {cancelling ? 'Cancelando…' : 'Sí, cancelar'}
+                    {cancelling ? 'Cancelando…' : 'Confirmar'}
                   </button>
                 </div>
               </div>
