@@ -15,6 +15,7 @@ export class ColonyController {
       // Usar $queryRaw para extraer el centroide usando ST_Centroid
       const colonies: any[] = await prisma.$queryRaw`
         SELECT 
+          id,
           name, 
           postal_code as "postalCode", 
           ST_X(ST_Centroid(geometry::geometry)) as lng, 

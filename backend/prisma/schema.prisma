@@ -503,6 +503,7 @@ model Organization {
   location        Unsupported("geography(Point, 4326)")?
   website         String?                                @db.VarChar(255)
   schedule        Json?
+  promo           String?                                @db.VarChar(500)
   orgType         OrgType                                @map("org_type")
   isVerified      Boolean                                @default(false) @map("is_verified")
   bankName        String?                                @map("bank_name") @db.VarChar(100)

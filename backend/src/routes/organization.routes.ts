@@ -19,7 +19,10 @@ router.post('/reports/:reportId/rescue', requireAuth, OrganizationController.sta
 router.post('/reports/:reportId/intake', requireAuth, OrganizationController.intakeReport);
 router.get('/portal/incoming-rescues', requireAuth, OrganizationController.getIncomingRescues);
 
+// PORTAL DE ANIMALES Y ADOPCIONES
+router.get('/portal/animals', requireAuth, OrganizationController.getPortalAnimals);
 router.post('/portal/animals', requireAuth, OrganizationController.createPortalAnimal);
+router.post('/portal/animals/direct-intake', requireAuth, OrganizationController.directIntakeAnimal);
 router.patch('/portal/animals/:animalId', requireAuth, OrganizationController.updatePortalAnimal);
 router.post('/portal/animals/:animalId/photos', requireAuth, OrganizationController.addPortalAnimalPhoto);
 router.post('/portal/animals/:animalId/records', requireAuth, OrganizationController.addPortalAnimalRecord);

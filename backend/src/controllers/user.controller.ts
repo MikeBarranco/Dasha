@@ -236,19 +236,60 @@ export class UserController {
       // Buscar si el usuario pertenece a alguna organización a través de organization_employees
       const employee = await prisma.organizationEmployee.findFirst({
         where: { userId },
-        include: {
-          organization: true
+        select: {
+          roleInOrg: true,
+          isVerified: true,
+          organization: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              logoUrl: true,
+              logoPublicId: true,
+              coverUrl: true,
+              coverPublicId: true,
+              slogan: true,
+              address: true,
+              phone: true,
+              whatsapp: true,
+              website: true,
+              schedule: true,
+              promo: true,
+              orgType: true,
+              isVerified: true,
+              bankName: true,
+              clabe: true,
+              holderName: true,
+              isActive: true,
+              createdAt: true,
+              updatedAt: true
+            }
+          }
         }
       });
 
-      if (!employee) {
+      if (!employee || !employee.organization) {
         res.status(404).json({ error: 'No perteneces a ninguna organización' });
         return;
+      }
+
+      // Obtener lat/lng por separado para no causar error 500 con PostGIS
+      const locationRes: any[] = await prisma.$queryRaw`
+        SELECT ST_X(location::geometry) as lng, ST_Y(location::geometry) as lat
+        FROM organizations
+        WHERE id = ${employee.organization.id}::uuid AND location IS NOT NULL
+      `;
+      let lat = null, lng = null;
+      if (locationRes && locationRes.length > 0) {
+        lat = locationRes[0].lat;
+        lng = locationRes[0].lng;
       }
 
       // Devolver la organización + su rol
       res.status(200).json({
         ...employee.organization,
+        lat,
+        lng,
         roleInOrg: employee.roleInOrg,
         isVerifiedEmployee: employee.isVerified
       });

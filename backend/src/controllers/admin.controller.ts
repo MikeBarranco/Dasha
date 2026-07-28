@@ -520,6 +520,22 @@ export class AdminController {
         }
       });
 
+      try {
+        const { NotificationService } = await import('../services/notification.service.js');
+        const org = await prisma.organization.findUnique({ where: { id: organizationId }, select: { name: true } });
+        if (org) {
+          await NotificationService.sendNotification({
+            userId: targetUser.id,
+            title: '¡Ahora eres aliado!',
+            body: `Has sido agregado como responsable de la organización ${org.name}. Bienvenido a la red de aliados.`,
+            type: 'system_alert',
+            link: '/portal'
+          });
+        }
+      } catch (err) {
+        console.error('Error sending push to new employee', err);
+      }
+
       res.status(201).json({ message: 'Miembro agregado exitosamente', member: newMember });
     } catch (error) {
       next(error);
