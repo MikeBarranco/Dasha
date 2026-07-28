@@ -1068,6 +1068,7 @@ const animalStatusLabels: Record<string, AnimalStatus> = {
   looking_for_foster: 'Buscando hogar',
   looking_for_adoption: 'Buscando hogar',
   adopted: 'Adoptado',
+  deceased: 'Fallecido',
 };
 
 // Texto legible cuando un evento del timeline no trae descripción propia.

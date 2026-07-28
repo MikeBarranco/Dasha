@@ -16,16 +16,23 @@ import type { Animal, AnimalStatus, MedicalEntry, MedicalEntryType } from '../..
 
 const PLACEHOLDER = '/placeholder-animal.svg';
 
-const statusOptions: AnimalStatus[] = ['En tratamiento', 'Recuperándose', 'Buscando hogar'];
+const statusOptions: AnimalStatus[] = [
+  'En tratamiento',
+  'Recuperándose',
+  'Buscando hogar',
+  'Fallecido',
+];
 
 // Etiqueta de nuestro modelo -> enum que espera el backend. "Adoptado" no está en
 // statusOptions a propósito: ese estado lo fija el flujo de adopción, no se elige
-// a mano desde el expediente.
+// a mano desde el expediente. "Fallecido" sí es manual (el aliado lo marca) y es
+// un estado final.
 const statusToSlug: Record<AnimalStatus, string> = {
   'En tratamiento': 'in_treatment',
   Recuperándose: 'recovering',
   'Buscando hogar': 'looking_for_adoption',
   Adoptado: 'adopted',
+  Fallecido: 'deceased',
 };
 
 const medTypeLabel: Record<MedicalEntryType, string> = {
@@ -370,6 +377,13 @@ export function PortalAnimalSheet({
                 </option>
               ))}
             </select>
+
+            {status === 'Fallecido' && changed && (
+              <p className="mt-2 rounded-lg bg-neutral-100 px-3 py-2 text-xs text-neutral-600">
+                Marcarás a {name || 'este animalito'} como fallecido. Es un estado final: dejará de
+                aparecer en la lista de rehabilitación. Lo recordaremos con cariño.
+              </p>
+            )}
 
             {error && <p className="mt-2 text-sm text-alerta">{error}</p>}
             {saved && (

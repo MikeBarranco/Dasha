@@ -2,7 +2,8 @@ export type AnimalStatus =
   | 'En tratamiento'
   | 'Recuperándose'
   | 'Buscando hogar'
-  | 'Adoptado';
+  | 'Adoptado'
+  | 'Fallecido';
 
 export type AnimalSize = 'Chico' | 'Mediano' | 'Grande';
 

@@ -108,6 +108,9 @@ export function RehabilitacionPage() {
   const filtered = useMemo(() => {
     const query = normalize(search.trim());
     return (animals ?? [])
+      // Los fallecidos no van a la vitrina pública de rehabilitación (no se
+      // apadrinan); su lugar es el memorial "Los que recordamos".
+      .filter((animal) => animal.status !== 'Fallecido')
       .filter((animal) => species === 'todos' || animal.species === species)
       .filter((animal) => size === 'todos' || animal.size === size)
       .filter((animal) => status === 'todos' || animal.status === status)

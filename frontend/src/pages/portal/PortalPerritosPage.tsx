@@ -21,6 +21,8 @@ const statusStyles: Record<string, string> = {
   'En tratamiento': 'bg-naranja/10 text-naranja',
   Recuperándose: 'bg-info/10 text-info',
   'Buscando hogar': 'bg-exito/10 text-exito',
+  Adoptado: 'bg-purpura/10 text-purpura',
+  Fallecido: 'bg-neutral-200 text-neutral-600',
 };
 
 export function PortalPerritosPage() {
