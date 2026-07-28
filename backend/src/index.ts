@@ -36,6 +36,16 @@ app.use(helmet());
 app.use(morgan('dev'));
 app.use(cookieParser());
 
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 300, // Límite de 300 peticiones por IP cada 15 minutos
+  message: { error: 'Demasiadas peticiones desde esta IP, por favor intenta de nuevo en 15 minutos.' },
+  standardHeaders: true, 
+  legacyHeaders: false, 
+});
+app.use('/api', apiLimiter);
+
+
 import { csrfProtection } from './middlewares/csrf.middleware';
 
 
