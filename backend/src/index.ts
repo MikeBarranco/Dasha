@@ -1,4 +1,17 @@
 import 'dotenv/config';
+import * as Sentry from '@sentry/node';
+import { nodeProfilingIntegration } from '@sentry/profiling-node';
+
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  environment: process.env.NODE_ENV || 'development',
+  integrations: [
+    nodeProfilingIntegration(),
+  ],
+  tracesSampleRate: 1.0, 
+  profilesSampleRate: 1.0, 
+});
+
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -146,6 +159,9 @@ io.on('connection', (socket) => {
     console.log('⚡ Socket disconnected:', socket.id);
   });
 });
+
+// Sentry error handler (debe ir antes que otros manejadores de error)
+Sentry.setupExpressErrorHandler(app);
 
 // Global Error Handler
 app.use(errorHandler);
