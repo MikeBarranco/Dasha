@@ -12,12 +12,14 @@ import {
   HelpCircle,
   Flag,
   Check,
+  Bell,
+  BellRing,
 } from 'lucide-react';
 import { ShareButton } from '../ui/ShareButton';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 import { useSheetDismiss } from '../../lib/useSheetDismiss';
 import { useAuth } from '../../lib/useAuth';
-import { acceptReport, reportStreetReport } from '../../lib/api';
+import { acceptReport, reportStreetReport, followReport, unfollowReport } from '../../lib/api';
 import { cn } from '../../lib/cn';
 import type { Report, Severity } from '../../data/mockReports';
 
@@ -72,6 +74,19 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
     useSheetDismiss(onClose);
 
   const isVolunteer = account?.role === 'volunteer' || account?.role === 'admin';
+
+  // Seguir el reporte: recibir push cuando cambie de estado. Optimista.
+  const [following, setFollowing] = useState(Boolean(report.isFollowing));
+  const toggleFollow = () => {
+    if (!account) {
+      navigate('/login');
+      return;
+    }
+    const next = !following;
+    setFollowing(next);
+    const action = next ? followReport(report.id) : unfollowReport(report.id);
+    action.catch(() => setFollowing(!next));
+  };
 
   // Denuncia del reporte (falso / foto de internet). POST /reports/:id/report.
   const [reporting, setReporting] = useState(false);
@@ -208,9 +223,37 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
 
           <p className="mt-3 text-sm text-neutral-600">{report.description}</p>
 
-          <div className="mt-4 inline-flex rounded-lg bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-600">
-            Estado: {report.status}
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <span className="inline-flex rounded-lg bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-600">
+              Estado: {report.status}
+            </span>
+            <button
+              type="button"
+              onClick={toggleFollow}
+              aria-pressed={following}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-medium transition-colors',
+                following
+                  ? 'bg-cobalto/10 text-cobalto'
+                  : 'border border-neutral-200 text-neutral-600 hover:border-cobalto/40 hover:text-cobalto',
+              )}
+            >
+              {following ? (
+                <>
+                  <BellRing className="h-3.5 w-3.5" /> Siguiendo
+                </>
+              ) : (
+                <>
+                  <Bell className="h-3.5 w-3.5" /> Seguir
+                </>
+              )}
+            </button>
           </div>
+          {following && (
+            <p className="mt-1.5 text-xs text-neutral-400">
+              Te avisaremos cuando este reporte cambie de estado.
+            </p>
+          )}
 
           <div className="mt-5">
             {report.activeAssignmentId ? (
