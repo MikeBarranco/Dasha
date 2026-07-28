@@ -1778,6 +1778,34 @@ export async function reportForumPost(
   });
 }
 
+// Reporta un COMENTARIO del foro. Mismo contrato que el de publicación.
+// POST /forum/replies/:id/report (mensaje_final_miguel.md, 14).
+export async function reportForumReply(
+  id: string,
+  reason: string,
+  details?: string,
+): Promise<void> {
+  const clean = details?.trim();
+  await authedRaw(`/forum/replies/${id}/report`, {
+    method: 'POST',
+    body: JSON.stringify(clean ? { reason, details: clean } : { reason }),
+  });
+}
+
+// Reporta un REPORTE de calle falso o inapropiado (foto de internet, broma).
+// POST /reports/:id/report (mensaje_final_miguel.md, 19).
+export async function reportStreetReport(
+  id: string,
+  reason: string,
+  details?: string,
+): Promise<void> {
+  const clean = details?.trim();
+  await authedRaw(`/reports/${id}/report`, {
+    method: 'POST',
+    body: JSON.stringify(clean ? { reason, details: clean } : { reason }),
+  });
+}
+
 type RawAlly = {
   id: string;
   name: string;

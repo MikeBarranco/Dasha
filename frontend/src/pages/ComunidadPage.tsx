@@ -28,24 +28,30 @@ import {
   createForumPost,
   likeForumPost,
   reportForumPost,
+  reportForumReply,
   getForumReplies,
   createForumReply,
 } from '../lib/api';
 import type { CommunityEvent, ForumPost, ForumReply } from '../data/mockComunidad';
 
 const REPORTED_STORAGE_KEY = 'dasha:foro:reportados';
+const REPORTED_REPLIES_STORAGE_KEY = 'dasha:foro:reportados-comentarios';
 
-// Recuerda qué publicaciones reportó este usuario, para que el "Reportado" siga
-// ahí tras refrescar (el backend aún no expone si el usuario ya reportó).
-function loadReportedIds(): Set<string> {
+// Recuerda qué publicaciones/comentarios reportó este usuario, para que el
+// "Reportado" siga ahí tras refrescar (el backend aún no expone si el usuario ya
+// reportó un comentario).
+function loadReportedFrom(key: string): Set<string> {
   try {
-    const raw = localStorage.getItem(REPORTED_STORAGE_KEY);
+    const raw = localStorage.getItem(key);
     const parsed = raw ? JSON.parse(raw) : [];
     return new Set(Array.isArray(parsed) ? parsed.map(String) : []);
   } catch {
     return new Set();
   }
 }
+
+// Objetivo del modal de reporte: una publicación o un comentario.
+type ReportTarget = { kind: 'post' | 'reply'; id: string };
 
 type Tab = 'eventos' | 'foro';
 
@@ -66,10 +72,15 @@ export function ComunidadPage() {
   const [photo, setPhoto] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
 
-  const [reportingId, setReportingId] = useState<string | null>(null);
+  const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
   const [reportReason, setReportReason] = useState(reportReasons[0]);
   const [reportDetail, setReportDetail] = useState('');
-  const [reportedIds, setReportedIds] = useState<Set<string>>(loadReportedIds);
+  const [reportedIds, setReportedIds] = useState<Set<string>>(() =>
+    loadReportedFrom(REPORTED_STORAGE_KEY),
+  );
+  const [reportedReplyIds, setReportedReplyIds] = useState<Set<string>>(() =>
+    loadReportedFrom(REPORTED_REPLIES_STORAGE_KEY),
+  );
 
   const [openComments, setOpenComments] = useState<string | null>(null);
   const [repliesByPost, setRepliesByPost] = useState<Record<string, ForumReply[]>>({});
@@ -163,34 +174,49 @@ export function ComunidadPage() {
     likeForumPost(id).catch(() => {});
   };
 
-  const openReport = (id: string) => {
+  const openReport = (target: ReportTarget) => {
     if (!account) {
       navigate('/login');
       return;
     }
     setReportReason(reportReasons[0]);
     setReportDetail('');
-    setReportingId(id);
+    setReportTarget(target);
   };
 
   const reportNeedsDetail = reportReason === 'Otro';
   const reportReady = !reportNeedsDetail || reportDetail.trim().length >= 3;
 
-  const submitReport = () => {
-    const id = reportingId;
-    if (!id || !reportReady) return;
-    const detail = reportDetail.trim();
-    setReportedIds((current) => {
+  // Marca el id como reportado en el set indicado y lo persiste, para que el
+  // "Reportado" siga tras refrescar.
+  const rememberReported = (
+    setReported: React.Dispatch<React.SetStateAction<Set<string>>>,
+    storageKey: string,
+    id: string,
+  ) => {
+    setReported((current) => {
       const next = new Set(current).add(id);
       try {
-        localStorage.setItem(REPORTED_STORAGE_KEY, JSON.stringify([...next]));
+        localStorage.setItem(storageKey, JSON.stringify([...next]));
       } catch {
         // sin acceso al almacenamiento: al menos queda marcado en esta sesión
       }
       return next;
     });
-    reportForumPost(id, reportReason, reportNeedsDetail ? detail : undefined).catch(() => {});
-    setReportingId(null);
+  };
+
+  const submitReport = () => {
+    const target = reportTarget;
+    if (!target || !reportReady) return;
+    const detail = reportNeedsDetail ? reportDetail.trim() : undefined;
+    if (target.kind === 'post') {
+      rememberReported(setReportedIds, REPORTED_STORAGE_KEY, target.id);
+      reportForumPost(target.id, reportReason, detail).catch(() => {});
+    } else {
+      rememberReported(setReportedReplyIds, REPORTED_REPLIES_STORAGE_KEY, target.id);
+      reportForumReply(target.id, reportReason, detail).catch(() => {});
+    }
+    setReportTarget(null);
     setReportDetail('');
   };
 
@@ -552,7 +578,7 @@ export function ComunidadPage() {
                   ) : (
                     <button
                       type="button"
-                      onClick={() => openReport(post.id)}
+                      onClick={() => openReport({ kind: 'post', id: post.id })}
                       aria-label="Reportar publicación"
                       className="ml-auto text-neutral-400 transition-colors hover:text-alerta"
                     >
@@ -589,6 +615,24 @@ export function ComunidadPage() {
                                   </p>
                                   <p className="mt-0.5 text-sm text-neutral-600">{reply.text}</p>
                                 </div>
+                                {/* Los comentarios optimistas (id local-) aún no existen en
+                                    el backend, no se pueden denunciar todavía. */}
+                                {!reply.id.startsWith('local-') &&
+                                  (reportedReplyIds.has(reply.id) ? (
+                                    <Flag
+                                      className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-neutral-300"
+                                      aria-label="Comentario reportado"
+                                    />
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => openReport({ kind: 'reply', id: reply.id })}
+                                      aria-label="Reportar comentario"
+                                      className="mt-0.5 flex-shrink-0 text-neutral-300 transition-colors hover:text-alerta"
+                                    >
+                                      <Flag className="h-3.5 w-3.5" />
+                                    </button>
+                                  ))}
                               </li>
                             ))}
                           </ul>
@@ -644,19 +688,21 @@ export function ComunidadPage() {
         </div>
       )}
 
-      {reportingId && (
+      {reportTarget && (
         <div className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center">
           <div
             className="absolute inset-0 bg-black/50"
-            onClick={() => setReportingId(null)}
+            onClick={() => setReportTarget(null)}
             aria-hidden="true"
           />
           <div className="relative w-full max-w-sm rounded-t-3xl bg-white p-5 shadow-xl sm:rounded-3xl">
             <div className="flex items-center justify-between">
-              <h3 className="font-display text-lg font-bold text-cobalto">Reportar publicación</h3>
+              <h3 className="font-display text-lg font-bold text-cobalto">
+                {reportTarget.kind === 'reply' ? 'Reportar comentario' : 'Reportar publicación'}
+              </h3>
               <button
                 type="button"
-                onClick={() => setReportingId(null)}
+                onClick={() => setReportTarget(null)}
                 aria-label="Cerrar"
                 className="rounded-full p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100"
               >
@@ -664,7 +710,7 @@ export function ComunidadPage() {
               </button>
             </div>
             <p className="mt-1 text-sm text-neutral-500">
-              Cuéntanos por qué. Un administrador la revisará.
+              Cuéntanos por qué. Un administrador lo revisará.
             </p>
             <div className="mt-3 space-y-2">
               {reportReasons.map((reason) => (
@@ -694,7 +740,11 @@ export function ComunidadPage() {
                   onChange={(event) => setReportDetail(event.target.value)}
                   maxLength={280}
                   rows={3}
-                  placeholder="Describe por qué reportas esta publicación…"
+                  placeholder={
+                    reportTarget.kind === 'reply'
+                      ? 'Describe por qué reportas este comentario…'
+                      : 'Describe por qué reportas esta publicación…'
+                  }
                   className="w-full resize-none rounded-xl border border-neutral-200 p-3 text-sm text-neutral-700 outline-none focus:ring-2 focus:ring-cobalto/30"
                 />
               </div>
