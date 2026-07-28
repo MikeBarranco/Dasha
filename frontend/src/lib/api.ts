@@ -269,14 +269,28 @@ export type Colonia = {
   lng: number;
 };
 
+// Saca el arreglo de una respuesta que puede venir cruda ([...]) o envuelta en
+// { data | colonies | results | items: [...] }. Evita que un cambio de forma del
+// backend truene el .map y deje la pantalla sin datos.
+function unwrapArray(body: unknown): Record<string, unknown>[] {
+  if (Array.isArray(body)) return body as Record<string, unknown>[];
+  if (body && typeof body === 'object') {
+    const obj = body as Record<string, unknown>;
+    for (const key of ['data', 'colonies', 'results', 'items']) {
+      if (Array.isArray(obj[key])) return obj[key] as Record<string, unknown>[];
+    }
+  }
+  return [];
+}
+
 // GET /colonies/search?cp=XXXXX -> colonias de ese código postal, con el CENTROIDE
 // (lat/lng) de cada una (api_updates_miguel.md, 7). Se lee tolerante por si el
-// backend cambia nombres de campo.
+// backend envuelve la respuesta ({ data: [...] }) o cambia nombres de campo.
 export async function getColoniesByCp(cp: string): Promise<Colonia[]> {
-  const data = await requestRaw<Record<string, unknown>[]>(
+  const body = await requestRaw<unknown>(
     `/colonies/search?cp=${encodeURIComponent(cp)}`,
   );
-  return (data ?? [])
+  return unwrapArray(body)
     .map((raw) => ({
       name: String(raw.name ?? raw.colonia ?? raw.neighborhood ?? ''),
       postalCode: String(raw.postalCode ?? raw.postal_code ?? raw.cp ?? cp),

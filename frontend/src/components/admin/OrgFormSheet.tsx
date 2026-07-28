@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { motion } from 'motion/react';
-import { X, ImagePlus, BadgeCheck } from 'lucide-react';
+import { X, ImagePlus, BadgeCheck, Loader2 } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 import {
@@ -10,8 +10,10 @@ import {
   type AdminOrg,
   type AdminOrgInput,
 } from '../../lib/adminApi';
+import { getColoniesByCp, type Colonia } from '../../lib/api';
 import { compressImage } from '../../lib/image';
 import { onlyDigits } from '../../lib/validation';
+import { OrgLocationPicker } from '../map/OrgLocationPicker';
 
 type OrgFormSheetProps = {
   org: AdminOrg | null;
@@ -32,8 +34,20 @@ export function OrgFormSheet({ org, onClose, onSaved }: OrgFormSheetProps) {
   const [whatsapp, setWhatsapp] = useState(org?.whatsapp ?? '');
   const [website, setWebsite] = useState(org?.website ?? '');
   const [schedule, setSchedule] = useState(org?.schedule ?? '');
-  const [lat, setLat] = useState(org?.lat ? String(org.lat) : '');
-  const [lng, setLng] = useState(org?.lng ? String(org.lng) : '');
+
+  // Ubicación: CP -> colonias (con centroide) -> pin arrastrable. Ya no se
+  // escriben lat/lng a mano (el admin tenía que ir a Maps a buscarlas). Al
+  // editar, si el aliado ya tiene coordenadas, el pin arranca ahí.
+  const [zipCode, setZipCode] = useState(org?.zipCode ?? '');
+  const [colonies, setColonies] = useState<Colonia[]>([]);
+  const [colonyName, setColonyName] = useState('');
+  const [loadingColonies, setLoadingColonies] = useState(false);
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(
+    org?.lat && org?.lng ? { lat: org.lat, lng: org.lng } : null,
+  );
+  // Último CP buscado, para ignorar respuestas viejas si lo cambian.
+  const lastCpRef = useRef('');
+
   const [logo, setLogo] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +58,40 @@ export function OrgFormSheet({ org, onClose, onSaved }: OrgFormSheetProps) {
       setLogo(await compressImage(files[0]));
     } catch {
       setError('No se pudo leer la imagen.');
+    }
+  };
+
+  // Cambia el CP: solo dígitos (máx 5). Al completar 5 busca sus colonias; al
+  // bajar de 5 limpia la colonia. La búsqueda va en el handler (no en efecto)
+  // para no llamar setState dentro del cuerpo de un efecto.
+  const handleZip = (raw: string) => {
+    const cp = onlyDigits(raw, 5);
+    setZipCode(cp);
+    if (cp.length !== 5) {
+      setColonies([]);
+      setColonyName('');
+      return;
+    }
+    lastCpRef.current = cp;
+    setLoadingColonies(true);
+    getColoniesByCp(cp)
+      .then((list) => {
+        if (lastCpRef.current === cp) setColonies(list);
+      })
+      .catch(() => {
+        if (lastCpRef.current === cp) setColonies([]);
+      })
+      .finally(() => {
+        if (lastCpRef.current === cp) setLoadingColonies(false);
+      });
+  };
+
+  // Al elegir una colonia, centra el mapa/pin en su centroide.
+  const pickColony = (value: string) => {
+    setColonyName(value);
+    const colony = colonies.find((item) => item.name === value);
+    if (colony && Number.isFinite(colony.lat) && Number.isFinite(colony.lng)) {
+      setCoords({ lat: colony.lat, lng: colony.lng });
     }
   };
 
@@ -66,8 +114,9 @@ export function OrgFormSheet({ org, onClose, onSaved }: OrgFormSheetProps) {
       whatsapp: whatsapp.trim() || undefined,
       website: website.trim() || undefined,
       schedule: schedule.trim() || undefined,
-      lat: lat ? Number(lat) : undefined,
-      lng: lng ? Number(lng) : undefined,
+      zipCode: zipCode || undefined,
+      lat: coords ? coords.lat : undefined,
+      lng: coords ? coords.lng : undefined,
       ...(logo ? { logoBase64: logo } : {}),
     };
 
@@ -250,25 +299,59 @@ export function OrgFormSheet({ org, onClose, onSaved }: OrgFormSheetProps) {
             />
           </Field>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Latitud">
-              <input
-                value={lat}
-                onChange={(event) => setLat(event.target.value)}
-                inputMode="decimal"
-                className={inputClass}
-                placeholder="19.04"
-              />
-            </Field>
-            <Field label="Longitud">
-              <input
-                value={lng}
-                onChange={(event) => setLng(event.target.value)}
-                inputMode="decimal"
-                className={inputClass}
-                placeholder="-98.20"
-              />
-            </Field>
+          <div className="rounded-2xl border border-neutral-200 bg-white p-4">
+            <p className="text-sm font-medium text-neutral-700">Ubicación en el mapa</p>
+            <p className="mt-0.5 text-xs text-neutral-500">
+              Escribe el código postal, elige la colonia y arrastra el pin hasta el aliado. Así
+              aparece bien ubicado en el mapa.
+            </p>
+
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <Field label="Código postal">
+                <input
+                  value={zipCode}
+                  onChange={(event) => handleZip(event.target.value)}
+                  inputMode="numeric"
+                  maxLength={5}
+                  className={inputClass}
+                  placeholder="72000"
+                />
+              </Field>
+              <Field label="Colonia">
+                <select
+                  value={colonyName}
+                  onChange={(event) => pickColony(event.target.value)}
+                  disabled={colonies.length === 0}
+                  className={`${inputClass} disabled:bg-neutral-50 disabled:text-neutral-400`}
+                >
+                  <option value="">
+                    {loadingColonies
+                      ? 'Buscando…'
+                      : colonies.length === 0
+                        ? 'Escribe el CP'
+                        : 'Elige la colonia'}
+                  </option>
+                  {colonies.map((colony) => (
+                    <option key={colony.name} value={colony.name}>
+                      {colony.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+
+            {zipCode.length === 5 && !loadingColonies && colonies.length === 0 && (
+              <p className="mb-2 text-xs text-alerta">
+                No encontramos colonias para ese código postal. Revísalo.
+              </p>
+            )}
+            {loadingColonies && (
+              <p className="mb-2 flex items-center gap-1.5 text-xs text-neutral-400">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Buscando colonias…
+              </p>
+            )}
+
+            <OrgLocationPicker center={coords} onChange={(la, ln) => setCoords({ lat: la, lng: ln })} />
           </div>
 
           {error && <p className="text-sm text-alerta">{error}</p>}
