@@ -33,10 +33,27 @@ export class ColonyController {
 
   static async searchByName(req: Request, res: Response, next: NextFunction) {
     try {
-      const { q } = req.query;
+      const { q, cp } = req.query;
+
+      // Handle CP search from frontend hitting /search?cp=
+      if (cp && typeof cp === 'string') {
+        const colonies: any[] = await prisma.$queryRaw`
+          SELECT 
+            id,
+            name, 
+            postal_code as "postalCode", 
+            ST_X(ST_Centroid(geometry::geometry)) as lng, 
+            ST_Y(ST_Centroid(geometry::geometry)) as lat 
+          FROM colonies 
+          WHERE postal_code = ${cp}
+          ORDER BY name ASC;
+        `;
+        res.status(200).json(colonies);
+        return;
+      }
 
       if (!q || typeof q !== 'string' || q.length < 3) {
-        res.status(400).json({ error: 'Debes proveer un término de búsqueda válido (?q=texto, mín 3 caracteres)' });
+        res.status(400).json({ error: 'Debes proveer un término de búsqueda válido (?q=texto, mín 3 caracteres) o un código postal (?cp=72000)' });
         return;
       }
 
