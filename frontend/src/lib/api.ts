@@ -2017,14 +2017,22 @@ export async function updateRescueAssignmentStatus(
   });
 }
 
-// El voluntario cancela un rescate que ya no puede hacer (no encontró al
-// animalito, le surgió algo). El backend debe LIBERAR el reporte a `active` para
-// que otro voluntario lo tome (spec en pendientes-isabel.md, sección 19l).
-export async function cancelRescueAssignment(id: string, reason?: string): Promise<void> {
-  const clean = reason?.trim();
+// Motivos estructurados de cancelación (contrato de Isabel, mensaje_final 17):
+// PATCH /rescue-assignments/:id { status:'cancelled', cancelledReason }. Con
+// 'not_found' el backend CIERRA el reporte en cascada; 'duplicate' lo marca
+// duplicado. Sin motivo (el voluntario ya no puede ir) el reporte se LIBERA a
+// `active` para que otro lo tome.
+export type CancelReason = 'not_found' | 'duplicate';
+
+export async function cancelRescueAssignment(
+  id: string,
+  reason?: CancelReason,
+): Promise<void> {
   await authedRaw(`/rescue-assignments/${id}`, {
     method: 'PATCH',
-    body: JSON.stringify(clean ? { status: 'cancelled', cancelReason: clean } : { status: 'cancelled' }),
+    body: JSON.stringify(
+      reason ? { status: 'cancelled', cancelledReason: reason } : { status: 'cancelled' },
+    ),
   });
 }
 
