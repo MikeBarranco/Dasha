@@ -1,13 +1,47 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { X, Navigation, Clock, MapPin, Maximize2, Radio, HeartHandshake, HelpCircle } from 'lucide-react';
+import {
+  X,
+  Navigation,
+  Clock,
+  MapPin,
+  Maximize2,
+  Radio,
+  HeartHandshake,
+  HelpCircle,
+  Flag,
+  Check,
+} from 'lucide-react';
 import { ShareButton } from '../ui/ShareButton';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 import { useSheetDismiss } from '../../lib/useSheetDismiss';
 import { useAuth } from '../../lib/useAuth';
-import { acceptReport } from '../../lib/api';
+import { acceptReport, reportStreetReport } from '../../lib/api';
+import { cn } from '../../lib/cn';
 import type { Report, Severity } from '../../data/mockReports';
+
+const REPORTED_STORAGE_KEY = 'dasha:reportes:reportados';
+
+// Motivos para denunciar un reporte de calle (foto de internet, broma, etc.).
+const reportReasons = [
+  'Foto falsa o de internet',
+  'No hay ningún animal ahí',
+  'Contenido inapropiado',
+  'Otro',
+];
+
+// Recuerda qué reportes denunció este usuario, para que el "Reportado" siga tras
+// refrescar (el backend aún no expone si el usuario ya denunció un reporte).
+function loadReportedIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(REPORTED_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(parsed) ? parsed.map(String) : []);
+  } catch {
+    return new Set();
+  }
+}
 
 const severityLabel: Record<Severity, string> = {
   critica: 'Urgencia crítica',
@@ -38,6 +72,41 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
     useSheetDismiss(onClose);
 
   const isVolunteer = account?.role === 'volunteer' || account?.role === 'admin';
+
+  // Denuncia del reporte (falso / foto de internet). POST /reports/:id/report.
+  const [reporting, setReporting] = useState(false);
+  const [reportReason, setReportReason] = useState(reportReasons[0]);
+  const [reportDetail, setReportDetail] = useState('');
+  const [reported, setReported] = useState(() => loadReportedIds().has(report.id));
+  const reportNeedsDetail = reportReason === 'Otro';
+  const reportReady = !reportNeedsDetail || reportDetail.trim().length >= 3;
+
+  const openReport = () => {
+    if (!account) {
+      navigate('/login');
+      return;
+    }
+    setReportReason(reportReasons[0]);
+    setReportDetail('');
+    setReporting(true);
+  };
+
+  const submitReport = () => {
+    if (!reportReady) return;
+    setReported(true);
+    const next = new Set(loadReportedIds()).add(report.id);
+    try {
+      localStorage.setItem(REPORTED_STORAGE_KEY, JSON.stringify([...next]));
+    } catch {
+      // sin acceso al almacenamiento: al menos queda marcado en esta sesión
+    }
+    reportStreetReport(
+      report.id,
+      reportReason,
+      reportNeedsDetail ? reportDetail.trim() : undefined,
+    ).catch(() => {});
+    setReporting(false);
+  };
 
   const handleAccept = async () => {
     if (accepting) return;
@@ -200,8 +269,91 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
               </>
             )}
           </div>
+
+          <div className="mt-4 border-t border-neutral-100 pt-3 text-center">
+            {reported ? (
+              <span className="inline-flex items-center gap-1.5 text-xs text-neutral-400">
+                <Flag className="h-3.5 w-3.5" /> Reporte denunciado
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={openReport}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-neutral-400 transition-colors hover:text-alerta"
+              >
+                <Flag className="h-3.5 w-3.5" /> Reportar este aviso
+              </button>
+            )}
+          </div>
         </div>
       </motion.div>
+
+      {reporting && (
+        <div className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setReporting(false)}
+            aria-hidden="true"
+          />
+          <div className="relative w-full max-w-sm rounded-t-3xl bg-white p-5 shadow-xl sm:rounded-3xl">
+            <div className="flex items-center justify-between">
+              <h3 className="font-display text-lg font-bold text-cobalto">Reportar este aviso</h3>
+              <button
+                type="button"
+                onClick={() => setReporting(false)}
+                aria-label="Cerrar"
+                className="rounded-full p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="mt-1 text-sm text-neutral-500">
+              Cuéntanos por qué. Un administrador lo revisará.
+            </p>
+            <div className="mt-3 space-y-2">
+              {reportReasons.map((reason) => (
+                <button
+                  key={reason}
+                  type="button"
+                  onClick={() => setReportReason(reason)}
+                  className={cn(
+                    'flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-sm transition-colors',
+                    reportReason === reason
+                      ? 'border-cobalto bg-cobalto/5 font-medium text-cobalto'
+                      : 'border-neutral-200 text-neutral-600 hover:border-cobalto/40',
+                  )}
+                >
+                  {reason}
+                  {reportReason === reason && <Check className="h-4 w-4" />}
+                </button>
+              ))}
+            </div>
+            {reportNeedsDetail && (
+              <div className="mt-3">
+                <label className="mb-1 block text-xs font-medium text-neutral-500">
+                  Cuéntanos brevemente el motivo
+                </label>
+                <textarea
+                  value={reportDetail}
+                  onChange={(event) => setReportDetail(event.target.value)}
+                  maxLength={280}
+                  rows={3}
+                  placeholder="Describe por qué reportas este aviso…"
+                  className="w-full resize-none rounded-xl border border-neutral-200 p-3 text-sm text-neutral-700 outline-none focus:ring-2 focus:ring-cobalto/30"
+                />
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={submitReport}
+              disabled={!reportReady}
+              className="mt-4 w-full rounded-xl bg-alerta py-3 font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              Enviar reporte
+            </button>
+          </div>
+        </div>
+      )}
 
       <AnimatePresence>
         {showPhoto && (
