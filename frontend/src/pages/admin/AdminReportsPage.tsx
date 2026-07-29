@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Trash2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Trash2, AlertCircle, RefreshCw, ScanSearch } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import {
   getAdminReports,
@@ -72,6 +72,11 @@ function ReportCard({
           <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-600">
             {report.species === 'gato' ? 'Gato' : 'Perro'}
           </span>
+          {!report.speciesVerified && (
+            <span className="flex items-center gap-1 rounded-full bg-naranja/10 px-2 py-0.5 text-xs font-medium text-naranja">
+              <ScanSearch className="h-3 w-3" /> Por revisar
+            </span>
+          )}
           {report.condition && (
             <span className="text-xs text-neutral-500">{report.condition}</span>
           )}
@@ -148,6 +153,7 @@ function ReportCard({
 export function AdminReportsPage() {
   const [reports, setReports] = useState<AdminReport[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<'todos' | 'por-revisar'>('todos');
 
   useEffect(() => {
     let active = true;
@@ -193,6 +199,11 @@ export function AdminReportsPage() {
     setReports((current) => (current ? current.filter((report) => report.id !== id) : current));
   };
 
+  const pendingReview = (reports ?? []).filter((report) => !report.speciesVerified).length;
+  const visibleReports = (reports ?? []).filter((report) =>
+    filter === 'por-revisar' ? !report.speciesVerified : true,
+  );
+
   return (
     <div>
       <div className="flex items-center justify-between">
@@ -201,6 +212,36 @@ export function AdminReportsPage() {
           <span className="text-sm text-neutral-400">{reports.length}</span>
         )}
       </div>
+
+      {reports !== null && reports.length > 0 && (
+        <div className="mt-4 inline-flex rounded-xl bg-neutral-100 p-1">
+          <button
+            type="button"
+            onClick={() => setFilter('todos')}
+            className={cn(
+              'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
+              filter === 'todos' ? 'bg-white text-cobalto shadow-sm' : 'text-neutral-500',
+            )}
+          >
+            Todos
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilter('por-revisar')}
+            className={cn(
+              'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
+              filter === 'por-revisar' ? 'bg-white text-naranja shadow-sm' : 'text-neutral-500',
+            )}
+          >
+            Por revisar
+            {pendingReview > 0 && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-naranja px-1.5 text-[11px] font-semibold text-white">
+                {pendingReview}
+              </span>
+            )}
+          </button>
+        </div>
+      )}
 
       {reports === null && (
         <div className="mt-6 space-y-3">
@@ -236,16 +277,35 @@ export function AdminReportsPage() {
       )}
 
       {reports !== null && reports.length > 0 && (
-        <div className="mt-6 space-y-3">
-          {reports.map((report) => (
-            <ReportCard
-              key={report.id}
-              report={report}
-              onStatusChange={handleStatusChange}
-              onDelete={handleDelete}
-            />
-          ))}
-        </div>
+        <>
+          {filter === 'por-revisar' && (
+            <p className="mt-4 text-sm text-neutral-500">
+              Reportes donde la IA no confirmó que la foto coincide con la especie. Revísalos y, si
+              no corresponden, elimínalos.
+            </p>
+          )}
+
+          {visibleReports.length === 0 ? (
+            <div className="mt-6 flex flex-col items-center justify-center rounded-2xl border border-dashed border-neutral-300 bg-white/60 px-6 py-16 text-center">
+              <ScanSearch className="h-8 w-8 text-neutral-300" />
+              <p className="mt-3 font-semibold text-neutral-700">Nada por revisar</p>
+              <p className="mt-1 max-w-xs text-sm text-neutral-500">
+                Todos los reportes tienen su especie verificada.
+              </p>
+            </div>
+          ) : (
+            <div className="mt-6 space-y-3">
+              {visibleReports.map((report) => (
+                <ReportCard
+                  key={report.id}
+                  report={report}
+                  onStatusChange={handleStatusChange}
+                  onDelete={handleDelete}
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

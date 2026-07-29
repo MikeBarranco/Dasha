@@ -98,6 +98,9 @@ export type AdminReport = {
   photo: string;
   createdAgo: string;
   reporter: string | null;
+  // La IA verificó que la especie del reporte coincide con la foto. Si el backend
+  // no manda la bandera, asumimos verificado (true) para no marcar todos.
+  speciesVerified: boolean;
 };
 
 function mapAdminReport(raw: Raw): AdminReport {
@@ -127,6 +130,9 @@ function mapAdminReport(raw: Raw): AdminReport {
       photos[0] || asString(pick(raw, ['photo', 'photoUrl', 'photo_url'])) || '/placeholder-animal.svg',
     createdAgo: timeAgo(asString(pick(raw, ['createdAt', 'created_at']))),
     reporter,
+    // Solo es false si el backend lo manda explícitamente en false; si no viene,
+    // se asume verificado para no llenar de falsos la bandeja "por revisar".
+    speciesVerified: pick(raw, ['speciesVerified', 'species_verified']) !== false,
   };
 }
 
