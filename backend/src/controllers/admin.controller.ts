@@ -340,6 +340,7 @@ export class AdminController {
           ST_X(location::geometry) as lng,
           ST_Y(location::geometry) as lat
         FROM organizations
+        WHERE is_verified = true AND is_active = true
         ORDER BY created_at DESC;
       `;
       res.status(200).json(orgs);

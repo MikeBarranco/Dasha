@@ -244,7 +244,7 @@ export class OrganizationController {
         roleInOrg = 'admin'; // Le damos rol de admin en la org
       } else {
         const employee = await prisma.organizationEmployee.findFirst({
-          where: { userId: user?.id },
+          where: { userId: user?.id, isVerified: true },
           select: {
             roleInOrg: true,
             organization: {
@@ -288,7 +288,7 @@ export class OrganizationController {
     }
 
     return await prisma.organizationEmployee.findFirst({
-      where: { userId }
+      where: { userId, isVerified: true }
     });
   }
 
