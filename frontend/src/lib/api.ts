@@ -1583,6 +1583,40 @@ export async function unfollowReport(reportId: string): Promise<void> {
   await authedRaw(`/reports/${reportId}/follow`, { method: 'DELETE' });
 }
 
+// Tipo de recurso que ofrece un aliado en un reporte (contrato de Isabel).
+export type OfferResourceType =
+  | 'money'
+  | 'food'
+  | 'transport'
+  | 'foster'
+  | 'medical_service'
+  | 'supplies'
+  | 'other';
+
+export type ReportOfferInput = {
+  title: string;
+  description: string;
+  resourceType: OfferResourceType;
+};
+
+// Un aliado ofrece ayuda en un reporte del mapa ("si lo traen, cubrimos la
+// consulta"). El backend detecta solo la organización del usuario en sesión y
+// enlaza la oferta al reporte y a la clínica. POST /reports/:id/offer
+// (guia_api_frontend_miguel2.md respuestas, 3).
+export async function postReportOffer(
+  reportId: string,
+  input: ReportOfferInput,
+): Promise<void> {
+  await authedRaw(`/reports/${reportId}/offer`, {
+    method: 'POST',
+    body: JSON.stringify({
+      title: input.title.trim(),
+      description: input.description.trim(),
+      resourceType: input.resourceType,
+    }),
+  });
+}
+
 // Comunidad: eventos públicos y foro. Lectura tolerante a los nombres de campo.
 // Sin datos de ejemplo: si el endpoint no existe o falla, la pantalla muestra su
 // estado vacío (no inventa eventos ni publicaciones). Enciende cuando Isabel los
