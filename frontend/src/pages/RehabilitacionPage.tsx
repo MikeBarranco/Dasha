@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Search, SlidersHorizontal, Heart, ChevronRight } from 'lucide-react';
+import { Search, SlidersHorizontal, Heart, ChevronRight, Flower2 } from 'lucide-react';
 import { ErrorState } from '../components/ui/ErrorState';
 import { PageHeader } from '../components/ui/PageHeader';
 import { ProgressBar } from '../components/ui/ProgressBar';
@@ -158,6 +158,22 @@ export function RehabilitacionPage() {
           <span className="block text-sm font-semibold text-purpura">Álbum de adoptados</span>
           <span className="block text-xs text-neutral-500">
             Mira los finales felices y cómo van creciendo en su hogar.
+          </span>
+        </span>
+        <ChevronRight className="h-5 w-5 flex-shrink-0 text-neutral-400" />
+      </Link>
+
+      <Link
+        to="/memorial"
+        className="mb-4 flex items-center gap-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3 transition-colors hover:bg-neutral-100"
+      >
+        <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-neutral-200/70 text-neutral-500">
+          <Flower2 className="h-5 w-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-neutral-700">Los que recordamos</span>
+          <span className="block text-xs text-neutral-500">
+            Un espacio para honrar a los que no lograron salir adelante.
           </span>
         </span>
         <ChevronRight className="h-5 w-5 flex-shrink-0 text-neutral-400" />
