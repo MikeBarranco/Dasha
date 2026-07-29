@@ -247,34 +247,43 @@ export class ForumController {
 
 
 
-  // POST /forum/replies/:id/vote
-  static async voteReply(req: Request, res: Response, next: NextFunction) {
+  // POST /forum/replies/:id/like
+  static async toggleLikeReply(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = (req as any).user?.id;
       const replyId = req.params.id as string;
-      const { value } = req.body;
 
-      if (value !== 1 && value !== -1) {
-        res.status(400).json({ error: 'Valor de voto inválido' });
-        return;
+      const existingVote = await prisma.forumVote.findUnique({
+        where: { userId_replyId: { userId, replyId } }
+      });
+
+      let increment = 0;
+
+      if (existingVote && existingVote.value === 1) {
+        await prisma.forumVote.delete({
+          where: { userId_replyId: { userId, replyId } }
+        });
+        increment = -1;
+      } else if (existingVote && existingVote.value === -1) {
+        await prisma.forumVote.update({
+          where: { userId_replyId: { userId, replyId } },
+          data: { value: 1 }
+        });
+        increment = 2;
+      } else {
+        await prisma.forumVote.create({
+          data: { userId, replyId, value: 1 }
+        });
+        increment = 1;
       }
 
-      await prisma.forumVote.upsert({
-        where: { userId_replyId: { userId, replyId } },
-        update: { value },
-        create: { userId, replyId, value }
-      });
-
-      // Recalcular votos totales
-      const allVotes = await prisma.forumVote.findMany({ where: { replyId } });
-      const total = allVotes.reduce((acc, v) => acc + v.value, 0);
-
-      await prisma.forumReply.update({
+      const reply = await prisma.forumReply.update({
         where: { id: replyId },
-        data: { upvotes: total }
+        data: { upvotes: { increment } },
+        select: { upvotes: true }
       });
 
-      res.status(200).json({ message: 'Voto registrado', totalVotes: total });
+      res.status(200).json({ message: 'Like procesado', totalVotes: reply.upvotes });
     } catch (error) {
       next(error);
     }

@@ -235,7 +235,7 @@ export class UserController {
 
       // Buscar si el usuario pertenece a alguna organización a través de organization_employees
       const employee = await prisma.organizationEmployee.findFirst({
-        where: { userId },
+        where: { userId, isVerified: true },
         select: {
           roleInOrg: true,
           isVerified: true,
