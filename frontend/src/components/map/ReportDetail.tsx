@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import {
@@ -14,14 +14,35 @@ import {
   Check,
   Bell,
   BellRing,
+  HandHeart,
+  Loader2,
 } from 'lucide-react';
 import { ShareButton } from '../ui/ShareButton';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 import { useSheetDismiss } from '../../lib/useSheetDismiss';
 import { useAuth } from '../../lib/useAuth';
-import { acceptReport, reportStreetReport, followReport, unfollowReport } from '../../lib/api';
+import {
+  acceptReport,
+  reportStreetReport,
+  followReport,
+  unfollowReport,
+  getMyOrganization,
+  postReportOffer,
+  type OfferResourceType,
+} from '../../lib/api';
 import { cn } from '../../lib/cn';
 import type { Report, Severity } from '../../data/mockReports';
+
+// Tipos de recurso que un aliado puede ofrecer, con etiqueta en español.
+const offerResourceOptions: { value: OfferResourceType; label: string }[] = [
+  { value: 'medical_service', label: 'Consulta o servicio médico' },
+  { value: 'money', label: 'Dinero' },
+  { value: 'food', label: 'Alimento' },
+  { value: 'transport', label: 'Transporte' },
+  { value: 'foster', label: 'Hogar temporal' },
+  { value: 'supplies', label: 'Insumos' },
+  { value: 'other', label: 'Otro' },
+];
 
 const REPORTED_STORAGE_KEY = 'dasha:reportes:reportados';
 
@@ -86,6 +107,51 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
     setFollowing(next);
     const action = next ? followReport(report.id) : unfollowReport(report.id);
     action.catch(() => setFollowing(!next));
+  };
+
+  // Oferta del aliado: solo si el usuario en sesión pertenece a una organización.
+  // Preguntamos al backend al abrir la ficha (una vez, solo con sesión).
+  const [isAlly, setIsAlly] = useState(false);
+  const [offering, setOffering] = useState(false);
+  const [offerTitle, setOfferTitle] = useState('');
+  const [offerDescription, setOfferDescription] = useState('');
+  const [offerType, setOfferType] = useState<OfferResourceType>('medical_service');
+  const [offerSaving, setOfferSaving] = useState(false);
+  const [offerSent, setOfferSent] = useState(false);
+  const [offerError, setOfferError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!account) return;
+    let active = true;
+    getMyOrganization()
+      .then((ctx) => {
+        if (active) setIsAlly(Boolean(ctx));
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [account]);
+
+  const offerReady = offerTitle.trim().length >= 3 && offerDescription.trim().length >= 5;
+
+  const submitOffer = async () => {
+    if (!offerReady || offerSaving) return;
+    setOfferSaving(true);
+    setOfferError(null);
+    try {
+      await postReportOffer(report.id, {
+        title: offerTitle,
+        description: offerDescription,
+        resourceType: offerType,
+      });
+      setOfferSent(true);
+      setOffering(false);
+    } catch (err) {
+      setOfferError(err instanceof Error ? err.message : 'No se pudo enviar la oferta.');
+    } finally {
+      setOfferSaving(false);
+    }
   };
 
   // Denuncia del reporte (falso / foto de internet). POST /reports/:id/report.
@@ -313,6 +379,21 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
             )}
           </div>
 
+          {isAlly &&
+            (offerSent ? (
+              <p className="mt-3 flex items-center justify-center gap-1.5 rounded-xl bg-exito/5 py-2.5 text-sm font-medium text-exito">
+                <Check className="h-4 w-4" /> Enviaste tu oferta de ayuda. ¡Gracias!
+              </p>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setOffering(true)}
+                className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-cobalto/30 py-2.5 text-sm font-semibold text-cobalto transition-colors hover:bg-cobalto/5"
+              >
+                <HandHeart className="h-4 w-4" /> Ofrecer ayuda de mi aliado
+              </button>
+            ))}
+
           <div className="mt-4 border-t border-neutral-100 pt-3 text-center">
             {reported ? (
               <span className="inline-flex items-center gap-1.5 text-xs text-neutral-400">
@@ -330,6 +411,86 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
           </div>
         </div>
       </motion.div>
+
+      {offering && (
+        <div className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => (offerSaving ? undefined : setOffering(false))}
+            aria-hidden="true"
+          />
+          <div className="relative w-full max-w-sm rounded-t-3xl bg-white p-5 shadow-xl sm:rounded-3xl">
+            <div className="flex items-center justify-between">
+              <h3 className="font-display text-lg font-bold text-cobalto">Ofrecer ayuda</h3>
+              <button
+                type="button"
+                onClick={() => setOffering(false)}
+                disabled={offerSaving}
+                aria-label="Cerrar"
+                className="rounded-full p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 disabled:opacity-50"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="mt-1 text-sm text-neutral-500">
+              Desde tu aliado, ofrece algo para este animalito. El voluntario y el ciudadano lo
+              verán en el reporte.
+            </p>
+            <div className="mt-3 space-y-3">
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-neutral-500">Tipo de ayuda</span>
+                <select
+                  value={offerType}
+                  onChange={(event) => setOfferType(event.target.value as OfferResourceType)}
+                  className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-700 outline-none focus:ring-2 focus:ring-cobalto/30"
+                >
+                  {offerResourceOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-neutral-500">Título</span>
+                <input
+                  value={offerTitle}
+                  onChange={(event) => setOfferTitle(event.target.value)}
+                  maxLength={80}
+                  placeholder="Ej. Cubrimos la revisión"
+                  className="w-full rounded-xl border border-neutral-200 px-3 py-2.5 text-sm text-neutral-700 outline-none focus:ring-2 focus:ring-cobalto/30"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-neutral-500">Detalle</span>
+                <textarea
+                  value={offerDescription}
+                  onChange={(event) => setOfferDescription(event.target.value)}
+                  maxLength={300}
+                  rows={3}
+                  placeholder="Si un voluntario lo trae a nuestra clínica, cubrimos la primera revisión."
+                  className="w-full resize-none rounded-xl border border-neutral-200 p-3 text-sm text-neutral-700 outline-none focus:ring-2 focus:ring-cobalto/30"
+                />
+              </label>
+            </div>
+            {offerError && <p className="mt-2 text-sm text-alerta">{offerError}</p>}
+            <button
+              type="button"
+              onClick={submitOffer}
+              disabled={!offerReady || offerSaving}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-cobalto py-3 font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+            >
+              {offerSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Enviando…
+                </>
+              ) : (
+                'Enviar oferta'
+              )}
+            </button>
+          </div>
+        </div>
+      )}
 
       {reporting && (
         <div className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center">
