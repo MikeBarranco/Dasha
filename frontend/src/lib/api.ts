@@ -977,6 +977,8 @@ export type MyOrgInput = {
   name: string;
   slogan?: string;
   description?: string;
+  // Promoción/oferta del aliado (texto libre hasta 500). Se muestra en su ficha.
+  promo?: string;
   schedule?: string;
   address?: string;
   phone?: string;
@@ -1993,6 +1995,7 @@ type RawAlly = {
   isVerified: boolean;
   lat: number;
   lng: number;
+  promo?: string | null;
 };
 
 const allyTypes: AllyType[] = ['veterinary', 'shelter', 'ngo', 'educational'];
@@ -2012,6 +2015,7 @@ export async function getAllies(): Promise<Ally[]> {
     isVerified: Boolean(raw.isVerified),
     lat: Number(raw.lat),
     lng: Number(raw.lng),
+    promo: raw.promo ?? null,
   }));
 }
 

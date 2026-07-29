@@ -24,6 +24,7 @@ export function PortalPerfilPage() {
   const [name, setName] = useState('');
   const [slogan, setSlogan] = useState('');
   const [description, setDescription] = useState('');
+  const [promo, setPromo] = useState('');
   const [schedule, setSchedule] = useState('');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
@@ -54,6 +55,7 @@ export function PortalPerfilPage() {
           setName(found.name ?? '');
           setSlogan(found.slogan ?? '');
           setDescription(found.description ?? '');
+          setPromo(found.promo ?? '');
           setSchedule(found.schedule ?? '');
           setAddress(found.address ?? '');
           setPhone(found.phone ?? '');
@@ -97,6 +99,7 @@ export function PortalPerfilPage() {
       name: cleanName,
       slogan: slogan.trim() || undefined,
       description: description.trim() || undefined,
+      promo: promo.trim() || undefined,
       schedule: schedule.trim() || undefined,
       address: address.trim() || undefined,
       phone: phone.trim() || undefined,
@@ -115,6 +118,7 @@ export function PortalPerfilPage() {
               name: cleanName,
               slogan: input.slogan,
               description: input.description ?? '',
+              promo: input.promo ?? null,
               schedule: input.schedule,
               address: input.address ?? '',
               phone: input.phone ?? null,
@@ -246,6 +250,20 @@ export function PortalPerfilPage() {
             className={`${inputClass} resize-none`}
             placeholder="Qué hacen y cómo ayudan a los animalitos"
           />
+        </Field>
+
+        <Field label="Promoción u oferta (opcional)">
+          <textarea
+            value={promo}
+            onChange={(event) => setPromo(event.target.value)}
+            maxLength={500}
+            rows={2}
+            className={`${inputClass} resize-none`}
+            placeholder="Ej. 50% de descuento en vacunas los martes"
+          />
+          <span className="mt-1 block text-xs text-neutral-400">
+            Se muestra como una promoción destacada en tu perfil público.
+          </span>
         </Field>
 
         <Field label="Horario">
