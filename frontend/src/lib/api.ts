@@ -344,6 +344,92 @@ export async function getReports(): Promise<Report[]> {
     }));
 }
 
+// Detalle enriquecido de un reporte (GET /reports/:id). Trae las fotos originales
+// + las de los avistamientos (para el carrusel), las ofertas de aliados, y la
+// fecha de creación (para calcular cuánto lleva en la calle). Contrato de Isabel
+// (28 jul). Se lee tolerante a la forma.
+export type ReportSighting = {
+  id: string;
+  photoUrl: string;
+  description: string;
+  createdAt: string;
+};
+
+export type ReportOffer = {
+  id: string;
+  title: string;
+  description: string;
+  resourceType: string;
+  organizationName: string;
+};
+
+export type ReportDetailData = {
+  createdAt: string;
+  // Fotos para el carrusel: las originales del reporte + las de los avistamientos.
+  photos: string[];
+  sightings: ReportSighting[];
+  offers: ReportOffer[];
+};
+
+function strField(raw: Record<string, unknown>, ...keys: string[]): string {
+  for (const key of keys) {
+    const value = raw[key];
+    if (typeof value === 'string' && value) return value;
+  }
+  return '';
+}
+
+export async function getReportDetail(id: string): Promise<ReportDetailData> {
+  const body = await requestRaw<Record<string, unknown> | null>(`/reports/${id}`);
+  const raw =
+    body && typeof body === 'object'
+      ? ('data' in body && body.data && typeof body.data === 'object'
+          ? (body.data as Record<string, unknown>)
+          : (body as Record<string, unknown>))
+      : {};
+
+  // Fotos originales: arreglo de { url, publicId } o de strings.
+  const rawPhotos = Array.isArray(raw.photos) ? (raw.photos as unknown[]) : [];
+  const originalPhotos = rawPhotos
+    .map((item) =>
+      typeof item === 'string' ? item : strField(item as Record<string, unknown>, 'url', 'photoUrl'),
+    )
+    .filter(Boolean);
+
+  const rawSightings = Array.isArray(raw.sightings) ? (raw.sightings as unknown[]) : [];
+  const sightings: ReportSighting[] = rawSightings
+    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object')
+    .map((item) => ({
+      id: strField(item, 'id', '_id'),
+      photoUrl: strField(item, 'photoUrl', 'photo_url', 'url'),
+      description: strField(item, 'description'),
+      createdAt: strField(item, 'createdAt', 'created_at'),
+    }));
+
+  const rawOffers = Array.isArray(raw.offers) ? (raw.offers as unknown[]) : [];
+  const offers: ReportOffer[] = rawOffers
+    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object')
+    .map((item) => ({
+      id: strField(item, 'id', '_id'),
+      title: strField(item, 'title'),
+      description: strField(item, 'description'),
+      resourceType: strField(item, 'resourceType', 'resource_type') || 'other',
+      organizationName:
+        strField(item, 'organizationName', 'organization_name', 'orgName') || 'Aliado',
+    }));
+
+  // Para el carrusel: fotos originales primero, luego las de los avistamientos.
+  const sightingPhotos = sightings.map((s) => s.photoUrl).filter(Boolean);
+  const photos = [...originalPhotos, ...sightingPhotos];
+
+  return {
+    createdAt: strField(raw, 'createdAt', 'created_at'),
+    photos,
+    sightings,
+    offers,
+  };
+}
+
 export type Stats = {
   reportesActivos: number;
   rescatesLogrados: number;

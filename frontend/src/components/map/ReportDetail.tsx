@@ -28,7 +28,9 @@ import {
   unfollowReport,
   getMyOrganization,
   postReportOffer,
+  getReportDetail,
   type OfferResourceType,
+  type ReportDetailData,
 } from '../../lib/api';
 import { cn } from '../../lib/cn';
 import type { Report, Severity } from '../../data/mockReports';
@@ -43,6 +45,22 @@ const offerResourceOptions: { value: OfferResourceType; label: string }[] = [
   { value: 'supplies', label: 'Insumos' },
   { value: 'other', label: 'Otro' },
 ];
+
+function resourceTypeLabel(value: string): string {
+  return offerResourceOptions.find((option) => option.value === value)?.label ?? 'Ayuda';
+}
+
+// "hace X" a partir de una fecha ISO, para saber cuánto lleva reportado / cuándo
+// se vio por última vez.
+function sinceLabel(iso: string): string {
+  if (!iso) return '';
+  const minutes = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (minutes < 60) return `hace ${Math.max(1, minutes)} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `hace ${hours} h`;
+  const days = Math.floor(hours / 24);
+  return `hace ${days} ${days === 1 ? 'día' : 'días'}`;
+}
 
 const REPORTED_STORAGE_KEY = 'dasha:reportes:reportados';
 
@@ -96,6 +114,41 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
 
   const isVolunteer = account?.role === 'volunteer' || account?.role === 'admin';
 
+  // Detalle enriquecido (fotos originales + avistamientos + ofertas). Se pide al
+  // abrir la ficha; el listado del mapa no trae estos campos.
+  const [detail, setDetail] = useState<ReportDetailData | null>(null);
+  const [heroIndex, setHeroIndex] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    getReportDetail(report.id)
+      .then((data) => {
+        if (active) setDetail(data);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [report.id]);
+
+  // Fotos del carrusel: las del detalle (originales + avistamientos); si el
+  // detalle aún no carga, al menos la foto principal del listado.
+  const detailPhotos = (detail?.photos ?? []).filter(
+    (url) => url && url !== '/placeholder-animal.svg',
+  );
+  const galleryPhotos = detailPhotos.length > 0 ? detailPhotos : [report.photo];
+  const heroPhoto = galleryPhotos[Math.min(heroIndex, galleryPhotos.length - 1)] ?? report.photo;
+
+  // Cuánto lleva en la calle: del reporte al último avistamiento.
+  const lastSightingAt = (detail?.sightings ?? [])
+    .map((sighting) => sighting.createdAt)
+    .filter(Boolean)
+    .sort()
+    .at(-1);
+  const reportedSince = detail?.createdAt ? sinceLabel(detail.createdAt) : '';
+  const lastSeenSince = lastSightingAt ? sinceLabel(lastSightingAt) : '';
+  const offers = detail?.offers ?? [];
+
   // Seguir el reporte: recibir push cuando cambie de estado. Optimista.
   const [following, setFollowing] = useState(Boolean(report.isFollowing));
   const toggleFollow = () => {
@@ -147,6 +200,10 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
       });
       setOfferSent(true);
       setOffering(false);
+      // Refresca el detalle para que la oferta recién enviada salga en la lista.
+      getReportDetail(report.id)
+        .then((data) => setDetail(data))
+        .catch(() => {});
     } catch (err) {
       setOfferError(err instanceof Error ? err.message : 'No se pudo enviar la oferta.');
     } finally {
@@ -241,7 +298,7 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
             aria-label="Ver foto completa"
           >
             <img
-              src={report.photo}
+              src={heroPhoto}
               alt={report.condition}
               onError={(event) => {
                 event.currentTarget.onerror = null;
@@ -273,6 +330,33 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
           </span>
         </div>
 
+        {/* Carrusel: fotos originales del reporte + las de los avistamientos. */}
+        {galleryPhotos.length > 1 && (
+          <div className="flex gap-2 overflow-x-auto px-4 pt-3">
+            {galleryPhotos.map((url, index) => (
+              <button
+                key={`${url}-${index}`}
+                type="button"
+                onClick={() => setHeroIndex(index)}
+                className={cn(
+                  'h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg border-2 transition-colors',
+                  index === heroIndex ? 'border-cobalto' : 'border-transparent',
+                )}
+              >
+                <img
+                  src={url}
+                  alt=""
+                  onError={(event) => {
+                    event.currentTarget.onerror = null;
+                    event.currentTarget.src = '/placeholder-animal.svg';
+                  }}
+                  className="h-full w-full object-cover"
+                />
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="p-5">
           <h2 className="font-display text-xl font-bold text-cobalto">
             {report.species === 'perro' ? 'Perro' : 'Gato'} · {report.condition}
@@ -286,6 +370,17 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
               <MapPin className="h-4 w-4" /> {report.colonia}
             </span>
           </div>
+
+          {/* Cuánto lleva en la calle: reportado + último avistamiento. */}
+          {reportedSince && (
+            <p className="mt-2 rounded-lg bg-neutral-50 px-3 py-2 text-xs text-neutral-500">
+              En seguimiento: reportado {reportedSince}
+              {lastSeenSince && lastSeenSince !== reportedSince
+                ? ` · visto por última vez ${lastSeenSince}`
+                : ''}
+              .
+            </p>
+          )}
 
           <p className="mt-3 text-sm text-neutral-600">{report.description}</p>
 
@@ -378,6 +473,39 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
               </>
             )}
           </div>
+
+          {offers.length > 0 && (
+            <div className="mt-5">
+              <p className="flex items-center gap-1.5 text-sm font-semibold text-cobalto">
+                <HandHeart className="h-4 w-4" /> Aliados que ofrecen ayuda
+              </p>
+              <ul className="mt-2 space-y-2">
+                {offers.map((offer) => (
+                  <li
+                    key={offer.id}
+                    className="rounded-xl border border-cobalto/15 bg-cobalto/5 p-3"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="min-w-0 truncate text-sm font-semibold text-neutral-800">
+                        {offer.title}
+                      </p>
+                      <span className="flex-shrink-0 rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-cobalto">
+                        {resourceTypeLabel(offer.resourceType)}
+                      </span>
+                    </div>
+                    {offer.description && (
+                      <p className="mt-1 text-xs leading-relaxed text-neutral-600">
+                        {offer.description}
+                      </p>
+                    )}
+                    <p className="mt-1 text-[11px] font-medium text-neutral-400">
+                      {offer.organizationName}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {isAlly &&
             (offerSent ? (
@@ -569,7 +697,7 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
             onClick={() => setShowPhoto(false)}
           >
             <img
-              src={report.photo}
+              src={heroPhoto}
               alt={report.condition}
               onError={(event) => {
                 event.currentTarget.onerror = null;
