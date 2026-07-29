@@ -1971,6 +1971,7 @@ export async function getAlly(id: string): Promise<Ally | null> {
     lng: Number(raw.lng ?? 0),
     schedule: allyStr(raw.schedule) || undefined,
     slogan: allyStr(raw.slogan) || undefined,
+    promo: allyStr(raw.promo) || null,
     coverUrl: allyStr(raw.coverUrl ?? raw.cover_url) || null,
     team: teamRaw.map((member) => mapAllyMember(member as Record<string, unknown>)),
     animals: animalsRaw.map((animal) => mapAllyAnimalLite(animal as Record<string, unknown>)),

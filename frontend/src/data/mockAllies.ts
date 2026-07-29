@@ -51,6 +51,9 @@ export type Ally = {
   lng: number;
   schedule?: string;
   slogan?: string;
+  // Promoción/oferta que el aliado ofrece (texto libre hasta 500), null si no
+  // tiene. Ej. "50% de descuento en vacunas los martes".
+  promo?: string | null;
   coverUrl?: string | null;
   team?: AllyMember[];
   animals?: AllyAnimal[];
