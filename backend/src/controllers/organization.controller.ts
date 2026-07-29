@@ -19,6 +19,7 @@ export class OrganizationController {
           ST_Y(location::geometry) as lat
         FROM organizations
         WHERE is_active = true
+          AND is_verified = true
           AND location IS NOT NULL
         ORDER BY created_at DESC;
       `;
