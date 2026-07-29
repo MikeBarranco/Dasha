@@ -20,6 +20,7 @@ import {
   HandHeart,
   AlertCircle,
   RefreshCw,
+  Tag,
 } from 'lucide-react';
 import { ShareButton } from '../components/ui/ShareButton';
 import { Avatar } from '../components/ui/Avatar';
@@ -212,6 +213,18 @@ export function AllyProfilePage() {
       <div className="px-1">
         {ally.description && (
           <p className="mt-4 text-sm leading-relaxed text-neutral-600">{ally.description}</p>
+        )}
+
+        {ally.promo && (
+          <div className="mt-4 flex items-start gap-3 rounded-2xl border border-naranja/30 bg-naranja/5 p-3.5">
+            <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-naranja/10 text-naranja">
+              <Tag className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-wide text-naranja">Promoción</p>
+              <p className="mt-0.5 text-sm leading-relaxed text-neutral-700">{ally.promo}</p>
+            </div>
+          </div>
         )}
 
         <div className="mt-4 flex flex-wrap gap-2">
