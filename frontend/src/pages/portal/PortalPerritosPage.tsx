@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence } from 'motion/react';
-import { PawPrint, AlertCircle, ChevronRight } from 'lucide-react';
+import { PawPrint, AlertCircle, ChevronRight, Plus } from 'lucide-react';
 import { PortalAnimalSheet } from '../../components/portal/PortalAnimalSheet';
+import { PortalDirectIntakeSheet } from '../../components/portal/PortalDirectIntakeSheet';
 import { getMyOrgAnimals } from '../../lib/api';
 import { mockAnimals, type Animal } from '../../data/mockAnimals';
 import { mockAllies as allies } from '../../data/mockAllies';
@@ -32,25 +33,39 @@ export function PortalPerritosPage() {
   );
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [intakeOpen, setIntakeOpen] = useState(false);
 
-  useEffect(() => {
-    if (ctx.preview) return;
-    let active = true;
+  // Carga los animales del aliado; el setState va en el .then (no síncrono).
+  const fetchAnimals = (isActive: () => boolean) => {
     getMyOrgAnimals(ctx.adminOrgId)
       .then((data) => {
-        if (!active) return;
+        if (!isActive()) return;
         setAnimals(data);
         setError(null);
       })
       .catch((err: unknown) => {
-        if (!active) return;
+        if (!isActive()) return;
         setError(err instanceof Error ? err.message : 'No se pudieron cargar los perritos');
         setAnimals([]);
       });
+  };
+
+  useEffect(() => {
+    if (ctx.preview) return;
+    let active = true;
+    fetchAnimals(() => active);
     return () => {
       active = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ctx.preview, ctx.adminOrgId]);
+
+  // Tras dar de alta un animal, recarga la lista (event handler, reset síncrono ok).
+  const reloadAfterIntake = () => {
+    setAnimals(null);
+    setError(null);
+    fetchAnimals(() => true);
+  };
 
   const onUpdated = (id: string, patch: Partial<Animal>) => {
     setAnimals((current) =>
@@ -62,10 +77,23 @@ export function PortalPerritosPage() {
 
   return (
     <div>
-      <h1 className="font-display text-xl font-bold text-cobalto">Mis perritos</h1>
-      <p className="mt-1 text-sm text-neutral-500">
-        Los animalitos que atiendes. Toca uno para ver su seguimiento y actualizar su estatus.
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="font-display text-xl font-bold text-cobalto">Mis perritos</h1>
+          <p className="mt-1 text-sm text-neutral-500">
+            Los animalitos que atiendes. Toca uno para ver su seguimiento y actualizar su estatus.
+          </p>
+        </div>
+        {!ctx.preview && (
+          <button
+            type="button"
+            onClick={() => setIntakeOpen(true)}
+            className="flex flex-shrink-0 items-center gap-1.5 rounded-xl bg-cobalto px-3 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+          >
+            <Plus className="h-4 w-4" /> Dar de alta
+          </button>
+        )}
+      </div>
 
       <div className="mt-5">
         {animals === null && (
@@ -86,10 +114,20 @@ export function PortalPerritosPage() {
 
         {animals !== null && !error && animals.length === 0 && (
           <div className="rounded-2xl border border-dashed border-neutral-300 bg-white/60 px-6 py-12 text-center">
-            <p className="font-semibold text-neutral-700">Aún no tienes perritos asignados</p>
+            <p className="font-semibold text-neutral-700">Aún no tienes perritos</p>
             <p className="mt-1 text-sm text-neutral-500">
-              Cuando recibas un rescate aparecerá aquí para darle seguimiento.
+              Cuando recibas un rescate aparecerá aquí. Y si ya tienes un animalito listo para
+              adopción, dalo de alta directamente.
             </p>
+            {!ctx.preview && (
+              <button
+                type="button"
+                onClick={() => setIntakeOpen(true)}
+                className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-cobalto px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              >
+                <Plus className="h-4 w-4" /> Dar de alta un animal
+              </button>
+            )}
           </div>
         )}
 
@@ -144,6 +182,16 @@ export function PortalPerritosPage() {
             orgId={ctx.adminOrgId}
             onClose={() => setSelectedId(null)}
             onUpdated={onUpdated}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {intakeOpen && (
+          <PortalDirectIntakeSheet
+            orgId={ctx.adminOrgId}
+            onClose={() => setIntakeOpen(false)}
+            onCreated={reloadAfterIntake}
           />
         )}
       </AnimatePresence>

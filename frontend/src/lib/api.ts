@@ -1438,6 +1438,39 @@ export async function addMyOrgAnimalPhoto(
   });
 }
 
+// Alta directa de un animal para adopción, SIN pasar por un rescate (un refugio
+// que ya tiene perritos propios). Backend: POST /portal/animals/direct-intake,
+// que crea un "reporte fantasma" (status closed) para respetar la FK reportId;
+// nosotros solo mandamos los datos del animal (guia_api_frontend_miguel2.md, 3).
+// Usamos las MISMAS convenciones que el reporte (dog/cat, small/medium/large,
+// photosBase64). OJO: Isabel dio la ruta pero no el detalle exacto del body
+// ("nombre, especie, etc."); si algún campo no cuadra, se ajusta el nombre aquí.
+export type DirectIntakeInput = {
+  name: string;
+  species: 'dog' | 'cat';
+  size: 'small' | 'medium' | 'large';
+  primaryColor: string;
+  description?: string;
+  photosBase64: string[];
+};
+
+export async function createDirectIntakeAnimal(
+  input: DirectIntakeInput,
+  orgId?: string,
+): Promise<void> {
+  await authedRaw(`/portal/animals/direct-intake${orgScope(orgId)}`, {
+    method: 'POST',
+    body: JSON.stringify({
+      name: input.name.trim(),
+      species: input.species,
+      size: input.size,
+      primaryColor: input.primaryColor,
+      description: input.description?.trim() || undefined,
+      photosBase64: input.photosBase64,
+    }),
+  });
+}
+
 // Cartilla médica del animal (esterilización + registros clínicos). El aliado la
 // edita desde su portal. Backend: /me/organization/animals/:id/medical (spec en
 // pendientes-isabel.md, cartilla médica). Se usa best-effort; si el endpoint aún
