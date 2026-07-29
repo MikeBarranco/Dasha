@@ -1273,6 +1273,13 @@ export async function getAdoptedAnimals(): Promise<Animal[]> {
   return (data ?? []).map(mapAnimal);
 }
 
+// Memorial "Los que recordamos": animales que fallecieron durante o después del
+// rescate. Contrato de Isabel: GET /animals?status=deceased (no hay ruta estática).
+export async function getDeceasedAnimals(): Promise<Animal[]> {
+  const data = await requestRaw<RawAnimal[]>('/animals?status=deceased');
+  return (data ?? []).map(mapAnimal);
+}
+
 // Los adoptados del usuario en sesión (para que la familia agregue momentos).
 // GET /me/adopted -> solo los animales que ESTE usuario adoptó.
 export async function getMyAdoptedAnimals(): Promise<Animal[]> {
