@@ -191,7 +191,47 @@ export class ReportService {
       return null;
     }
 
-    return this.formatReportForFrontend(reports[0]);
+    const formattedReport = this.formatReportForFrontend(reports[0]);
+
+    // 2. Fetch additional data for the detailed view
+    const photos = await prisma.reportPhoto.findMany({
+      where: { reportId: id },
+      orderBy: { createdAt: 'asc' }
+    });
+
+    const sightings = await prisma.caseAction.findMany({
+      where: { reportId: id, actionType: 'sighting_added' },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const offers = await prisma.resource.findMany({
+      where: { reportId: id, status: 'offered' },
+      include: { organization: { select: { name: true } } },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return {
+      ...formattedReport,
+      photos: photos.map(p => ({ url: p.url, publicId: p.publicId })),
+      sightings: sightings.map(s => {
+        const meta = s.metadata as any || {};
+        return {
+          id: s.id,
+          photoUrl: meta.photoUrl,
+          lat: meta.lat,
+          lng: meta.lng,
+          description: s.description,
+          createdAt: s.createdAt
+        };
+      }),
+      offers: offers.map(o => ({
+        id: o.id,
+        title: o.title,
+        description: o.description,
+        resourceType: o.resourceType,
+        organizationName: o.organization?.name || 'Aliado'
+      }))
+    };
   }
 
   /**
