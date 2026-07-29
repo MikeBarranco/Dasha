@@ -529,7 +529,7 @@ export class AdminController {
             userId: targetUser.id,
             title: '¡Ahora eres aliado!',
             body: `Has sido agregado como responsable de la organización ${org.name}. Bienvenido a la red de aliados.`,
-            type: 'system_alert',
+            type: 'system',
             link: '/portal'
           });
         }

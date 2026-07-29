@@ -61,7 +61,7 @@ export class OrganizationApplicationController {
           userId: admin.id,
           title: 'Nueva postulación de aliado',
           body: `Se ha recibido una nueva postulación para ${org.name}.`,
-          type: 'system_alert',
+          type: 'system',
           link: '/admin/organizations'
         })
       );
@@ -131,7 +131,7 @@ export class OrganizationApplicationController {
             userId: applicantId,
             title: '¡Postulación Aprobada!',
             body: `Tu organización ${org.name} ha sido aprobada. ¡Bienvenido a la red!`,
-            type: 'system_alert',
+            type: 'system',
             link: '/portal'
           });
         }
@@ -158,7 +158,7 @@ export class OrganizationApplicationController {
             userId: applicantId,
             title: 'Postulación Rechazada',
             body: `Tu solicitud para ${org.name} fue rechazada: ${rejectionReason || 'No cumple con los requisitos.'}`,
-            type: 'system_alert',
+            type: 'system',
             link: '/'
           });
         }
