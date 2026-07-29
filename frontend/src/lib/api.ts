@@ -314,6 +314,8 @@ type ListedReport = {
   createdAt: string;
   activeAssignmentId?: string | null;
   active_assignment_id?: string | null;
+  isFollowing?: boolean;
+  is_following?: boolean;
 };
 
 export async function getReports(): Promise<Report[]> {
@@ -338,6 +340,7 @@ export async function getReports(): Promise<Report[]> {
       status: raw.status ? (statusLabels[raw.status] ?? raw.status) : 'Activo',
       // Id del traslado en curso: habilita "Ver rescate en vivo" desde el pin del mapa.
       activeAssignmentId: raw.activeAssignmentId ?? raw.active_assignment_id ?? null,
+      isFollowing: Boolean(raw.isFollowing ?? raw.is_following ?? false),
     }));
 }
 
@@ -1567,6 +1570,17 @@ export async function followAnimal(animalId: string): Promise<void> {
 
 export async function unfollowAnimal(animalId: string): Promise<void> {
   await authedRaw(`/animals/${animalId}/follow`, { method: 'DELETE' });
+}
+
+// Seguir / dejar de seguir un REPORTE de calle para recibir push cuando cambie
+// de estado (voluntario en camino / rescatado). Backend: POST/DELETE
+// /reports/:id/follow (guia_api_frontend_miguel2.md, 6).
+export async function followReport(reportId: string): Promise<void> {
+  await authedRaw(`/reports/${reportId}/follow`, { method: 'POST' });
+}
+
+export async function unfollowReport(reportId: string): Promise<void> {
+  await authedRaw(`/reports/${reportId}/follow`, { method: 'DELETE' });
 }
 
 // Comunidad: eventos públicos y foro. Lectura tolerante a los nombres de campo.

@@ -15,6 +15,9 @@ export type Report = {
   // Si hay un traslado en curso (voluntario en camino), el backend manda el id
   // de la asignación para poder abrir el seguimiento en vivo tipo Uber.
   activeAssignmentId?: string | null;
+  // Si el usuario en sesión ya sigue este reporte (para recibir avisos de cambio
+  // de estado). El backend lo manda cuando hay sesión.
+  isFollowing?: boolean;
 };
 
 export const mockReports: Report[] = [
