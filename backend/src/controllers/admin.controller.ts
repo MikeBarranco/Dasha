@@ -338,9 +338,10 @@ export class AdminController {
           address, phone, whatsapp, org_type as "orgType", is_active as "isActive",
           is_verified as "isVerified", created_at as "createdAt", website,
           ST_X(location::geometry) as lng,
-          ST_Y(location::geometry) as lat
+          ST_Y(location::geometry) as lat,
+          is_approved as "isApproved"
         FROM organizations
-        WHERE is_verified = true AND is_active = true
+        WHERE is_approved = true AND is_active = true
         ORDER BY created_at DESC;
       `;
       res.status(200).json(orgs);
@@ -596,8 +597,20 @@ export class AdminController {
     try {
       const { photosBase64, ...data } = req.body; // photosBase64 is an array of strings
       
+      const userId = (req as any).user?.id;
       const animal = await prisma.animalProfile.create({
-        data
+        data: {
+          ...data,
+          report: {
+            create: {
+              userId: userId || data.organizationId, // Fallback if no user context
+              species: data.species || 'dog',
+              status: 'closed',
+              address: 'Alta manual desde admin',
+              description: 'Reporte fantasma creado automáticamente por alta de administrador'
+            }
+          }
+        }
       });
 
       if (photosBase64 && Array.isArray(photosBase64)) {

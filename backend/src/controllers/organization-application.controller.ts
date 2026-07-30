@@ -77,7 +77,7 @@ export class OrganizationApplicationController {
   static async getApplications(req: Request, res: Response, next: NextFunction) {
     try {
       const applications = await prisma.organization.findMany({
-        where: { isVerified: false, isActive: true },
+        where: { isApproved: false, isActive: true },
         include: {
           employees: {
             where: { roleInOrg: 'admin' },
@@ -118,7 +118,7 @@ export class OrganizationApplicationController {
         await prisma.$transaction(async (tx) => {
           await tx.organization.update({
             where: { id },
-            data: { isVerified: true }
+            data: { isVerified: true, isApproved: true }
           });
           await tx.organizationEmployee.updateMany({
             where: { organizationId: id },

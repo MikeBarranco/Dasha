@@ -62,7 +62,12 @@ export class RescueAssignmentController {
         currentLocation,
         startLocation: locationRes[0]?.start_lat ? { lat: locationRes[0].start_lat, lng: locationRes[0].start_lng } : null,
         reportLocation: reportLoc[0]?.lat ? { lat: reportLoc[0].lat, lng: reportLoc[0].lng } : null,
-        orgLocation: orgLoc[0]?.lat ? { lat: orgLoc[0].lat, lng: orgLoc[0].lng } : null,
+        origin: reportLoc[0]?.lat ? { lat: reportLoc[0].lat, lng: reportLoc[0].lng } : null, // Mapeado para el frontend
+        destination: orgLoc[0]?.lat && assignment.report.destinationOrg ? { 
+          lat: orgLoc[0].lat, 
+          lng: orgLoc[0].lng,
+          organization: { name: assignment.report.destinationOrg.name }
+        } : null,
       });
     } catch (error) {
       next(error);

@@ -521,6 +521,7 @@ model Organization {
   promo           String?                                @db.VarChar(500)
   orgType         OrgType                                @map("org_type")
   isVerified      Boolean                                @default(false) @map("is_verified")
+  isApproved      Boolean                                @default(false) @map("is_approved")
   bankName        String?                                @map("bank_name") @db.VarChar(100)
   clabe           String?                                @db.VarChar(18)
   holderName      String?                                @map("holder_name") @db.VarChar(200)
@@ -559,7 +560,7 @@ model OrganizationEmployee {
 
 model AnimalProfile {
   id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  reportId        String        @unique @map("report_id") @db.Uuid
+  reportId        String?       @unique @map("report_id") @db.Uuid
   organizationId  String?       @map("organization_id") @db.Uuid
   name            String        @db.VarChar(100)
   species         Species
@@ -585,7 +586,7 @@ model AnimalProfile {
   createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz
   updatedAt       DateTime      @default(now()) @map("updated_at") @db.Timestamptz
 
-  report               Report                @relation(fields: [reportId], references: [id])
+  report               Report?               @relation(fields: [reportId], references: [id])
   organization         Organization?         @relation("AnimalOrganization", fields: [organizationId], references: [id])
   currentFoster        User?                 @relation("AnimalFoster", fields: [currentFosterId], references: [id])
   adopter              User?                 @relation("AnimalAdopter", fields: [adoptedByUserId], references: [id])
