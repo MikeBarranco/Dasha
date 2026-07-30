@@ -2360,9 +2360,18 @@ export async function getMyRescueAssignments(status?: RescueStatus): Promise<Res
 // .data). Buscamos el nodo de la asignación de forma robusta por si el contrato
 // la anida (assignment / report.assignment): si el id sale vacío NO redirigimos
 // al rescate en vivo, el usuario re-clica y el 2º intento da 403.
-export async function acceptReport(reportId: string): Promise<RescueAssignment | null> {
+// destinationOrgId: el aliado al que el voluntario llevará al animalito. Se manda
+// en el accept para que aparezca en "rescates entrantes" de ese aliado y alimente
+// la ruta. OJO: contrato por confirmar con Isabel (pendientes 6): dio el nombre
+// del campo pero no confirmó si va aquí o en un PATCH aparte; si cambia, es ajuste
+// de una línea.
+export async function acceptReport(
+  reportId: string,
+  destinationOrgId?: string,
+): Promise<RescueAssignment | null> {
   const raw = await authedRaw<Record<string, unknown> | null>(`/reports/${reportId}/accept`, {
     method: 'POST',
+    body: destinationOrgId ? JSON.stringify({ destinationOrgId }) : undefined,
   });
   const asRecord = (value: unknown): Record<string, unknown> | null =>
     value && typeof value === 'object' && !Array.isArray(value)
