@@ -7,6 +7,7 @@ import { cn } from '../lib/cn';
 import { createLostPetReport, type LostPetInput } from '../lib/lostPets';
 import { compressImage } from '../lib/image';
 import { useAuth } from '../lib/useAuth';
+import { onlyDigits } from '../lib/validation';
 
 const LocationPicker = lazy(() =>
   import('../components/map/LocationPicker').then((module) => ({ default: module.LocationPicker })),
@@ -142,7 +143,9 @@ export function ReportarPerdidaPage() {
       setDone(true);
     } catch (error) {
       console.error('Failed to create lost pet report', error);
-      alert('No se pudo publicar. Intenta de nuevo.');
+      // Mostramos el motivo real del backend (si lo hay) en vez de un genérico,
+      // para poder diagnosticar en lugar de quedarnos a ciegas.
+      alert(error instanceof Error ? error.message : 'No se pudo publicar. Intenta de nuevo.');
     } finally {
       setIsSubmitting(false);
     }
@@ -385,14 +388,19 @@ export function ReportarPerdidaPage() {
             <label className="mb-2 block text-sm font-medium text-neutral-700">
               Recompensa <span className="font-normal text-neutral-400">(opcional)</span>
             </label>
-            <input
-              type="text"
-              value={reward}
-              onChange={(event) => setReward(event.target.value)}
-              maxLength={60}
-              placeholder="Ej. $500 a quien lo encuentre"
-              className="w-full rounded-xl border border-neutral-200 p-3 text-base focus:border-purpura focus:outline-none"
-            />
+            {/* Monto en pesos: la columna del backend es DECIMAL(10,2), así que
+                solo números y máximo 8 dígitos enteros (hasta 99,999,999). */}
+            <div className="flex items-center rounded-xl border border-neutral-200 focus-within:border-purpura">
+              <span className="pl-3 text-base text-neutral-400">$</span>
+              <input
+                type="text"
+                value={reward}
+                onChange={(event) => setReward(onlyDigits(event.target.value, 8))}
+                inputMode="numeric"
+                placeholder="Ej. 500"
+                className="w-full rounded-xl bg-transparent p-3 text-base outline-none"
+              />
+            </div>
           </div>
         </div>
       )}
