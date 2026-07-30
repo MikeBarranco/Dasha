@@ -12,7 +12,6 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { useAuth } from '../lib/useAuth';
-import { RescueDestinationSheet } from '../components/map/RescueDestinationSheet';
 import {
   getMe,
   getVolunteerAvailability,
@@ -88,7 +87,6 @@ export function PanelVoluntarioPage() {
   const [nearbyError, setNearbyError] = useState(false);
   const [assignments, setAssignments] = useState<RescueAssignment[] | null>(null);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
-  const [destinationFor, setDestinationFor] = useState<Report | null>(null);
   const [refreshingNearby, setRefreshingNearby] = useState(false);
 
   useEffect(() => {
@@ -235,13 +233,12 @@ export function PanelVoluntarioPage() {
     }
   };
 
-  const acceptCase = async (report: Report, destinationOrgId?: string) => {
+  const acceptCase = async (report: Report) => {
     if (acceptingId) return;
     setAcceptingId(report.id);
     try {
-      const assignment = await acceptReport(report.id, destinationOrgId);
+      const assignment = await acceptReport(report.id);
       const rescueId = assignment?.id ? String(assignment.id).trim() : '';
-      setDestinationFor(null);
       if (rescueId) {
         navigate(`/rescate/${rescueId}`);
       } else {
@@ -536,12 +533,12 @@ export function PanelVoluntarioPage() {
                 <div className="border-t border-neutral-100 p-3">
                   <button
                     type="button"
-                    onClick={() => setDestinationFor(report)}
+                    onClick={() => acceptCase(report)}
                     disabled={acceptingId === report.id}
                     className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-naranja py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
                   >
                     <Navigation className="h-4 w-4" />
-                    {acceptingId === report.id ? 'Aceptando…' : 'VOY EN CAMINO'}
+                    {acceptingId === report.id ? 'Aceptando…' : 'Aceptar el caso'}
                   </button>
                 </div>
               </article>
@@ -549,16 +546,6 @@ export function PanelVoluntarioPage() {
           </div>
         )}
       </section>
-
-      {destinationFor && (
-        <RescueDestinationSheet
-          reportLat={destinationFor.lat}
-          reportLng={destinationFor.lng}
-          accepting={acceptingId === destinationFor.id}
-          onPick={(orgId) => acceptCase(destinationFor, orgId)}
-          onClose={() => setDestinationFor(null)}
-        />
-      )}
     </div>
   );
 }
