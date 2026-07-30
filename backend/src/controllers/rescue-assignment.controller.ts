@@ -114,8 +114,7 @@ export class RescueAssignmentController {
           const notFoundCount = await prisma.rescueAssignment.count({
             where: { reportId: assignment.reportId, cancelledReason: 'not_found' }
           });
-          
-          if (notFoundCount >= 2) {
+          if (notFoundCount >= 3) {
             await prisma.report.update({
               where: { id: assignment.reportId },
               data: { status: 'not_found' }

@@ -39,6 +39,12 @@ router.post('/:id/follow', requireAuth, ReportController.followReport);
 // DELETE /api/v1/reports/:id/follow (Dejar de seguir reporte)
 router.delete('/:id/follow', requireAuth, ReportController.unfollowReport);
 
+// POST /api/v1/reports/:id/adopt-request (Solicitar adopción de mascota)
+router.post('/:id/adopt-request', requireAuth, ReportController.adoptRequest);
+
+// GET /api/v1/reports/:id/adoption-requests (Ver interesados en adopción)
+router.get('/:id/adoption-requests', requireAuth, ReportController.getAdoptionRequests);
+
 // POST /api/v1/reports/:id/report (Reportar/marcar un reporte de calle como falso/inapropiado)
 router.post('/:id/report', requireAuth, ReportController.flagReport);
 

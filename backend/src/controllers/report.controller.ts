@@ -84,7 +84,7 @@ export class ReportController {
                 userId: vol.id,
                 title: '¡Emergencia cerca de ti!',
                 body: `Se ha reportado un ${data.species === 'dog' ? 'perro' : 'gato'} con urgencia ${data.urgency === 'high' ? 'alta' : 'crítica'}.`,
-                type: 'system_alert',
+                type: 'rescue_alert',
                 referenceId: report.id,
                 referenceType: 'report',
                 link: `/reports/${report.id}`
@@ -300,12 +300,21 @@ export class ReportController {
   static async addSighting(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const { lat, lng, description, photoUrl } = req.body;
+      const { lat, lng, description, photoUrl, photoBase64 } = req.body;
       const userId = (req as any).user?.id;
 
       if (!lat || !lng) {
         res.status(400).json({ error: 'Latitud y longitud son requeridas' });
         return;
+      }
+
+      let finalPhotoUrl = photoUrl;
+
+      if (photoBase64) {
+        const uploadResult = await cloudinary.uploader.upload(photoBase64, {
+          folder: 'dasha_reports_sightings',
+        });
+        finalPhotoUrl = uploadResult.secure_url;
       }
 
       await prisma.$executeRaw`
@@ -317,7 +326,7 @@ export class ReportController {
           ${userId ? userId : null}::uuid, 
           'sighting_added'::"ActionType", 
           ${description || 'Nuevo avistamiento reportado'}, 
-          ${JSON.stringify({ photoUrl, lat, lng })}::jsonb, 
+          ${JSON.stringify({ photoUrl: finalPhotoUrl, lat, lng })}::jsonb, 
           NOW()
         );
       `;
@@ -483,6 +492,103 @@ export class ReportController {
         message: 'Oferta de ayuda registrada exitosamente',
         data: resource
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // ==========================================
+  // ADOPCIONES MVP
+  // ==========================================
+  static async adoptRequest(req: Request, res: Response, next: NextFunction) {
+    try {
+      const reportId = req.params.id as string;
+      const applicantId = (req as any).user?.id;
+      const { message } = req.body;
+
+      if (!applicantId) {
+        res.status(401).json({ error: 'No autorizado' });
+        return;
+      }
+
+      const report = await prisma.report.findUnique({ where: { id: reportId } });
+      if (!report) {
+        res.status(404).json({ error: 'Reporte no encontrado' });
+        return;
+      }
+
+      // Evitar duplicados del mismo usuario para el mismo reporte
+      const existing = await prisma.reportAdoptionRequest.findFirst({
+        where: { reportId, applicantId }
+      });
+
+      if (existing) {
+        res.status(400).json({ error: 'Ya has enviado una solicitud de adopción para este reporte.' });
+        return;
+      }
+
+      const adoptionReq = await prisma.reportAdoptionRequest.create({
+        data: {
+          reportId,
+          applicantId,
+          message: message || 'Me interesa adoptar a esta mascota.'
+        },
+        include: { applicant: true }
+      });
+
+      // Notificar al dueño del reporte
+      if (report.userId !== applicantId) {
+        const { NotificationService } = await import('../services/notification.service.js');
+        await NotificationService.sendNotification({
+          userId: report.userId,
+          title: '¡Alguien quiere adoptar! 🏠',
+          body: `${adoptionReq.applicant.name} está interesado(a) en adoptar. Revisa los interesados en tu reporte.`,
+          type: 'system',
+          referenceId: reportId,
+          referenceType: 'report',
+          link: `/reports/${reportId}`
+        });
+      }
+
+      res.status(201).json({
+        status: 'success',
+        message: 'Solicitud enviada correctamente',
+        data: adoptionReq
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getAdoptionRequests(req: Request, res: Response, next: NextFunction) {
+    try {
+      const reportId = req.params.id as string;
+      const userId = (req as any).user?.id;
+
+      const report = await prisma.report.findUnique({ where: { id: reportId } });
+      if (!report) {
+        res.status(404).json({ error: 'Reporte no encontrado' });
+        return;
+      }
+
+      // Solo el dueño del reporte (o un admin) puede ver los interesados
+      const isAdmin = (req as any).user?.role === 'admin';
+      if (report.userId !== userId && !isAdmin) {
+        res.status(403).json({ error: 'No tienes permiso para ver los interesados de este reporte' });
+        return;
+      }
+
+      const requests = await prisma.reportAdoptionRequest.findMany({
+        where: { reportId },
+        include: {
+          applicant: {
+            select: { id: true, name: true, phone: true, email: true, avatarUrl: true }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      res.status(200).json(requests);
     } catch (error) {
       next(error);
     }

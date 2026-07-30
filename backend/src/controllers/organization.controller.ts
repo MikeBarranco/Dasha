@@ -50,7 +50,7 @@ export class OrganizationController {
           status: 'in_progress'
         },
         include: {
-          volunteer: { select: { id: true, firstName: true, lastName: true, avatarUrl: true, phone: true } },
+          volunteer: { select: { id: true, name: true, avatarUrl: true, phone: true } },
           photos: { select: { url: true } },
           rescues: {
             where: { status: 'on_the_way' },
@@ -299,7 +299,7 @@ export class OrganizationController {
   static async updateMyPortalProfile(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = (req as any).user?.id;
-      const { logoBase64, lat, lng, ...data } = req.body;
+      const { logoBase64, coverBase64, lat, lng, isVerified, id, createdAt, updatedAt, ...data } = req.body;
       
       const myEmployee = await OrganizationController.getPortalContext(req, userId);
 
@@ -317,6 +317,15 @@ export class OrganizationController {
         });
         updateData.logoUrl = uploadRes.secure_url;
         updateData.logoPublicId = uploadRes.public_id;
+      }
+
+      // Subir cover a Cloudinary si se proporciona
+      if (coverBase64 && coverBase64.startsWith('data:image')) {
+        const uploadRes = await cloudinary.uploader.upload(coverBase64, {
+          folder: 'dasha/orgs'
+        });
+        updateData.coverUrl = uploadRes.secure_url;
+        updateData.coverPublicId = uploadRes.public_id;
       }
 
       const updatedOrg = await prisma.organization.update({

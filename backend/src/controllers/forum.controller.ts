@@ -30,6 +30,10 @@ export class ForumController {
           where: { flaggedBy: userId },
           select: { id: true }
         };
+        includeClause.votes = {
+          where: { userId, value: 1 },
+          select: { id: true }
+        };
       }
 
       const postsRaw = await prisma.forumPost.findMany({
@@ -39,10 +43,11 @@ export class ForumController {
       });
 
       const posts = postsRaw.map((p: any) => {
-        const { flags, ...rest } = p;
+        const { flags, votes, ...rest } = p;
         return {
           ...rest,
-          hasReported: flags ? flags.length > 0 : false
+          hasReported: flags ? flags.length > 0 : false,
+          likedByMe: votes ? votes.length > 0 : false
         };
       });
 
@@ -186,13 +191,32 @@ export class ForumController {
   static async getReplies(req: Request, res: Response, next: NextFunction) {
     try {
       const postId = req.params.id as string;
-      const replies = await prisma.forumReply.findMany({
+      const userId = (req as any).user?.id;
+      const includeClause: any = {
+        user: { select: { id: true, name: true, role: true, avatarUrl: true } }
+      };
+
+      if (userId) {
+        includeClause.votes = {
+          where: { userId, value: 1 },
+          select: { id: true }
+        };
+      }
+
+      const repliesRaw = await prisma.forumReply.findMany({
         where: { postId },
         orderBy: { createdAt: 'asc' },
-        include: {
-          user: { select: { id: true, name: true, role: true, avatarUrl: true } }
-        }
+        include: includeClause
       });
+
+      const replies = repliesRaw.map((r: any) => {
+        const { votes, ...rest } = r;
+        return {
+          ...rest,
+          likedByMe: votes ? votes.length > 0 : false
+        };
+      });
+
       res.status(200).json(replies);
     } catch (error) {
       next(error);

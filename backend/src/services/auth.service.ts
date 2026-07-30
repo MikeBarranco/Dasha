@@ -42,7 +42,7 @@ export class AuthService {
       where: { email: data.email },
     });
 
-    if (!user || !user.passwordHash) {
+    if (!user || !user.passwordHash || !user.isActive) {
       throw new Error('Credenciales inválidas');
     }
 
