@@ -106,6 +106,37 @@ function buildAllyPopup(ally: Ally, onMore: () => void): HTMLDivElement {
   return node;
 }
 
+// Popup para cuando varios reportes caen en el mismo punto: en vez de que se
+// encimen y solo se vea el último, mostramos la lista para poder elegir cuál abrir.
+function buildReportClusterPopup(
+  reports: Report[],
+  onSelect: (report: Report) => void,
+): HTMLDivElement {
+  const node = document.createElement('div');
+  node.style.maxHeight = '220px';
+  node.style.overflowY = 'auto';
+  const header = document.createElement('div');
+  header.className = 'dasha-popup-count';
+  header.textContent = `${reports.length} reportes en este punto`;
+  node.appendChild(header);
+  for (const report of reports) {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.style.cssText =
+      'display:flex;align-items:center;gap:8px;width:100%;padding:6px 2px;background:transparent;border:none;border-top:1px solid #eee;cursor:pointer;text-align:left;';
+    const img = document.createElement('span');
+    img.style.cssText = `width:32px;height:32px;flex-shrink:0;border-radius:8px;background-image:url(${report.photo});background-size:cover;background-position:center;`;
+    const text = document.createElement('span');
+    text.style.cssText = 'font-size:12px;color:#374151;';
+    text.textContent = `${report.species === 'gato' ? 'Gato' : 'Perro'} · ${report.condition}`;
+    row.appendChild(img);
+    row.appendChild(text);
+    row.addEventListener('click', () => onSelect(report));
+    node.appendChild(row);
+  }
+  return node;
+}
+
 function createLostPetElement(pet: LostPet): HTMLDivElement {
   const element = document.createElement('div');
   element.style.width = '40px';
@@ -547,28 +578,69 @@ export function MapView({
         }
       };
 
+      const reportPopup = new maplibregl.Popup({
+        closeButton: true,
+        closeOnClick: true,
+        offset: 16,
+        className: 'dasha-popup',
+      });
+
       const renderMarkers = () => {
         for (const marker of markersRef.current) marker.remove();
         markersRef.current = [];
+
+        // Agrupa los reportes que caen (casi) en el mismo punto (~1 m) para que no
+        // se encimen y solo se vea el último. Un grupo con varios muestra un
+        // contador y, al tocarlo, la lista para elegir cuál abrir.
+        const groups = new Map<string, Report[]>();
         for (const report of reportsRef.current) {
+          const key = `${report.lat.toFixed(5)},${report.lng.toFixed(5)}`;
+          const arr = groups.get(key);
+          if (arr) arr.push(report);
+          else groups.set(key, [report]);
+        }
+
+        for (const group of groups.values()) {
+          const primary = group[0];
           const element = document.createElement('div');
+          element.style.position = 'relative';
           element.style.width = '44px';
           element.style.height = '44px';
           element.style.borderRadius = '9999px';
-          element.style.border = `3px solid ${severityColor(report.severity)}`;
-          element.style.backgroundImage = `url(${report.photo})`;
+          element.style.border = `3px solid ${severityColor(primary.severity)}`;
+          element.style.backgroundImage = `url(${primary.photo})`;
           element.style.backgroundSize = 'cover';
           element.style.backgroundPosition = 'center';
           element.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.3)';
           element.style.cursor = 'pointer';
           element.style.display = 'none';
 
+          if (group.length > 1) {
+            const badge = document.createElement('span');
+            badge.textContent = String(group.length);
+            badge.style.cssText =
+              'position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;padding:0 4px;border-radius:9999px;background:#0b3d91;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.3);';
+            element.appendChild(badge);
+          }
+
           element.addEventListener('click', (event) => {
             event.stopPropagation();
-            onSelectRef.current(report);
+            if (group.length === 1) {
+              onSelectRef.current(primary);
+            } else {
+              reportPopup
+                .setLngLat([primary.lng, primary.lat])
+                .setDOMContent(
+                  buildReportClusterPopup(group, (report) => {
+                    reportPopup.remove();
+                    onSelectRef.current(report);
+                  }),
+                )
+                .addTo(map);
+            }
           });
           const marker = new maplibregl.Marker({ element })
-            .setLngLat([report.lng, report.lat])
+            .setLngLat([primary.lng, primary.lat])
             .addTo(map);
           markersRef.current.push(marker);
         }
