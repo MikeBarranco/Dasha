@@ -131,12 +131,20 @@ export class AchievementService {
   }
 
   private static async grantAchievement(userId: string, achievement: any) {
-    await prisma.userAchievement.create({
-      data: {
-        userId,
-        achievementId: achievement.id
+    try {
+      await prisma.userAchievement.create({
+        data: {
+          userId,
+          achievementId: achievement.id
+        }
+      });
+    } catch (error: any) {
+      if (error.code === 'P2002') {
+        // Logro ya otorgado concurrentemente
+        return;
       }
-    });
+      throw error;
+    }
 
     if (achievement.pointsReward > 0) {
       await prisma.user.update({
@@ -148,7 +156,7 @@ export class AchievementService {
     const { NotificationService } = await import('./notification.service.js');
     await NotificationService.sendNotification({
       userId,
-      title: '¡Nueva Medalla Desbloqueada! 🏆',
+      title: '¡Nueva Medalla Desbloqueada! 🏅',
       body: `Has ganado la medalla: ${achievement.name}. ¡Gracias por tu ayuda!`,
       type: 'achievement',
       referenceId: achievement.id,

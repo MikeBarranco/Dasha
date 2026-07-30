@@ -53,6 +53,21 @@ router.get('/notifications', requireAuth, UserController.getMyNotifications);
 // GET /api/v1/me/organization (Portal de Aliado)
 router.get('/organization', requireAuth, UserController.getMyOrganization);
 
+// PATCH /api/v1/me/organization (actualizar perfil de aliado)
+router.patch('/organization', requireAuth, OrganizationController.updateMyPortalProfile);
+
+// GET /api/v1/me/organization/team
+router.get('/organization/team', requireAuth, OrganizationController.getMyPortalTeam);
+
+// POST /api/v1/me/organization/team
+router.post('/organization/team', requireAuth, OrganizationController.addTeamMember);
+
+// DELETE /api/v1/me/organization/team/:employeeId
+router.delete('/organization/team/:employeeId', requireAuth, OrganizationController.removeTeamMember);
+
+// POST /api/v1/me/organization/reports/:reportId/intake
+router.post('/organization/reports/:reportId/intake', requireAuth, OrganizationController.intakeReport);
+
 // GET /api/v1/me/organization/animals
 router.get('/organization/animals', requireAuth, OrganizationController.getOrganizationAnimals);
 
@@ -64,6 +79,32 @@ router.post('/organization/animals/:id/medical', requireAuth, OrganizationContro
 
 // DELETE /api/v1/me/organization/animals/:id/medical/:entryId (borrar registro)
 router.delete('/organization/animals/:id/medical/:entryId', requireAuth, OrganizationController.deleteAnimalMedicalEntry);
+
+// GET /api/v1/me/organization/donations
+router.get('/organization/donations', requireAuth, OrganizationController.getPortalDonations);
+
+// PATCH /api/v1/me/organization/donations/:id
+router.patch('/organization/donations/:id', requireAuth, (req, res, next) => {
+  req.params.donationId = req.params.id;
+  if (req.body.received) {
+    OrganizationController.approvePortalDonation(req, res, next);
+  } else {
+    OrganizationController.rejectPortalDonation(req, res, next);
+  }
+});
+
+// GET /api/v1/me/organization/adoption-requests
+router.get('/organization/adoption-requests', requireAuth, OrganizationController.getPortalAdoptions);
+
+// PATCH /api/v1/me/organization/adoption-requests/:id
+router.patch('/organization/adoption-requests/:id', requireAuth, (req, res, next) => {
+  req.params.applicationId = req.params.id;
+  if (req.body.status === 'approved') {
+    OrganizationController.approvePortalAdoption(req, res, next);
+  } else {
+    OrganizationController.rejectPortalAdoption(req, res, next);
+  }
+});
 
 // PATCH /api/v1/me/notifications/:id (Protegida, marcar como leída)
 router.patch('/notifications/:id', requireAuth, UserController.updateNotification);

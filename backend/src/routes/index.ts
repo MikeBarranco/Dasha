@@ -47,6 +47,17 @@ router.use('/achievements', publicGetLimiter, achievementRoutes);
 router.use('/needs', needRoutes);
 router.use('/organization-applications', organizationApplicationRoutes);
 
+// ==========================================================
+// FIX PARA FRONTEND: Rutas de portal que el frontend consume en la raíz
+// ==========================================================
+import { requireAuth } from '../middlewares/auth.middleware';
+import { OrganizationController } from '../controllers/organization.controller';
+
+router.get('/organizations/portal/incoming-rescues', requireAuth, OrganizationController.getIncomingRescues);
+router.patch('/portal/animals/:animalId', requireAuth, OrganizationController.updatePortalAnimal);
+router.post('/portal/animals/:animalId/photos', requireAuth, OrganizationController.addPortalAnimalPhoto);
+router.post('/portal/animals/direct-intake', requireAuth, OrganizationController.directIntakeAnimal);
+
 router.get('/health', publicGetLimiter, (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });

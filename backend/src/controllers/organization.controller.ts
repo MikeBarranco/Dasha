@@ -35,12 +35,10 @@ export class OrganizationController {
   // ========================================================
   static async getIncomingRescues(req: Request, res: Response, next: NextFunction) {
     try {
-      const userId = req.user?.id;
+      const userId = (req as any).user?.id;
       if (!userId) return res.status(401).json({ error: 'No autorizado' });
 
-      const employee = await prisma.organizationEmployee.findFirst({
-        where: { userId }
-      });
+      const employee = await OrganizationController.getPortalContext(req, userId);
       if (!employee) return res.status(403).json({ error: 'No perteneces a ninguna organización' });
 
       // Get reports assigned to this org that are currently in progress
