@@ -2227,14 +2227,19 @@ export async function getRescueAssignment(id: string): Promise<RescueAssignment 
   return mapRescueAssignment(raw);
 }
 
-// El voluntario avanza el estado del traslado. PATCH /rescue-assignments/:id { status }
+// El voluntario avanza el estado del traslado. PATCH /rescue-assignments/:id
+// { status, destinationOrgId? }. Isabel (30 jul) confirmó que el aliado destino
+// se inyecta EN ESTE PATCH junto con el cambio de estatus (al marcar "voy en
+// camino"): así el reporte aparece en "rescates entrantes" de esa clínica y el
+// GET del assignment devuelve `destination` para el mapa en vivo.
 export async function updateRescueAssignmentStatus(
   id: string,
   status: RescueStatus,
+  destinationOrgId?: string,
 ): Promise<void> {
   await authedRaw(`/rescue-assignments/${id}`, {
     method: 'PATCH',
-    body: JSON.stringify({ status }),
+    body: JSON.stringify(destinationOrgId ? { status, destinationOrgId } : { status }),
   });
 }
 
@@ -2360,18 +2365,13 @@ export async function getMyRescueAssignments(status?: RescueStatus): Promise<Res
 // .data). Buscamos el nodo de la asignación de forma robusta por si el contrato
 // la anida (assignment / report.assignment): si el id sale vacío NO redirigimos
 // al rescate en vivo, el usuario re-clica y el 2º intento da 403.
-// destinationOrgId: el aliado al que el voluntario llevará al animalito. Se manda
-// en el accept para que aparezca en "rescates entrantes" de ese aliado y alimente
-// la ruta. OJO: contrato por confirmar con Isabel (pendientes 6): dio el nombre
-// del campo pero no confirmó si va aquí o en un PATCH aparte; si cambia, es ajuste
-// de una línea.
-export async function acceptReport(
-  reportId: string,
-  destinationOrgId?: string,
-): Promise<RescueAssignment | null> {
+// Aceptar un reporte crea la asignación (status 'accepted'). El aliado DESTINO ya
+// NO va aquí: Isabel (30 jul) confirmó que `destinationOrgId` se manda en el
+// PATCH /rescue-assignments/:id al marcar "voy en camino" (ver
+// updateRescueAssignmentStatus).
+export async function acceptReport(reportId: string): Promise<RescueAssignment | null> {
   const raw = await authedRaw<Record<string, unknown> | null>(`/reports/${reportId}/accept`, {
     method: 'POST',
-    body: destinationOrgId ? JSON.stringify({ destinationOrgId }) : undefined,
   });
   const asRecord = (value: unknown): Record<string, unknown> | null =>
     value && typeof value === 'object' && !Array.isArray(value)

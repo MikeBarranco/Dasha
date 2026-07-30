@@ -27,6 +27,7 @@ import {
   type CancelReason,
 } from '../lib/api';
 import { Avatar } from '../components/ui/Avatar';
+import { RescueDestinationSheet } from '../components/map/RescueDestinationSheet';
 import { RescuePhotoSheet } from '../components/rescue/RescuePhotoSheet';
 import { CaseTimeline } from '../components/rescue/CaseTimeline';
 
@@ -100,6 +101,9 @@ export function RescateEnVivoPage() {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelChoice, setCancelChoice] = useState<CancelReason | 'unavailable' | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  // Aliado destino elegido al marcar "voy en camino"; viaja en ese PATCH.
+  const [pickingDest, setPickingDest] = useState(false);
+  const [destOrgId, setDestOrgId] = useState<string | undefined>(undefined);
 
   const realAssignment = assignment ?? null;
   const isDriver = Boolean(
@@ -201,9 +205,14 @@ export function RescateEnVivoPage() {
     }
   };
 
-  // Al tocar el paso: si pide foto, abrimos la hoja; si no, avanzamos directo.
+  // Al tocar el paso: para arrancar el traslado ("voy en camino") primero se
+  // elige el aliado destino; si el paso pide foto la abrimos; si no, avanza.
   const handleStep = () => {
     if (!step || advancing) return;
+    if (step.next === 'on_the_way') {
+      setPickingDest(true);
+      return;
+    }
     if (step.photo) {
       setPhotoStep(step.photo);
       return;
@@ -211,9 +220,26 @@ export function RescateEnVivoPage() {
     void runAdvance(null, '');
   };
 
+  // Tras elegir (o saltar) el aliado destino, sigue el paso normal: si pide foto
+  // la pedimos, si no avanza directo. El destino elegido viaja en el PATCH.
+  const handlePickDestination = (orgId?: string) => {
+    setDestOrgId(orgId);
+    setPickingDest(false);
+    if (step?.photo) {
+      setPhotoStep(step.photo);
+      return;
+    }
+    void runAdvance(null, '', orgId);
+  };
+
   // Sube la foto (si hay) y avanza el estado. La foto es evidencia opcional: si
-  // su subida falla no bloqueamos el traslado, el estado se actualiza igual.
-  const runAdvance = async (photoBase64: string | null, note: string) => {
+  // su subida falla no bloqueamos el traslado, el estado se actualiza igual. Al
+  // pasar a "on_the_way" mandamos el aliado destino en el mismo PATCH.
+  const runAdvance = async (
+    photoBase64: string | null,
+    note: string,
+    destinationOrgId?: string,
+  ) => {
     if (!step || advancing) return;
     setAdvancing(true);
     try {
@@ -224,7 +250,11 @@ export function RescateEnVivoPage() {
           // La evidencia es un extra; seguimos con el avance del estado.
         }
       }
-      await updateRescueAssignmentStatus(assignment.id, step.next);
+      await updateRescueAssignmentStatus(
+        assignment.id,
+        step.next,
+        step.next === 'on_the_way' ? destinationOrgId : undefined,
+      );
       setPendingStatus(step.next);
       setPhotoStep(null);
     } catch (err) {
@@ -418,12 +448,22 @@ export function RescateEnVivoPage() {
         </div>
       </div>
 
+      {pickingDest && (
+        <RescueDestinationSheet
+          reportLat={assignment.origin?.lat ?? 0}
+          reportLng={assignment.origin?.lng ?? 0}
+          accepting={advancing}
+          onPick={(orgId) => handlePickDestination(orgId)}
+          onClose={() => setPickingDest(false)}
+        />
+      )}
+
       <AnimatePresence>
         {photoStep && (
           <RescuePhotoSheet
             kind={photoStep}
             saving={advancing}
-            onConfirm={(photoBase64, note) => runAdvance(photoBase64, note)}
+            onConfirm={(photoBase64, note) => runAdvance(photoBase64, note, destOrgId)}
             onClose={() => {
               if (!advancing) setPhotoStep(null);
             }}

@@ -18,7 +18,6 @@ import {
   Loader2,
 } from 'lucide-react';
 import { ShareButton } from '../ui/ShareButton';
-import { RescueDestinationSheet } from './RescueDestinationSheet';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 import { useSheetDismiss } from '../../lib/useSheetDismiss';
 import { useAuth } from '../../lib/useAuth';
@@ -109,7 +108,6 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
   const [showPhoto, setShowPhoto] = useState(false);
   const [accepting, setAccepting] = useState(false);
   const [acceptError, setAcceptError] = useState<string | null>(null);
-  const [pickingDestination, setPickingDestination] = useState(false);
   const [showVolInfo, setShowVolInfo] = useState(false);
   const { dragControls, scrollRef, onPointerDown, onPointerMove, onDragEnd } =
     useSheetDismiss(onClose);
@@ -254,18 +252,17 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
     setReporting(false);
   };
 
-  const handleAccept = async (destinationOrgId?: string) => {
+  const handleAccept = async () => {
     if (accepting) return;
     setAccepting(true);
     setAcceptError(null);
     try {
-      const assignment = await acceptReport(report.id, destinationOrgId);
+      const assignment = await acceptReport(report.id);
       onClose();
       navigate(assignment?.id ? `/rescate/${assignment.id}` : '/mapa');
     } catch (err) {
       setAcceptError(err instanceof Error ? err.message : 'No se pudo aceptar el caso.');
       setAccepting(false);
-      setPickingDestination(false);
     }
   };
 
@@ -443,11 +440,11 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
               <>
                 <button
                   type="button"
-                  onClick={() => setPickingDestination(true)}
+                  onClick={() => handleAccept()}
                   disabled={accepting}
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-naranja py-3 font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
                 >
-                  <Navigation className="h-5 w-5" /> {accepting ? 'Aceptando…' : 'Voy en camino'}
+                  <Navigation className="h-5 w-5" /> {accepting ? 'Aceptando…' : 'Aceptar el caso'}
                 </button>
                 {acceptError && <p className="mt-2 text-sm text-alerta">{acceptError}</p>}
               </>
@@ -548,16 +545,6 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
           </div>
         </div>
       </motion.div>
-
-      {pickingDestination && (
-        <RescueDestinationSheet
-          reportLat={report.lat}
-          reportLng={report.lng}
-          accepting={accepting}
-          onPick={(orgId) => handleAccept(orgId)}
-          onClose={() => setPickingDestination(false)}
-        />
-      )}
 
       {offering && (
         <div className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center">
