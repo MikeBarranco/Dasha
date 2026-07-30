@@ -205,6 +205,19 @@ function describe(achievement: AvailableAchievement): string {
 // (GET /me/achievements/available) y marca las que el usuario ya desbloqueó.
 // Si el backend aún no responde, mostramos SOLO los logros que el usuario ya
 // tiene: nunca medallas inventadas que jamás se podrían desbloquear.
+// Quita medallas repetidas por nombre (defensivo): si el catálogo o los logros
+// desbloqueados vienen con duplicados (p. ej. un seed corrido dos veces en el
+// backend), nunca se muestran dos veces la misma medalla.
+function dedupeByName(medals: Medal[]): Medal[] {
+  const seen = new Set<string>();
+  return medals.filter((medal) => {
+    const key = normalize(medal.name);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 export function buildMedals(
   available: AvailableAchievement[],
   unlocked: Achievement[],
@@ -213,21 +226,26 @@ export function buildMedals(
   const unlockedNames = new Set(unlocked.map((item) => normalize(item.name)));
 
   if (available.length === 0) {
-    return unlocked.map((item, index) => ({
-      id: item.code || `logro-${index}`,
-      name: item.name,
-      image: pickArt(item.name, item.image, ''),
-      description: item.description,
-      unlocked: true,
-    }));
+    return dedupeByName(
+      unlocked.map((item, index) => ({
+        id: item.code || `logro-${index}`,
+        name: item.name,
+        image: pickArt(item.name, item.image, ''),
+        description: item.description,
+        unlocked: true,
+      })),
+    );
   }
 
-  return available.map((item) => ({
-    id: item.code || item.id,
-    name: item.name,
-    image: pickArt(item.name, item.iconUrl, item.requirementType),
-    description: describe(item),
-    unlocked:
-      (Boolean(item.code) && unlockedCodes.has(item.code)) || unlockedNames.has(normalize(item.name)),
-  }));
+  return dedupeByName(
+    available.map((item) => ({
+      id: item.code || item.id,
+      name: item.name,
+      image: pickArt(item.name, item.iconUrl, item.requirementType),
+      description: describe(item),
+      unlocked:
+        (Boolean(item.code) && unlockedCodes.has(item.code)) ||
+        unlockedNames.has(normalize(item.name)),
+    })),
+  );
 }
