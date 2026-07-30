@@ -58,6 +58,14 @@ router.patch('/portal/animals/:animalId', requireAuth, OrganizationController.up
 router.post('/portal/animals/:animalId/photos', requireAuth, OrganizationController.addPortalAnimalPhoto);
 router.post('/portal/animals/direct-intake', requireAuth, OrganizationController.directIntakeAnimal);
 
+import { NeedController } from '../controllers/need.controller';
+router.get('/organizations/:id/needs', NeedController.getOrganizationNeeds);
+router.post('/organizations/:id/needs', requireAuth, NeedController.createNeed);
+router.patch('/organizations/:id/needs/:needId', requireAuth, (req, res, next) => {
+  req.params.id = req.params.needId;
+  NeedController.updateNeed(req, res, next);
+});
+
 router.get('/health', publicGetLimiter, (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
