@@ -1896,6 +1896,9 @@ function mapForumPost(raw: Record<string, unknown>): ForumPost {
     ),
     replies,
     hasReported: Boolean(raw.hasReported ?? raw.has_reported ?? false),
+    likedByMe: Boolean(
+      raw.likedByMe ?? raw.liked_by_me ?? raw.hasLiked ?? raw.has_liked ?? raw.isLiked ?? raw.liked,
+    ),
   };
 }
 

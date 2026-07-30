@@ -67,6 +67,7 @@ export function ComunidadPage() {
   const [posts, setPosts] = useState<ForumPost[] | null>(null);
   const [interested, setInterested] = useState<Set<string>>(new Set());
   const [liked, setLiked] = useState<Set<string>>(new Set());
+  const [zoomImage, setZoomImage] = useState<string | null>(null);
 
   const [text, setText] = useState('');
   const [photo, setPhoto] = useState<string | null>(null);
@@ -102,6 +103,12 @@ export function ComunidadPage() {
         const reported = data.filter((post) => post.hasReported).map((post) => post.id);
         if (reported.length) {
           setReportedIds((current) => new Set([...current, ...reported]));
+        }
+        // El corazón debe seguir encendido tras refrescar: iniciamos "liked" con
+        // los posts que el backend dice que este usuario ya likeó.
+        const likedByMe = data.filter((post) => post.likedByMe).map((post) => post.id);
+        if (likedByMe.length) {
+          setLiked((current) => new Set([...current, ...likedByMe]));
         }
         // Deep link a una publicación concreta (?post=id): abre el foro y sus
         // comentarios. Se hace aquí (no en un efecto) porque depende de que los
@@ -540,14 +547,24 @@ export function ComunidadPage() {
                 </div>
                 <p className="mt-3 break-words text-sm text-neutral-600">{post.text}</p>
                 {post.image && (
-                  <img
-                    src={post.image}
-                    alt=""
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                    }}
-                    className="mt-3 h-48 w-full rounded-xl object-cover"
-                  />
+                  <button
+                    type="button"
+                    onClick={() => setZoomImage(post.image ?? null)}
+                    className="relative mt-3 block w-full overflow-hidden rounded-xl"
+                    aria-label="Ver foto completa"
+                  >
+                    <img
+                      src={post.image}
+                      alt=""
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                      className="h-48 w-full object-cover"
+                    />
+                    <span className="pointer-events-none absolute bottom-2 right-2 rounded-full bg-black/55 px-2.5 py-1 text-xs font-medium text-white">
+                      Ver foto
+                    </span>
+                  </button>
                 )}
                 <div className="mt-3 flex items-center gap-5 text-sm text-neutral-500">
                   <button
@@ -762,6 +779,32 @@ export function ComunidadPage() {
           </div>
         </div>
       )}
+
+      <AnimatePresence>
+        {zoomImage && (
+          <motion.div
+            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/90 p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setZoomImage(null)}
+          >
+            <img
+              src={zoomImage}
+              alt=""
+              className="max-h-full max-w-full rounded-xl object-contain"
+            />
+            <button
+              type="button"
+              onClick={() => setZoomImage(null)}
+              aria-label="Cerrar foto"
+              className="absolute right-4 top-4 rounded-full bg-white/90 p-2 text-neutral-800 shadow"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

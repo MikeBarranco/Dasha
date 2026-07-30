@@ -30,4 +30,7 @@ export type ForumPost = {
   replies?: ForumReply[];
   // El backend marca si el usuario en sesión ya reportó esta publicación.
   hasReported?: boolean;
+  // El backend marca si el usuario en sesión ya le dio like (para que el corazón
+  // siga encendido tras refrescar).
+  likedByMe?: boolean;
 };
