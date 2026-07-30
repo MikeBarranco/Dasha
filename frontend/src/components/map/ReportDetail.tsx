@@ -382,7 +382,7 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
             </p>
           )}
 
-          <p className="mt-3 text-sm text-neutral-600">{report.description}</p>
+          <p className="mt-3 break-words text-sm text-neutral-600">{report.description}</p>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <span className="inline-flex rounded-lg bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-600">

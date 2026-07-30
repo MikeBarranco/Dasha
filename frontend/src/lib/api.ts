@@ -102,6 +102,10 @@ async function request<T>(path: string, options: RequestInit = {}, auth = false)
     throw new Error('Inicia sesión para continuar');
   }
 
+  // ¿Había sesión ANTES de la llamada? Si no la había, un 401 no es "sesión
+  // caída" sino un login/registro con credenciales incorrectas.
+  const hadSession = getStoredUser() !== null;
+
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
     headers,
@@ -111,7 +115,9 @@ async function request<T>(path: string, options: RequestInit = {}, auth = false)
 
   if (response.status === 401) {
     handleUnauthorized();
-    throw new Error(SESSION_EXPIRED_MESSAGE);
+    throw new Error(
+      hadSession ? SESSION_EXPIRED_MESSAGE : (body.message ?? 'Correo o contraseña incorrectos'),
+    );
   }
 
   if (!response.ok || body.status === 'error') {

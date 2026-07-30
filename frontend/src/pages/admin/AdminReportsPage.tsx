@@ -92,7 +92,9 @@ function ReportCard({
 
         <p className="mt-1 text-sm font-medium text-neutral-800">{report.colonia}</p>
         {report.description && (
-          <p className="mt-0.5 line-clamp-2 text-sm text-neutral-500">{report.description}</p>
+          <p className="mt-0.5 line-clamp-2 break-words text-sm text-neutral-500">
+            {report.description}
+          </p>
         )}
         <p className="mt-1 text-xs text-neutral-400">
           {report.createdAgo}

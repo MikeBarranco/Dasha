@@ -98,7 +98,7 @@ function VolunteerCard({
       )}
 
       {(volunteer.zone || volunteer.helpType || volunteer.availability || volunteer.motivation) && (
-        <div className="mt-2 space-y-0.5 text-xs text-neutral-500">
+        <div className="mt-2 space-y-0.5 break-words text-xs text-neutral-500">
           {volunteer.zone && (
             <p>
               <span className="font-medium text-neutral-600">Zona:</span> {volunteer.zone}

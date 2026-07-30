@@ -38,13 +38,17 @@ export function RegistroPage() {
         ? 'Escribe tu nombre'
         : !onlyLetters(nombre)
           ? 'Solo letras, sin números'
-          : '',
+          : nombre.trim().length < 2
+            ? 'Escribe tu nombre completo'
+            : '',
     apellidos:
       apellidos.trim() === ''
         ? 'Escribe tus apellidos'
         : !onlyLetters(apellidos)
           ? 'Solo letras, sin números'
-          : '',
+          : apellidos.trim().length < 2
+            ? 'Escribe tus apellidos completos'
+            : '',
     email: !isValidEmail(email) ? 'Correo no válido (debe llevar @)' : '',
     password: !isStrongPassword(password) ? 'La contraseña no cumple los requisitos' : '',
     confirm: confirm !== password || confirm === '' ? 'Las contraseñas no coinciden' : '',

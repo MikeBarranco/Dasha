@@ -126,7 +126,7 @@ export function PortalLayout() {
   const linkSearch = adminOrgId ? `?orgId=${adminOrgId}` : '';
 
   return (
-    <div className="flex min-h-screen flex-col bg-lino">
+    <div className="flex min-h-screen flex-col overflow-x-hidden bg-lino">
       <header className="sticky top-0 z-40 border-b border-neutral-200 bg-white/90 backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-4 py-3 md:px-6">
           <div className="flex min-w-0 items-center gap-2.5">
