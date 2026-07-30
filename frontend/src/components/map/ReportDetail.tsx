@@ -118,12 +118,20 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
   // abrir la ficha; el listado del mapa no trae estos campos.
   const [detail, setDetail] = useState<ReportDetailData | null>(null);
   const [heroIndex, setHeroIndex] = useState(0);
+  // Seguir el reporte: recibir push cuando cambie de estado. Optimista. Se
+  // declara aquí (antes del efecto que lo usa) para poder reflejar el estado
+  // real que trae el detalle al abrir la ficha.
+  const [following, setFollowing] = useState(Boolean(report.isFollowing));
 
   useEffect(() => {
     let active = true;
     getReportDetail(report.id)
       .then((data) => {
-        if (active) setDetail(data);
+        if (!active) return;
+        setDetail(data);
+        // El detalle trae el estado real de "siguiendo" (el del listado del mapa
+        // puede venir desactualizado). Se aplica al abrir la ficha.
+        setFollowing(data.isFollowing);
       })
       .catch(() => {});
     return () => {
@@ -149,8 +157,6 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
   const lastSeenSince = lastSightingAt ? sinceLabel(lastSightingAt) : '';
   const offers = detail?.offers ?? [];
 
-  // Seguir el reporte: recibir push cuando cambie de estado. Optimista.
-  const [following, setFollowing] = useState(Boolean(report.isFollowing));
   const toggleFollow = () => {
     if (!account) {
       navigate('/login');

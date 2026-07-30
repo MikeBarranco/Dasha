@@ -11,6 +11,7 @@ import { useAuth } from '../../lib/useAuth';
 import {
   hasSeenOnboarding,
   markOnboardingSeen,
+  openOnboarding,
   ONBOARDING_OPEN_EVENT,
 } from '../../lib/onboarding';
 
@@ -35,6 +36,16 @@ export function AppLayout() {
     window.addEventListener(ONBOARDING_OPEN_EVENT, open);
     return () => window.removeEventListener(ONBOARDING_OPEN_EVENT, open);
   }, []);
+
+  // Al aprobar la solicitud, el rol cambia a "volunteer" a media sesión (sin
+  // recargar). Disparamos el onboarding de voluntario para que aparezca solo,
+  // sin tener que cerrar y volver a entrar. Se dispara por evento (no setState
+  // directo) para que lo maneje el listener de arriba.
+  useEffect(() => {
+    if (user?.role === 'volunteer' && !hasSeenOnboarding('volunteer')) {
+      openOnboarding('volunteer');
+    }
+  }, [user?.role]);
 
   const closeOnboarding = () => {
     markOnboardingSeen('app');

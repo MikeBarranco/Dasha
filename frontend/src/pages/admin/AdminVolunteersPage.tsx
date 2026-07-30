@@ -56,15 +56,17 @@ function VolunteerCard({
   onView,
 }: {
   volunteer: AdminVolunteer;
-  onDecision: (id: string, status: 'approved' | 'rejected') => Promise<void>;
+  onDecision: (id: string, status: 'approved' | 'rejected', reason?: string) => Promise<void>;
   onView: (src: string) => void;
 }) {
   const [saving, setSaving] = useState<null | 'approved' | 'rejected'>(null);
+  const [rejecting, setRejecting] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
 
-  const decide = async (status: 'approved' | 'rejected') => {
+  const decide = async (status: 'approved' | 'rejected', reason?: string) => {
     setSaving(status);
     try {
-      await onDecision(volunteer.id, status);
+      await onDecision(volunteer.id, status, reason);
     } catch {
       setSaving(null);
       alert('No se pudo actualizar la solicitud. Intenta de nuevo.');
@@ -129,26 +131,63 @@ function VolunteerCard({
       </div>
 
       {volunteer.status === 'pending' ? (
-        <div className="mt-4 flex gap-3">
-          <button
-            type="button"
-            onClick={() => decide('rejected')}
-            disabled={saving !== null}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-neutral-200 py-2.5 text-sm font-medium text-alerta transition-colors hover:bg-alerta/5 disabled:opacity-60"
-          >
-            <X className="h-4 w-4" />
-            {saving === 'rejected' ? 'Rechazando…' : 'Rechazar'}
-          </button>
-          <button
-            type="button"
-            onClick={() => decide('approved')}
-            disabled={saving !== null}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-exito py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-          >
-            <Check className="h-4 w-4" />
-            {saving === 'approved' ? 'Aprobando…' : 'Aprobar'}
-          </button>
-        </div>
+        rejecting ? (
+          <div className="mt-4 rounded-xl border border-alerta/20 bg-alerta/5 p-3">
+            <label className="mb-1 block text-xs font-medium text-neutral-600">
+              Motivo del rechazo (lo verá la persona)
+            </label>
+            <textarea
+              value={rejectReason}
+              onChange={(event) => setRejectReason(event.target.value)}
+              maxLength={200}
+              rows={2}
+              placeholder="Ej. La foto de la identificación no se ve clara."
+              className="w-full resize-none rounded-lg border border-neutral-200 px-3 py-2 text-sm text-neutral-700 outline-none focus:ring-2 focus:ring-cobalto/30"
+            />
+            <div className="mt-2 flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setRejecting(false);
+                  setRejectReason('');
+                }}
+                disabled={saving !== null}
+                className="flex-1 rounded-lg border border-neutral-200 py-2 text-sm font-medium text-neutral-600 transition-colors hover:bg-neutral-50 disabled:opacity-60"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => decide('rejected', rejectReason.trim())}
+                disabled={saving !== null || rejectReason.trim().length < 3}
+                className="flex-1 rounded-lg bg-alerta py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                {saving === 'rejected' ? 'Rechazando…' : 'Confirmar rechazo'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-4 flex gap-3">
+            <button
+              type="button"
+              onClick={() => setRejecting(true)}
+              disabled={saving !== null}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-neutral-200 py-2.5 text-sm font-medium text-alerta transition-colors hover:bg-alerta/5 disabled:opacity-60"
+            >
+              <X className="h-4 w-4" />
+              Rechazar
+            </button>
+            <button
+              type="button"
+              onClick={() => decide('approved')}
+              disabled={saving !== null}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-exito py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+            >
+              <Check className="h-4 w-4" />
+              {saving === 'approved' ? 'Aprobando…' : 'Aprobar'}
+            </button>
+          </div>
+        )
       ) : (
         <p className="mt-3 text-xs text-neutral-400">{volunteer.requestedAgo}</p>
       )}
@@ -196,8 +235,8 @@ export function AdminVolunteersPage() {
     };
   }, []);
 
-  const handleDecision = async (id: string, status: 'approved' | 'rejected') => {
-    await updateVolunteerStatus(id, status);
+  const handleDecision = async (id: string, status: 'approved' | 'rejected', reason?: string) => {
+    await updateVolunteerStatus(id, status, reason);
     // Tras decidir, el backend borra las fotos de identidad; reflejamos el nuevo
     // estado y limpiamos las fotos en pantalla.
     setVolunteers((list) =>
