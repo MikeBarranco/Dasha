@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ImagePlus, Check } from 'lucide-react';
-import { getAllies, updateMyOrganization, type MyOrgInput } from '../../lib/api';
+import { getAlly, updateMyOrganization, type MyOrgInput } from '../../lib/api';
 import { mockAllies, type Ally } from '../../data/mockAllies';
 import { compressImage } from '../../lib/image';
 import { useAllyPortal } from '../../lib/useAllyPortal';
@@ -39,10 +39,12 @@ export function PortalPerfilPage() {
 
   useEffect(() => {
     let active = true;
-    getAllies()
-      .then((data) => {
+    // Precargamos desde el DETALLE del aliado (getAlly = /allies/:id), no desde la
+    // lista (getAllies = /allies): la lista no incluye coverUrl, schedule ni slogan,
+    // por eso al re-editar el perfil salían vacíos aunque el público sí los mostraba.
+    getAlly(ctx.organizationId)
+      .then((real) => {
         if (!active) return;
-        const real = data.find((item) => item.id === ctx.organizationId) ?? null;
         // El mock solo aplica en la vista previa (admin); un aliado real ve su
         // organización real, no una de ejemplo.
         const found =
