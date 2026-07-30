@@ -258,7 +258,11 @@ export function PerfilPage() {
         <StatCard value={unlockedCount} label="Medallas" />
       </div>
 
+      {/* Un responsable/veterinario de aliado tiene rol global "citizen", pero su
+          identidad es el portal de aliado: no le mostramos "conviértete en
+          voluntario". */}
       {realRole === 'citizen' &&
+        !allyContext &&
         (volunteerPending ? (
           <div className="rounded-2xl border border-purpura/20 bg-purpura/5 p-5">
             <h2 className="font-display text-lg font-bold text-purpura">Solicitud en revisión</h2>

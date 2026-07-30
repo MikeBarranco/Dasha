@@ -375,6 +375,9 @@ export type ReportDetailData = {
   photos: string[];
   sightings: ReportSighting[];
   offers: ReportOffer[];
+  // Si el usuario en sesión ya sigue este reporte (valor confiable del detalle,
+  // el del listado del mapa puede venir desactualizado).
+  isFollowing: boolean;
 };
 
 function strField(raw: Record<string, unknown>, ...keys: string[]): string {
@@ -433,6 +436,7 @@ export async function getReportDetail(id: string): Promise<ReportDetailData> {
     photos,
     sightings,
     offers,
+    isFollowing: raw.isFollowing === true || raw.is_following === true,
   };
 }
 

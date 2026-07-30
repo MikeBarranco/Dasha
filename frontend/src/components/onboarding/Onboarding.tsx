@@ -33,6 +33,8 @@ export function Onboarding({ onClose, steps = appSteps }: OnboardingProps) {
     else setIndex((value) => value + 1);
   };
 
+  const back = () => setIndex((value) => Math.max(0, value - 1));
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
       <motion.div
@@ -42,7 +44,18 @@ export function Onboarding({ onClose, steps = appSteps }: OnboardingProps) {
         transition={{ duration: 0.25, ease: 'easeOut' }}
         className="relative w-full max-w-sm overflow-hidden rounded-3xl bg-white p-6 shadow-xl"
       >
-        <div className="flex justify-end">
+        <div className="flex items-center justify-between">
+          {index > 0 ? (
+            <button
+              type="button"
+              onClick={back}
+              className="text-sm font-medium text-neutral-400 transition-colors hover:text-neutral-600"
+            >
+              Atrás
+            </button>
+          ) : (
+            <span />
+          )}
           <button
             type="button"
             onClick={onClose}

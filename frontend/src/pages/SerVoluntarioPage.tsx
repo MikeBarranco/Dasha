@@ -133,7 +133,7 @@ function CaptureField({
 export function SerVoluntarioPage() {
   const navigate = useNavigate();
   const { user: account } = useAuth();
-  const { apply } = useVolunteerStatus();
+  const { status, apply } = useVolunteerStatus();
   const [phone, setPhone] = useState('');
   const [zone, setZone] = useState('');
   const [cp, setCp] = useState('');
@@ -247,16 +247,22 @@ export function SerVoluntarioPage() {
     }
   };
 
-  if (done) {
+  // Ya sea porque acaba de enviar (done) o porque ya tenía una solicitud en
+  // revisión (status pending, de una sesión anterior), NO mostramos el formulario
+  // de nuevo: eso permitía mandar la solicitud dos veces.
+  if (done || status === 'pending') {
     return (
       <div className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center text-center">
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-exito text-white">
           <Check className="h-10 w-10" />
         </div>
-        <h2 className="mt-6 font-display text-2xl font-bold text-cobalto">¡Solicitud enviada!</h2>
+        <h2 className="mt-6 font-display text-2xl font-bold text-cobalto">
+          {done ? '¡Solicitud enviada!' : 'Solicitud en revisión'}
+        </h2>
         <p className="mt-2 text-neutral-500">
-          Gracias por querer ayudar. Validaremos tu identidad y te contactaremos pronto. Mientras,
-          tu solicitud queda en revisión.
+          {done
+            ? 'Gracias por querer ayudar. Validaremos tu identidad y te contactaremos pronto. Mientras, tu solicitud queda en revisión.'
+            : 'Ya tienes una solicitud de voluntario en revisión. Te avisaremos en cuanto la aprobemos.'}
         </p>
         <button
           type="button"

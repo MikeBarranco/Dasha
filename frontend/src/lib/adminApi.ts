@@ -809,10 +809,13 @@ export async function getAdminVolunteers(): Promise<AdminVolunteer[]> {
 export async function updateVolunteerStatus(
   id: string,
   status: 'approved' | 'rejected',
+  rejectionReason?: string,
 ): Promise<void> {
   await adminFetch(`/admin/volunteers/${id}/status`, {
     method: 'PATCH',
-    body: JSON.stringify({ status }),
+    body: JSON.stringify(
+      status === 'rejected' && rejectionReason ? { status, rejectionReason } : { status },
+    ),
   });
 }
 
