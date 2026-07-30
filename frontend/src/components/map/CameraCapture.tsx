@@ -32,6 +32,7 @@ export function CameraCapture({
 
   useEffect(() => {
     let active = true;
+    let watchdog: number | undefined;
 
     const stop = () => {
       streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -43,6 +44,14 @@ export function CameraCapture({
         if (active) setStatus('error');
         return;
       }
+      // Red de seguridad: la PRIMERA vez, el permiso de la cámara se puede quedar
+      // encolado detrás del permiso de ubicación que pide el mapa, y el spinner de
+      // "Abriendo la cámara…" se cuelga sin salida. Si en unos segundos no quedó
+      // lista, mostramos "Reintentar" en vez de dejar el spinner colgado. Si el
+      // permiso llega después, el bloque de abajo la marca lista y se corrige solo.
+      watchdog = window.setTimeout(() => {
+        if (active && !streamRef.current) setStatus('error');
+      }, 12000);
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: facing },
@@ -57,9 +66,11 @@ export function CameraCapture({
           videoRef.current.srcObject = stream;
           await videoRef.current.play().catch(() => {});
         }
-        setStatus('ready');
+        if (active) setStatus('ready');
       } catch {
         if (active) setStatus('error');
+      } finally {
+        if (watchdog) window.clearTimeout(watchdog);
       }
     };
 
@@ -67,6 +78,7 @@ export function CameraCapture({
 
     return () => {
       active = false;
+      if (watchdog) window.clearTimeout(watchdog);
       stop();
     };
   }, [facing, retry]);
