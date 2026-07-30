@@ -341,6 +341,7 @@ model User {
   followedAnimals      AnimalFollower[]
   followedReports      ReportFollower[]
   needContributions    NeedContribution[]
+  reportAdoptionRequests ReportAdoptionRequest[] @relation("ReportAdoptionApplicant")
 
   @@map("users")
 }
@@ -414,11 +415,25 @@ model Report {
   resources        Resource[]
   lostPet          LostPet?
   lostMatches      LostPetMatch[]
-  flags            ReportFlag[]
-  followers        ReportFollower[]
+  flags               ReportFlag[]
+  followers           ReportFollower[]
+  adoptionRequests    ReportAdoptionRequest[]
 
   @@index([status])
   @@map("reports")
+}
+
+model ReportAdoptionRequest {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reportId    String   @map("report_id") @db.Uuid
+  applicantId String   @map("applicant_id") @db.Uuid
+  message     String?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  report    Report @relation(fields: [reportId], references: [id])
+  applicant User   @relation("ReportAdoptionApplicant", fields: [applicantId], references: [id])
+
+  @@map("report_adoption_requests")
 }
 
 model ReportPhoto {

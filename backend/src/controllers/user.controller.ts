@@ -451,7 +451,10 @@ export class UserController {
 
       await prisma.user.update({
         where: { id: userId },
-        data: { isActive: false } // Borrado lógico
+        data: { 
+          isActive: false,
+          email: `deleted_${Date.now()}_${user?.email}`
+        }
       });
 
       res.status(200).json({ message: 'Cuenta inactivada exitosamente' });
@@ -526,7 +529,7 @@ export class UserController {
           userId: admin.id,
           title: 'Nueva solicitud de voluntario',
           body: `${updatedUser.name} ha enviado una solicitud de voluntariado.`,
-          type: 'system_alert',
+          type: 'system',
           link: '/admin/volunteers'
         })
       );

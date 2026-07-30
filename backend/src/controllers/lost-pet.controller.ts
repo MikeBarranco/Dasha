@@ -62,7 +62,7 @@ export class LostPetController {
 
         // B. Crear el LostPet vinculado usando Raw Query (porque lastSeenLocation es Unsupported y obligatorio)
         const radius = searchRadiusKm || 3;
-        const rewardVal = reward ? parseFloat(reward) : null;
+        const rewardVal = reward != null ? Number(reward) : null;
         const seenAt = lastSeenAt ? new Date(lastSeenAt) : new Date();
         const safeContactName = contactName || null;
         const safeContactWhatsapp = contactWhatsapp || null;
@@ -81,10 +81,16 @@ export class LostPetController {
 
         const lostPetId = lostPetRes[0].id;
 
-        // C. Actualizar coordenadas PostGIS en Report (Report sí tiene .create porque es opcional)
+        // C. Actualizar coordenadas PostGIS y Colonia en Report
         await tx.$executeRaw`
           UPDATE "reports"
-          SET location = ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)
+          SET 
+            location = ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326),
+            colony_id = (
+              SELECT id FROM "colonies"
+              WHERE ST_Intersects("geometry", ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography)
+              LIMIT 1
+            )
           WHERE id = ${report.id}::uuid;
         `;
 
