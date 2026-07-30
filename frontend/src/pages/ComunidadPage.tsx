@@ -538,7 +538,7 @@ export function ComunidadPage() {
                     </p>
                   </div>
                 </div>
-                <p className="mt-3 text-sm text-neutral-600">{post.text}</p>
+                <p className="mt-3 break-words text-sm text-neutral-600">{post.text}</p>
                 {post.image && (
                   <img
                     src={post.image}
@@ -613,7 +613,9 @@ export function ComunidadPage() {
                                     </span>{' '}
                                     · {reply.role} · {reply.timeAgo}
                                   </p>
-                                  <p className="mt-0.5 text-sm text-neutral-600">{reply.text}</p>
+                                  <p className="mt-0.5 break-words text-sm text-neutral-600">
+                                    {reply.text}
+                                  </p>
                                 </div>
                                 {/* Los comentarios optimistas (id local-) aún no existen en
                                     el backend, no se pueden denunciar todavía. */}

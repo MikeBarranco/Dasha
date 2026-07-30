@@ -124,7 +124,9 @@ export function AccountSettingsSheet({
   const [deleting, setDeleting] = useState(false);
   const [delError, setDelError] = useState<string | null>(null);
 
-  const canDelete = delConfirm.trim().toUpperCase() === DELETE_WORD && !deleting;
+  // Debe coincidir EXACTO (mayúsculas incluidas): es una acción destructiva y
+  // queremos fricción deliberada. "eliMinar" no cuenta.
+  const canDelete = delConfirm.trim() === DELETE_WORD && !deleting;
 
   const submitDelete = async () => {
     if (!canDelete) return;

@@ -212,7 +212,9 @@ export function AllyProfilePage() {
 
       <div className="px-1">
         {ally.description && (
-          <p className="mt-4 text-sm leading-relaxed text-neutral-600">{ally.description}</p>
+          <p className="mt-4 break-words text-sm leading-relaxed text-neutral-600">
+            {ally.description}
+          </p>
         )}
 
         {ally.promo && (
@@ -222,7 +224,9 @@ export function AllyProfilePage() {
             </span>
             <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-wide text-naranja">Promoción</p>
-              <p className="mt-0.5 text-sm leading-relaxed text-neutral-700">{ally.promo}</p>
+              <p className="mt-0.5 break-words text-sm leading-relaxed text-neutral-700">
+                {ally.promo}
+              </p>
             </div>
           </div>
         )}

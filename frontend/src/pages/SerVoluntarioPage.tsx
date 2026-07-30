@@ -393,6 +393,7 @@ export function SerVoluntarioPage() {
             value={motivation}
             onChange={(event) => setMotivation(event.target.value)}
             rows={3}
+            maxLength={300}
             placeholder="Cuéntanos un poco de ti"
             className={cn(inputClass, 'resize-none')}
           />
