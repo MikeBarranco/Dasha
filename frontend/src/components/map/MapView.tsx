@@ -602,8 +602,12 @@ export function MapView({
 
         for (const group of groups.values()) {
           const primary = group[0];
+          // OJO: no fijar `position` en línea. maplibre posiciona el marcador con
+          // `position: absolute` (de su clase .maplibregl-marker); si lo pisamos con
+          // `relative`, el pin se sale del anclaje y se arrastra al hacer zoom. El
+          // contador se cuelga con `absolute` y toma como referencia este mismo
+          // elemento (que ya es `absolute`), así que no necesita `relative` aquí.
           const element = document.createElement('div');
-          element.style.position = 'relative';
           element.style.width = '44px';
           element.style.height = '44px';
           element.style.borderRadius = '9999px';
