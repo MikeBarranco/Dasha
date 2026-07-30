@@ -15,10 +15,12 @@ const LocationPicker = lazy(() =>
 
 const sizes = ['Pequeño', 'Mediano', 'Grande'];
 const colorOptions = ['Negro', 'Café', 'Blanco', 'Gris', 'Beige', 'Manchado'];
+// La columna search_radius_km del backend es INTEGER: solo enteros. Nada de
+// medios kilómetros (0.5 reventaba el INSERT con error 22P02).
 const radiusOptions = [
-  { label: '500 m', value: 0.5 },
   { label: '1 km', value: 1 },
   { label: '3 km', value: 3 },
+  { label: '5 km', value: 5 },
 ];
 
 type SelectChipProps = {

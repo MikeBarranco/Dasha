@@ -37,7 +37,8 @@ export async function createLostPetReport(input: LostPetInput): Promise<LostPetR
     condition: 'lost',
     lat: input.lat,
     lng: input.lng,
-    searchRadiusKm: input.searchRadiusKm,
+    // La columna es INTEGER: nunca mandamos un decimal (evita el error 22P02).
+    searchRadiusKm: Math.max(1, Math.round(input.searchRadiusKm)),
     reward: input.reward || undefined,
     contactWhatsapp: input.contactPhone,
     description: input.description || undefined,
