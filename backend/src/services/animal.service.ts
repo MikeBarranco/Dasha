@@ -37,7 +37,7 @@ export class AnimalService {
       // Crear el perfil del animal
       const animal = await tx.animalProfile.create({
         data: {
-          reportId: data.reportId,
+          ...(data.reportId ? { report: { connect: { id: data.reportId } } } : {}),
           organizationId: data.organizationId,
           name: data.name,
           species: data.species,
