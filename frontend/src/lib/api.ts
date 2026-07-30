@@ -2388,8 +2388,12 @@ export async function acceptReport(
 // Suma un avistamiento a un reporte existente en vez de crear un duplicado.
 // POST /reports/:id/sighting (incrementa seen_count / last_seen_at en el backend).
 // Contrato del backend (api_updates_miguel.md, 10):
-// { lat, lng, description, photosBase64: [...] }. Mandar dónde y cuándo se vio
-// es el punto del avistamiento: antes iba sin datos y el reporte no se enriquecía.
+// { lat, lng, description, photoBase64 }. Mandar dónde y cuándo se vio es el punto
+// del avistamiento: antes iba sin datos y el reporte no se enriquecía. La foto va
+// como `photoBase64` (string, singular) — el backend la sube a Cloudinary y la
+// devuelve en `sightings[].photoUrl` de GET /reports/:id (contrato de Isabel,
+// 30 jul); antes la mandábamos como `photosBase64: []` y por eso no se guardaba,
+// dejando el carrusel de duplicados con una sola foto.
 export async function addSighting(
   reportId: string,
   sighting: { lat: number; lng: number; description?: string; photoBase64?: string },
@@ -2400,7 +2404,7 @@ export async function addSighting(
   };
   const description = sighting.description?.trim();
   if (description) body.description = description;
-  if (sighting.photoBase64) body.photosBase64 = [sighting.photoBase64];
+  if (sighting.photoBase64) body.photoBase64 = sighting.photoBase64;
   await authedRaw(`/reports/${reportId}/sighting`, {
     method: 'POST',
     body: JSON.stringify(body),
