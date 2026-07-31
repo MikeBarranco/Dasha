@@ -14,6 +14,7 @@ import { getColoniesByCp, type Colonia } from '../../lib/api';
 import { compressImage } from '../../lib/image';
 import { onlyDigits } from '../../lib/validation';
 import { OrgLocationPicker } from '../map/OrgLocationPicker';
+import { ScheduleEditor } from '../portal/ScheduleEditor';
 
 type OrgFormSheetProps = {
   org: AdminOrg | null;
@@ -290,13 +291,7 @@ export function OrgFormSheet({ org, onClose, onSaved }: OrgFormSheetProps) {
           </Field>
 
           <Field label="Horario">
-            <input
-              value={schedule}
-              onChange={(event) => setSchedule(event.target.value)}
-              maxLength={120}
-              className={inputClass}
-              placeholder="Ej. Lun a Vie 9:00 a 18:00"
-            />
+            <ScheduleEditor value={schedule} onChange={setSchedule} />
           </Field>
 
           <div className="rounded-2xl border border-neutral-200 bg-white p-4">
@@ -351,7 +346,11 @@ export function OrgFormSheet({ org, onClose, onSaved }: OrgFormSheetProps) {
               </p>
             )}
 
-            <OrgLocationPicker center={coords} onChange={(la, ln) => setCoords({ lat: la, lng: ln })} />
+            <OrgLocationPicker
+              center={coords}
+              colonyName={colonyName}
+              onChange={(la, ln) => setCoords({ lat: la, lng: ln })}
+            />
           </div>
 
           {error && <p className="text-sm text-alerta">{error}</p>}

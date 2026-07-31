@@ -4,6 +4,7 @@ import { getAlly, updateMyOrganization, type MyOrgInput } from '../../lib/api';
 import { mockAllies, type Ally } from '../../data/mockAllies';
 import { compressImage } from '../../lib/image';
 import { useAllyPortal } from '../../lib/useAllyPortal';
+import { ScheduleEditor } from '../../components/portal/ScheduleEditor';
 
 const inputClass =
   'w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-base text-neutral-700 outline-none focus:ring-2 focus:ring-cobalto/30';
@@ -269,13 +270,7 @@ export function PortalPerfilPage() {
         </Field>
 
         <Field label="Horario">
-          <input
-            value={schedule}
-            onChange={(event) => setSchedule(event.target.value)}
-            maxLength={120}
-            className={inputClass}
-            placeholder="Ej. Lun a Sáb 9:00 a 20:00"
-          />
+          <ScheduleEditor value={schedule} onChange={setSchedule} />
         </Field>
 
         <Field label="Dirección">

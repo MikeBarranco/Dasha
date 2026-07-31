@@ -308,7 +308,11 @@ export function SolicitudAliadoPage() {
             </p>
           )}
 
-          <OrgLocationPicker center={coords} onChange={(lat, lng) => setCoords({ lat, lng })} />
+          <OrgLocationPicker
+            center={coords}
+            colonyName={colonyName}
+            onChange={(lat, lng) => setCoords({ lat, lng })}
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
