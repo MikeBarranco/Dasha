@@ -2,6 +2,20 @@
 // Su única tarea por ahora es recibir Web Push del backend y mostrar la
 // notificación nativa en el celular/PC, y abrir la app al tocarla.
 
+// Traduce el `link` lógico del backend a la ruta real de la app. DEBE ser igual
+// que src/lib/notificationLink.ts (aquí no podemos importar ese módulo porque
+// el service worker corre aparte). Si cambias una, cambia la otra.
+function mapNotificationLink(link) {
+  if (!link) return '/';
+  var forum = link.match(/^\/forum\/posts\/(.+)$/);
+  if (forum) return '/comunidad?tab=foro&post=' + forum[1];
+  var report = link.match(/^\/reports\/(.+)$/);
+  if (report) return '/mapa?reporte=' + report[1];
+  if (link === '/admin/organizations') return '/admin/solicitudes-aliado';
+  if (link === '/admin/volunteers') return '/admin/voluntarios';
+  return link;
+}
+
 self.addEventListener('install', () => {
   // Activa esta versión sin esperar a que se cierren las pestañas viejas.
   self.skipWaiting();
@@ -27,7 +41,9 @@ self.addEventListener('push', (event) => {
     body: payload.body || 'Tienes una nueva notificación de Dasha.',
     icon: '/icon-192.png',
     badge: '/icon-192.png',
-    data: { url: payload.url || '/' },
+    // El backend manda `link` (no `url`); lo traducimos a nuestra ruta real para
+    // que al tocar el push abra la pantalla correcta y no "página no encontrada".
+    data: { url: mapNotificationLink(payload.link || payload.url) },
   };
 
   event.waitUntil(self.registration.showNotification(title, options));
