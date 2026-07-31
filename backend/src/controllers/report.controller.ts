@@ -593,4 +593,76 @@ export class ReportController {
       next(error);
     }
   }
+  static async adoptDirectly(req: Request, res: Response, next: NextFunction) {
+    try {
+      const reportId = req.params.id as string;
+      const userId = (req as any).user?.id;
+      const { photoBase64, name } = req.body;
+
+      if (!userId) {
+        res.status(401).json({ error: 'No autorizado' });
+        return;
+      }
+
+      if (!photoBase64) {
+        res.status(400).json({ error: 'Se requiere una foto (selfie) como prueba de adopción' });
+        return;
+      }
+
+      const report = await prisma.report.findUnique({ where: { id: reportId } });
+      if (!report) {
+        res.status(404).json({ error: 'Reporte no encontrado' });
+        return;
+      }
+
+      if (report.status === 'adopted' || report.status === 'closed') {
+        res.status(400).json({ error: 'El reporte ya está cerrado o el animal ya fue adoptado' });
+        return;
+      }
+
+      // 1. Subir la foto a cloudinary
+      const { v2: cloudinary } = await import('cloudinary');
+      const uploadRes = await cloudinary.uploader.upload(photoBase64, {
+        folder: 'dasha/animals'
+      });
+
+      // 2. Crear perfil del animal a nombre del ciudadano y actualizar el reporte en transacción
+      const animal = await prisma.$transaction(async (tx) => {
+        const newAnimal = await tx.animalProfile.create({
+          data: {
+            report: { connect: { id: report.id } },
+            adoptedByUserId: userId,
+            name: name || 'Adoptado',
+            species: report.species || 'dog',
+            color: report.primaryColor,
+            status: 'adopted',
+            adoptedAt: new Date(),
+            photos: {
+              create: {
+                url: uploadRes.secure_url,
+                publicId: uploadRes.public_id,
+                orderIndex: 0
+              }
+            }
+          }
+        });
+
+        // Actualizar el reporte a status 'adopted'
+        await tx.report.update({
+          where: { id: report.id },
+          data: { status: 'adopted' }
+        });
+
+        return newAnimal;
+      });
+
+      res.status(201).json({
+        status: 'success',
+        message: '¡Felicidades por tu adopción!',
+        animal
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
