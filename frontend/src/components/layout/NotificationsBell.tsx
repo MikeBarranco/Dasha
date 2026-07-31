@@ -5,6 +5,7 @@ import { Bell, CheckCheck } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { useAuth } from '../../lib/useAuth';
 import { getNotifications, markNotificationRead, type AppNotification } from '../../lib/api';
+import { mapNotificationLink } from '../../lib/notificationLink';
 
 // Cada cuánto vuelve a consultar la campanita (ms).
 const NOTIFICATIONS_POLL_MS = 45000;
@@ -90,7 +91,7 @@ export function NotificationsBell() {
     }
     if (item.link) {
       setOpen(false);
-      navigate(item.link);
+      navigate(mapNotificationLink(item.link));
     }
   };
 
