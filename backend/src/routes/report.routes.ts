@@ -42,6 +42,9 @@ router.delete('/:id/follow', requireAuth, ReportController.unfollowReport);
 // POST /api/v1/reports/:id/adopt-request (Solicitar adopción de mascota)
 router.post('/:id/adopt-request', requireAuth, ReportController.adoptRequest);
 
+// POST /api/v1/reports/:id/adopt-directly (Adopción directa por el ciudadano que reporta)
+router.post('/:id/adopt-directly', requireAuth, ReportController.adoptDirectly);
+
 // GET /api/v1/reports/:id/adoption-requests (Ver interesados en adopción)
 router.get('/:id/adoption-requests', requireAuth, ReportController.getAdoptionRequests);
 

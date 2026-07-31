@@ -58,4 +58,8 @@ router.patch('/:id/needs/:needId', requireAuth, (req, res, next) => {
   NeedController.updateNeed(req, res, next);
 });
 
+import { EventController } from '../controllers/event.controller';
+// POST /api/v1/organizations/:id/events (Crear evento por aliado)
+router.post('/:id/events', requireAuth, EventController.createOrganizationEvent);
+
 export default router;

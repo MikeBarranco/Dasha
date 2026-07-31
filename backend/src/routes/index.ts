@@ -59,12 +59,15 @@ router.post('/portal/animals/:animalId/photos', requireAuth, OrganizationControl
 router.post('/portal/animals/direct-intake', requireAuth, OrganizationController.directIntakeAnimal);
 
 import { NeedController } from '../controllers/need.controller';
+import { EventController } from '../controllers/event.controller';
 router.get('/organizations/:id/needs', NeedController.getOrganizationNeeds);
 router.post('/organizations/:id/needs', requireAuth, NeedController.createNeed);
 router.patch('/organizations/:id/needs/:needId', requireAuth, (req, res, next) => {
   req.params.id = req.params.needId;
   NeedController.updateNeed(req, res, next);
 });
+
+router.post('/organizations/:id/events', requireAuth, EventController.createOrganizationEvent);
 
 router.get('/health', publicGetLimiter, (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
