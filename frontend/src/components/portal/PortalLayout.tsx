@@ -14,6 +14,7 @@ import {
   Home,
   Ambulance,
   HandHeart,
+  CalendarDays,
 } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { useAuth } from '../../lib/useAuth';
@@ -42,6 +43,7 @@ const portalSections = [
   { to: '/portal/adopciones', label: 'Adopciones', icon: Home, end: false, fullCycleOnly: true },
   { to: '/portal/donaciones', label: 'Donaciones', icon: HeartHandshake, end: false, fullCycleOnly: false },
   { to: '/portal/necesidades', label: 'Necesidades', icon: HandHeart, end: false, fullCycleOnly: false },
+  { to: '/portal/eventos', label: 'Eventos', icon: CalendarDays, end: false, fullCycleOnly: false },
 ];
 
 export function PortalLayout() {

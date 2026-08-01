@@ -1810,15 +1810,24 @@ function mapEvent(raw: Record<string, unknown>): CommunityEvent {
       ? (raw.organization as Record<string, unknown>)
       : null;
   const image = String(raw.imageUrl ?? raw.image_url ?? raw.image ?? '');
+  // La dirección (string) es lo que se muestra; `location` en BD es un punto
+  // geográfico (objeto), así que va después para no imprimir "[object Object]".
+  const place =
+    String(raw.address ?? '') ||
+    (typeof raw.location === 'string' ? raw.location : '') ||
+    String(raw.place ?? org?.name ?? '');
   return {
     id: String(raw.id ?? raw._id ?? ''),
     title: String(raw.title ?? raw.name ?? 'Evento'),
     type: eventCategoryPublicLabels[category] ?? (category || 'Evento'),
     date: formatEventWhen(String(raw.eventDate ?? raw.event_date ?? raw.date ?? '')),
-    place: String(raw.location ?? raw.place ?? org?.name ?? ''),
+    place,
     image: image || '/placeholder-animal.svg',
     description: String(raw.description ?? ''),
     interested: Number(raw.interestedCount ?? raw.interested ?? nestedCount(raw, 'interested') ?? 0),
+    organizationId: String(
+      raw.organizationId ?? raw.organization_id ?? org?.id ?? org?._id ?? '',
+    ) || undefined,
   };
 }
 
@@ -1829,6 +1838,39 @@ export async function getEvents(): Promise<CommunityEvent[]> {
 
 export async function rsvpEvent(id: string): Promise<void> {
   await authedRaw(`/events/${id}/interested`, { method: 'POST' });
+}
+
+// Publicación de un evento por parte de un ALIADO (desde su portal). Backend:
+// POST /organizations/:id/events; el usuario debe ser admin de esa organización.
+// El evento queda activo de inmediato (sin aprobación global). `GET /events` ya
+// lo filtra por fecha de fin y lo devuelve ordenado por el más próximo.
+export type OrgEventInput = {
+  title: string;
+  description: string;
+  category: string;
+  eventDate: string; // ISO
+  endDate?: string; // ISO opcional (evento de varios días / con hora de fin)
+  address: string;
+  lat?: number;
+  lng?: number;
+  imageBase64?: string;
+};
+
+export async function createOrgEvent(orgId: string, input: OrgEventInput): Promise<void> {
+  await authedRaw(`/organizations/${orgId}/events`, {
+    method: 'POST',
+    body: JSON.stringify({
+      title: input.title.trim(),
+      description: input.description.trim(),
+      category: input.category,
+      eventDate: input.eventDate,
+      endDate: input.endDate || undefined,
+      address: input.address.trim(),
+      lat: input.lat,
+      lng: input.lng,
+      imageBase64: input.imageBase64 || undefined,
+    }),
+  });
 }
 
 const forumRoleLabels: Record<string, string> = {
