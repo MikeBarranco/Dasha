@@ -7,6 +7,9 @@ export type CommunityEvent = {
   image: string;
   description: string;
   interested: number;
+  // Organización que publica el evento (para filtrar los del propio aliado en su
+  // portal). Ausente en los datos de ejemplo.
+  organizationId?: string;
 };
 
 export type ForumReply = {
