@@ -2,6 +2,9 @@ import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ScrollToTop } from './components/layout/ScrollToTop';
 import { AnalyticsTracker } from './components/layout/AnalyticsTracker';
+import { CookieBanner } from './components/layout/CookieBanner';
+import { TerminosPage } from './pages/TerminosPage';
+import { AvisoPrivacidadPage } from './pages/AvisoPrivacidadPage';
 import { AppLayout } from './components/layout/AppLayout';
 import { ErrorBoundary } from './components/layout/ErrorBoundary';
 import { LandingPage } from './pages/LandingPage';
@@ -66,12 +69,15 @@ function App() {
     <BrowserRouter>
       <ScrollToTop />
       <AnalyticsTracker />
+      <CookieBanner />
       <ErrorBoundary>
         <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="registro" element={<RegistroPage />} />
         <Route path="auth/callback" element={<AuthCallbackPage />} />
+        <Route path="terminos" element={<TerminosPage />} />
+        <Route path="aviso-privacidad" element={<AvisoPrivacidadPage />} />
         <Route path="rescate/:assignmentId" element={<RescateEnVivoPage />} />
         <Route element={<AppLayout />}>
           <Route path="mapa" element={<MapaPage />} />
