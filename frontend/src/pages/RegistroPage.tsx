@@ -31,6 +31,7 @@ export function RegistroPage() {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const errors = {
     nombre:
@@ -54,7 +55,7 @@ export function RegistroPage() {
     confirm: confirm !== password || confirm === '' ? 'Las contraseñas no coinciden' : '',
   };
 
-  const isValid = Object.values(errors).every((value) => value === '');
+  const isValid = Object.values(errors).every((value) => value === '') && acceptedTerms;
 
   const markTouched = (field: string) => setTouched((current) => ({ ...current, [field]: true }));
 
@@ -86,6 +87,17 @@ export function RegistroPage() {
         </div>
 
         <OAuthButtons />
+        <p className="mt-3 text-center text-xs text-neutral-400">
+          Al continuar con Google aceptas nuestros{' '}
+          <Link to="/terminos" target="_blank" className="underline">
+            Términos
+          </Link>{' '}
+          y el{' '}
+          <Link to="/aviso-privacidad" target="_blank" className="underline">
+            Aviso de Privacidad
+          </Link>
+          .
+        </p>
 
         <div className="my-5 flex items-center gap-3">
           <span className="h-px flex-1 bg-neutral-200" />
@@ -161,6 +173,30 @@ export function RegistroPage() {
               placeholder="Repite la contraseña"
             />
           </Field>
+
+          <label className="flex items-start gap-2.5 text-sm text-neutral-600">
+            <input
+              type="checkbox"
+              checked={acceptedTerms}
+              onChange={(event) => setAcceptedTerms(event.target.checked)}
+              className="mt-0.5 h-4 w-4 flex-shrink-0 rounded border-neutral-300 text-cobalto focus:ring-cobalto/30"
+            />
+            <span>
+              Acepto los{' '}
+              <Link to="/terminos" target="_blank" className="font-medium text-cobalto underline">
+                Términos y Condiciones
+              </Link>{' '}
+              y el{' '}
+              <Link
+                to="/aviso-privacidad"
+                target="_blank"
+                className="font-medium text-cobalto underline"
+              >
+                Aviso de Privacidad
+              </Link>
+              .
+            </span>
+          </label>
 
           <button
             type="submit"
