@@ -1385,6 +1385,23 @@ export async function getMyAdoptedAnimals(): Promise<Animal[]> {
   return (data ?? []).map(mapAnimal);
 }
 
+// Adopción directa del ciudadano ("me lo quedo"): quien YA tiene al animalito de
+// un reporte se lo queda sin volverse voluntario ni pasar por un aliado. Backend:
+// POST /reports/:id/adopt-directly { photoBase64, name? }. Marca el reporte como
+// adopted, crea el AnimalProfile con adoptedByUserId = ciudadano en sesión y usa
+// la foto (selfie con el animalito) como primera del álbum. Aparece en
+// GET /me/adopted y permite agregar momentos.
+export async function adoptDirectly(
+  reportId: string,
+  photoBase64: string,
+  name?: string,
+): Promise<void> {
+  await authedRaw(`/reports/${reportId}/adopt-directly`, {
+    method: 'POST',
+    body: JSON.stringify({ photoBase64, name: name?.trim() || undefined }),
+  });
+}
+
 // La familia agrega un momento (foto + descripción) a su perrito adoptado.
 // POST /animals/:id/moments { photoBase64, caption }. Registra un case_action y
 // suma la foto al álbum, para que crezca la historia post-adopción.

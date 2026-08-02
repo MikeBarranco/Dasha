@@ -15,9 +15,11 @@ import {
   Bell,
   BellRing,
   HandHeart,
+  Heart,
   Loader2,
 } from 'lucide-react';
 import { ShareButton } from '../ui/ShareButton';
+import { AdoptDirectlySheet } from './AdoptDirectlySheet';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 import { useSheetDismiss } from '../../lib/useSheetDismiss';
 import { useAuth } from '../../lib/useAuth';
@@ -109,6 +111,7 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
   const [accepting, setAccepting] = useState(false);
   const [acceptError, setAcceptError] = useState<string | null>(null);
   const [showVolInfo, setShowVolInfo] = useState(false);
+  const [adoptOpen, setAdoptOpen] = useState(false);
   const { dragControls, scrollRef, onPointerDown, onPointerMove, onDragEnd } =
     useSheetDismiss(onClose);
 
@@ -480,6 +483,24 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
             )}
           </div>
 
+          {/* Adopción directa: si alguien YA tiene al animalito consigo, puede
+              darle un hogar sin volverse voluntario. No aplica si ya hay un
+              traslado en curso. */}
+          {!report.activeAssignmentId && (
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={() => (account ? setAdoptOpen(true) : navigate('/login'))}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-cobalto/30 py-2.5 text-sm font-semibold text-cobalto transition-colors hover:bg-cobalto/5"
+              >
+                <Heart className="h-4 w-4" /> Quiero adoptarlo
+              </button>
+              <p className="mt-1 text-center text-xs text-neutral-400">
+                ¿Ya lo tienes contigo? Dale un hogar y quedará en tu cuenta.
+              </p>
+            </div>
+          )}
+
           {offers.length > 0 && (
             <div className="mt-5">
               <p className="flex items-center gap-1.5 text-sm font-semibold text-cobalto">
@@ -720,6 +741,20 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
               <X className="h-5 w-5" />
             </button>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {adoptOpen && (
+          <AdoptDirectlySheet
+            reportId={report.id}
+            speciesLabel={report.species}
+            onClose={() => setAdoptOpen(false)}
+            onAdopted={() => {
+              setAdoptOpen(false);
+              onClose();
+            }}
+          />
         )}
       </AnimatePresence>
     </div>
