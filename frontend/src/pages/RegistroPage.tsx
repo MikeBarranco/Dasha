@@ -1,9 +1,11 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { AnimatePresence } from 'motion/react';
 import { Loader2, Bone } from 'lucide-react';
 import { useAuth } from '../lib/useAuth';
 import { PasswordInput } from '../components/auth/PasswordInput';
 import { OAuthButtons } from '../components/auth/OAuthButtons';
+import { LegalSheet, type LegalDoc } from '../components/legal/LegalSheet';
 import { cn } from '../lib/cn';
 import { onlyLetters, isValidEmail, passwordRules, isStrongPassword } from '../lib/validation';
 
@@ -32,6 +34,9 @@ export function RegistroPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  // Documento legal abierto en la hoja. Se muestra ENCIMA del formulario, sin
+  // navegar, para no perder lo que la persona ya escribió (nombre, contraseña…).
+  const [legalDoc, setLegalDoc] = useState<LegalDoc | null>(null);
 
   const errors = {
     nombre:
@@ -89,13 +94,13 @@ export function RegistroPage() {
         <OAuthButtons />
         <p className="mt-3 text-center text-xs text-neutral-400">
           Al continuar con Google aceptas nuestros{' '}
-          <Link to="/terminos" target="_blank" className="underline">
+          <button type="button" onClick={() => setLegalDoc('terminos')} className="underline">
             Términos
-          </Link>{' '}
+          </button>{' '}
           y el{' '}
-          <Link to="/aviso-privacidad" target="_blank" className="underline">
+          <button type="button" onClick={() => setLegalDoc('aviso')} className="underline">
             Aviso de Privacidad
-          </Link>
+          </button>
           .
         </p>
 
@@ -183,17 +188,21 @@ export function RegistroPage() {
             />
             <span>
               Acepto los{' '}
-              <Link to="/terminos" target="_blank" className="font-medium text-cobalto underline">
+              <button
+                type="button"
+                onClick={() => setLegalDoc('terminos')}
+                className="font-medium text-cobalto underline"
+              >
                 Términos y Condiciones
-              </Link>{' '}
+              </button>{' '}
               y el{' '}
-              <Link
-                to="/aviso-privacidad"
-                target="_blank"
+              <button
+                type="button"
+                onClick={() => setLegalDoc('aviso')}
                 className="font-medium text-cobalto underline"
               >
                 Aviso de Privacidad
-              </Link>
+              </button>
               .
             </span>
           </label>
@@ -214,6 +223,10 @@ export function RegistroPage() {
           </Link>
         </p>
       </div>
+
+      <AnimatePresence>
+        {legalDoc && <LegalSheet doc={legalDoc} onClose={() => setLegalDoc(null)} />}
+      </AnimatePresence>
     </div>
   );
 }
