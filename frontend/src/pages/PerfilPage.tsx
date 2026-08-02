@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { AnimatePresence } from 'motion/react';
 import {
   ChevronRight,
@@ -432,6 +432,15 @@ export function PerfilPage() {
       <div className="pt-2 text-center">
         <p className="mb-3 text-xs text-neutral-400">Síguenos en redes</p>
         <SocialLinks />
+        <div className="mt-4 flex items-center justify-center gap-x-4 gap-y-1 text-xs text-neutral-400">
+          <Link to="/terminos" className="transition-colors hover:text-cobalto">
+            Términos
+          </Link>
+          <span aria-hidden="true">·</span>
+          <Link to="/aviso-privacidad" className="transition-colors hover:text-cobalto">
+            Aviso de Privacidad
+          </Link>
+        </div>
       </div>
 
       <AnimatePresence>
