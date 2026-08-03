@@ -305,7 +305,8 @@ export class ForumController {
         where: { id: replyId },
         data: { upvotes: { increment } },
         select: { upvotes: true }
-        res.status(200).json({ message: 'Like procesado', totalVotes: reply.upvotes });
+      });
+      res.status(200).json({ message: 'Like procesado', totalVotes: reply.upvotes });
     } catch (error) {
       next(error);
     }
