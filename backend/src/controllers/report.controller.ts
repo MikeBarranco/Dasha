@@ -641,7 +641,7 @@ export class ReportController {
         const newAnimal = await tx.animalProfile.create({
           data: {
             report: { connect: { id: report.id } },
-            adoptedByUserId: userId,
+            adopter: { connect: { id: userId } },
             name: name || 'Adoptado',
             species: report.species || 'dog',
             color: report.primaryColor,
