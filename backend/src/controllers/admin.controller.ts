@@ -935,9 +935,39 @@ export class AdminController {
   static async deleteForumPost(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
-      await prisma.forumPost.delete({
-        where: { id }
+      
+      await prisma.$transaction(async (tx) => {
+        // Eliminar votos del post y de las respuestas de este post
+        await tx.forumVote.deleteMany({
+          where: {
+            OR: [
+              { postId: id },
+              { reply: { postId: id } }
+            ]
+          }
+        });
+        
+        // Eliminar denuncias de las respuestas
+        await tx.forumReplyFlag.deleteMany({
+          where: { reply: { postId: id } }
+        });
+        
+        // Eliminar respuestas
+        await tx.forumReply.deleteMany({
+          where: { postId: id }
+        });
+        
+        // Eliminar denuncias del post
+        await tx.forumPostFlag.deleteMany({
+          where: { postId: id }
+        });
+        
+        // Eliminar el post
+        await tx.forumPost.delete({
+          where: { id }
+        });
       });
+      
       res.status(200).json({ message: 'Post del foro eliminado correctamente' });
     } catch (error) {
       next(error);
@@ -947,9 +977,24 @@ export class AdminController {
   static async deleteForumReply(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
-      await prisma.forumReply.delete({
-        where: { id }
+      
+      await prisma.$transaction(async (tx) => {
+        // Eliminar votos de la respuesta
+        await tx.forumVote.deleteMany({
+          where: { replyId: id }
+        });
+        
+        // Eliminar denuncias de la respuesta
+        await tx.forumReplyFlag.deleteMany({
+          where: { replyId: id }
+        });
+        
+        // Eliminar la respuesta
+        await tx.forumReply.delete({
+          where: { id }
+        });
       });
+      
       res.status(200).json({ message: 'Respuesta del foro eliminada correctamente' });
     } catch (error) {
       next(error);
