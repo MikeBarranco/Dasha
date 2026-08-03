@@ -315,11 +315,18 @@ export class UserController {
           photos: {
             take: 1
           },
-          colony: true
+          colony: true,
+          lostPet: true // IMPORTANTE: Para saber si es de perdidos
         }
       });
 
-      res.status(200).json(reports);
+      // Mapear para asegurar que el frontend detecte si es LostPet
+      const mappedReports = reports.map(r => ({
+        ...r,
+        isLostPet: !!r.lostPet
+      }));
+
+      res.status(200).json(mappedReports);
     } catch (error) {
       next(error);
     }
