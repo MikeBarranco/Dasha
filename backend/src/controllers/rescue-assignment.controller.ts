@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { NotificationService } from '../services/notification.service';
+import cloudinary from '../config/cloudinary';
 
 export class RescueAssignmentController {
   
@@ -226,11 +227,11 @@ export class RescueAssignmentController {
   static async addRescuePhoto(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
-      const { photoUrl, description } = req.body;
+      const { photoBase64, kind, note } = req.body;
       const userId = (req as any).user?.id;
 
-      if (!photoUrl) {
-        res.status(400).json({ error: 'photoUrl es requerido' });
+      if (!photoBase64) {
+        res.status(400).json({ error: 'photoBase64 es requerido' });
         return;
       }
 
@@ -243,19 +244,24 @@ export class RescueAssignmentController {
         return;
       }
 
-      await prisma.$executeRaw`
-        INSERT INTO case_actions (
-          id, report_id, actor_id, action_type, description, photo_url, created_at
-        ) VALUES (
-          gen_random_uuid(), 
-          ${assignment.reportId}::uuid, 
-          ${userId ? userId : null}::uuid, 
-          'photo_added'::"ActionType", 
-          ${description || 'Foto del traslado añadida'}, 
-          ${photoUrl}, 
-          NOW()
-        );
-      `;
+      // Subir la foto a Cloudinary
+      const uploadResult = await cloudinary.uploader.upload(photoBase64, {
+        folder: 'dasha/rescue_evidences'
+      });
+
+      // Crear CaseAction usando Prisma Client para que el tipo Json en metadata funcione
+      await prisma.caseAction.create({
+        data: {
+          reportId: assignment.reportId,
+          actorId: userId || null,
+          actionType: 'note_added', // Usamos un ActionType válido
+          description: note || (kind === 'pickup' ? 'Evidencia de recolección' : 'Evidencia de entrega'),
+          metadata: {
+            url: uploadResult.secure_url,
+            kind: kind
+          }
+        }
+      });
 
       res.status(201).json({ status: 'success', message: 'Foto añadida al historial del caso' });
     } catch (error) {
