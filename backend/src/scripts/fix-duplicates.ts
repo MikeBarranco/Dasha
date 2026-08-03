@@ -1,6 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../config/db';
 
 async function fixDuplicates() {
   console.log('Iniciando limpieza de medallas duplicadas...');
