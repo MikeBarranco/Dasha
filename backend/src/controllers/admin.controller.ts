@@ -861,7 +861,7 @@ export class AdminController {
       const reportFlags = await prisma.reportFlag.findMany({
         orderBy: { createdAt: 'desc' },
         include: {
-          report: { include: { user: { select: { name: true } } } },
+          report: { include: { user: { select: { name: true } }, photos: { take: 1, select: { url: true } } } },
           flagger: { select: { id: true, name: true, email: true } }
         }
       });
@@ -875,7 +875,8 @@ export class AdminController {
           id: f.post.id,
           title: f.post.title,
           content: f.post.content,
-          author: { name: f.post.user.name }
+          author: { name: f.post.user.name },
+          imageUrl: f.post.images?.[0] || undefined
         },
         type: 'post'
       }));
@@ -903,7 +904,8 @@ export class AdminController {
           id: f.report.id,
           title: `Reporte de Animal: ${f.report.species}`,
           content: f.report.description,
-          author: { name: f.report.user?.name || 'Usuario Anónimo' }
+          author: { name: f.report.user?.name || 'Usuario Anónimo' },
+          imageUrl: f.report.photos?.[0]?.url || undefined
         },
         type: 'report'
       }));
