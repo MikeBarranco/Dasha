@@ -822,7 +822,7 @@ export class OrganizationController {
           species: species || 'dog',
           primaryColor: color || 'N/A',
           size: size || 'medium',
-          condition: condition || 'healthy',
+          condition: condition || 'stable',
           description: description || 'Ingreso directo al refugio',
           status: 'closed',
           address: 'Ingreso directo'
