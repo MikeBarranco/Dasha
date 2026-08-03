@@ -513,6 +513,7 @@ model Organization {
   coverPublicId   String?                                @map("cover_public_id") @db.VarChar(255)
   slogan          String?                                @db.VarChar(255)
   address         String?                                @db.VarChar(255)
+  zipCode         String?                                @map("zip_code") @db.VarChar(10)
   phone           String?                                @db.VarChar(20)
   whatsapp        String?                                @db.VarChar(20)
   location        Unsupported("geography(Point, 4326)")?
