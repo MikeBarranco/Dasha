@@ -390,7 +390,15 @@ export class ReportController {
     }
   }
 
-  // ==========================================
+  // ============================  // Función para mapear motivos en español al enum de Prisma FlagReason
+  static mapReason(reason: string): any {
+    const normalized = reason.toLowerCase();
+    if (normalized.includes('ofensivo') || normalized.includes('inapropiado')) return 'inappropriate';
+    if (normalized.includes('spam') || normalized.includes('publicidad')) return 'spam';
+    if (normalized.includes('falsa') || normalized.includes('internet') || normalized.includes('no hay')) return 'fake';
+    return 'other';
+  }
+
   // REPORTE DE ABUSO O FALSO REPORTE
   // ==========================================
   
@@ -416,12 +424,14 @@ export class ReportController {
         return;
       }
 
+      const mappedReason = ReportController.mapReason(reason);
+
       const flag = await prisma.reportFlag.create({
         data: {
           reportId,
           flaggedBy: userId,
-          reason,
-          notes: details || notes,
+          reason: mappedReason,
+          notes: details || notes || reason,
           status: 'open'
         }
       });

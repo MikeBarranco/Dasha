@@ -306,11 +306,19 @@ export class ForumController {
         data: { upvotes: { increment } },
         select: { upvotes: true }
       });
-
       res.status(200).json({ message: 'Like procesado', totalVotes: reply.upvotes });
     } catch (error) {
       next(error);
     }
+  }
+
+  // Función para mapear motivos en español al enum de Prisma FlagReason
+  static mapReason(reason: string): any {
+    const normalized = reason.toLowerCase();
+    if (normalized.includes('ofensivo') || normalized.includes('inapropiado')) return 'inappropriate';
+    if (normalized.includes('spam') || normalized.includes('publicidad')) return 'spam';
+    if (normalized.includes('falsa') || normalized.includes('internet') || normalized.includes('no hay')) return 'fake';
+    return 'other';
   }
 
   // POST /forum/posts/:id/report
@@ -336,12 +344,14 @@ export class ForumController {
         return;
       }
 
+      const mappedReason = ForumController.mapReason(reason);
+
       const flag = await prisma.forumPostFlag.create({
         data: {
           postId,
           flaggedBy: userId,
-          reason,
-          notes: details || notes,
+          reason: mappedReason,
+          notes: details || notes || reason,
           status: 'open'
         }
       });
@@ -375,12 +385,14 @@ export class ForumController {
         return;
       }
 
+      const mappedReason = ForumController.mapReason(reason);
+
       const flag = await prisma.forumReplyFlag.create({
         data: {
           replyId,
           flaggedBy: userId,
-          reason,
-          notes: details || notes,
+          reason: mappedReason,
+          notes: details || notes || reason,
           status: 'open'
         }
       });
