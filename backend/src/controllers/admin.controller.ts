@@ -838,18 +838,80 @@ export class AdminController {
   }
 
   // ==========================================
-  // FORO
+  // DENUNCIAS (TODO TIPO)
   // ==========================================
   static async getForumReports(req: Request, res: Response, next: NextFunction) {
     try {
-      const reports = await prisma.forumPostFlag.findMany({
+      const postFlags = await prisma.forumPostFlag.findMany({
         orderBy: { createdAt: 'desc' },
         include: {
-          post: true,
+          post: { include: { user: { select: { name: true } } } },
           flagger: { select: { id: true, name: true, email: true } }
         }
       });
-      res.status(200).json(reports);
+
+      const replyFlags = await prisma.forumReplyFlag.findMany({
+        orderBy: { createdAt: 'desc' },
+        include: {
+          reply: { include: { user: { select: { name: true } } } },
+          flagger: { select: { id: true, name: true, email: true } }
+        }
+      });
+
+      const reportFlags = await prisma.reportFlag.findMany({
+        orderBy: { createdAt: 'desc' },
+        include: {
+          report: { include: { user: { select: { name: true } } } },
+          flagger: { select: { id: true, name: true, email: true } }
+        }
+      });
+
+      const mappedPostFlags = postFlags.map(f => ({
+        id: f.id,
+        reason: f.reason,
+        createdAt: f.createdAt,
+        reporter: { name: f.flagger.name },
+        post: {
+          id: f.post.id,
+          title: f.post.title,
+          content: f.post.content,
+          author: { name: f.post.user.name }
+        },
+        type: 'post'
+      }));
+
+      const mappedReplyFlags = replyFlags.map(f => ({
+        id: f.id,
+        reason: f.reason,
+        createdAt: f.createdAt,
+        reporter: { name: f.flagger.name },
+        post: {
+          id: f.reply.id,
+          title: 'Comentario en el foro',
+          content: f.reply.content,
+          author: { name: f.reply.user.name }
+        },
+        type: 'reply'
+      }));
+
+      const mappedReportFlags = reportFlags.map(f => ({
+        id: f.id,
+        reason: f.reason,
+        createdAt: f.createdAt,
+        reporter: { name: f.flagger.name },
+        post: {
+          id: f.report.id,
+          title: `Reporte de Animal: ${f.report.species}`,
+          content: f.report.description,
+          author: { name: f.report.user?.name || 'Usuario Anónimo' }
+        },
+        type: 'report'
+      }));
+
+      const allFlags = [...mappedPostFlags, ...mappedReplyFlags, ...mappedReportFlags]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      res.status(200).json(allFlags);
     } catch (error) {
       next(error);
     }
