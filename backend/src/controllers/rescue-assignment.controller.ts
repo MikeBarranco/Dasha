@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { NotificationService } from '../services/notification.service';
-import cloudinary from '../config/cloudinary';
+import { v2 as cloudinary } from 'cloudinary';
 
 export class RescueAssignmentController {
   
@@ -254,7 +254,7 @@ export class RescueAssignmentController {
         data: {
           reportId: assignment.reportId,
           actorId: userId || null,
-          actionType: 'note_added', // Usamos un ActionType válido
+          actionType: 'status_changed', // Usamos un ActionType válido
           description: note || (kind === 'pickup' ? 'Evidencia de recolección' : 'Evidencia de entrega'),
           metadata: {
             url: uploadResult.secure_url,
