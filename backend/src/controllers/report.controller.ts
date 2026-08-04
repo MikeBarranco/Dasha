@@ -44,7 +44,8 @@ export class ReportController {
       
       // Evaluar logros de reportero de forma asíncrona (sin bloquear la respuesta)
       if (data.userId) {
-        AchievementService.checkAndGrantReporterAchievements(data.userId);
+        AchievementService.checkAndGrantReporterAchievements(data.userId)
+          .catch((err: any) => console.error('Error in checkAndGrantReporterAchievements:', err));
         // Otorgar XP por reporte
         prisma.user.update({
           where: { id: data.userId },
