@@ -13,7 +13,7 @@ export class OrganizationApplicationController {
         return;
       }
 
-      const { name, orgType, description, phone, address, zipCode, lat, lng } = req.body;
+      const { name, orgType, description, phone, whatsapp, website, address, zipCode, lat, lng } = req.body;
 
       // Concatenar el zipCode a la dirección si viene
       const finalAddress = zipCode ? `${address || ''} CP. ${zipCode}`.trim() : address;
@@ -25,6 +25,8 @@ export class OrganizationApplicationController {
           orgType,
           description,
           phone,
+          whatsapp,
+          website,
           address: finalAddress,
           isVerified: false,
           isActive: true
