@@ -190,6 +190,10 @@ export function SolicitudAliadoPage() {
     setSaving(true);
     setError(null);
 
+    // `contactName` no es columna de la tabla de solicitudes: lo doblamos dentro
+    // de la descripción para no perder el dato y que el admin sepa a quién contactar.
+    const fullDescription = `${cleanDescription}\n\nPersona de contacto: ${cleanContact}`;
+
     const input: OrgApplicationInput = {
       name: cleanName,
       orgType,
@@ -197,8 +201,7 @@ export function SolicitudAliadoPage() {
       phone,
       whatsapp: whatsapp || undefined,
       website: website.trim() || undefined,
-      description: cleanDescription,
-      contactName: cleanContact,
+      description: fullDescription,
       zipCode: zipCode || undefined,
       lat: coords.lat,
       lng: coords.lng,

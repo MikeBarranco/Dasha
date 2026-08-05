@@ -82,7 +82,7 @@ export function PortalDirectIntakeSheet({ orgId, onClose, onCreated }: DirectInt
           name: name.trim(),
           species,
           size,
-          primaryColor: color || 'No especificado',
+          color: color || 'No especificado',
           description: description.trim() || undefined,
           photosBase64: photos,
         },

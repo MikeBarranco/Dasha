@@ -231,12 +231,26 @@ export type AdminAnimalInput = {
   species: 'dog' | 'cat';
   status: string;
   history?: string;
-  diagnosis?: string;
-  treatment?: string;
   estimatedCost?: number;
   organizationId?: string | null;
   photosBase64?: string[];
 };
+
+// El esquema del backend usa `story` y `totalCostNeeded` (no `history`/
+// `estimatedCost`) y rechaza `diagnosis`/`treatment` (viven en otra tabla médica).
+// Por eso mandamos el body con los nombres exactos y omitimos lo que no existe.
+function buildAdminAnimalBody(input: AdminAnimalInput): Record<string, unknown> {
+  const body: Record<string, unknown> = {
+    name: input.name,
+    species: input.species,
+    status: input.status,
+    organizationId: input.organizationId ?? null,
+  };
+  if (input.history !== undefined) body.story = input.history;
+  if (input.estimatedCost !== undefined) body.totalCostNeeded = input.estimatedCost;
+  if (input.photosBase64 && input.photosBase64.length > 0) body.photosBase64 = input.photosBase64;
+  return body;
+}
 
 export async function getAdminAnimals(): Promise<AdminAnimal[]> {
   const data = await adminFetch<Raw[]>('/admin/animals');
@@ -244,11 +258,17 @@ export async function getAdminAnimals(): Promise<AdminAnimal[]> {
 }
 
 export async function createAdminAnimal(input: AdminAnimalInput): Promise<void> {
-  await adminFetch('/admin/animals', { method: 'POST', body: JSON.stringify(input) });
+  await adminFetch('/admin/animals', {
+    method: 'POST',
+    body: JSON.stringify(buildAdminAnimalBody(input)),
+  });
 }
 
 export async function updateAdminAnimal(id: string, input: AdminAnimalInput): Promise<void> {
-  await adminFetch(`/admin/animals/${id}`, { method: 'PATCH', body: JSON.stringify(input) });
+  await adminFetch(`/admin/animals/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(buildAdminAnimalBody(input)),
+  });
 }
 
 export async function deleteAdminAnimal(id: string): Promise<void> {
@@ -600,6 +620,7 @@ export type AdminForumReport = {
   postId: string;
   postAuthor: string;
   postContent: string;
+  postImageUrl: string | null;
 };
 
 function mapForumReport(raw: Raw): AdminForumReport {
@@ -624,6 +645,7 @@ function mapForumReport(raw: Raw): AdminForumReport {
     postId: asString(pick(post, ['id', '_id'])),
     postAuthor: postAuthor || 'Anónimo',
     postContent: asString(pick(post, ['content', 'text', 'body', 'message'])),
+    postImageUrl: asString(pick(post, ['imageUrl', 'image_url', 'image'])) || null,
   };
 }
 
@@ -637,16 +659,17 @@ export async function dismissAdminForumReport(id: string): Promise<void> {
 }
 
 // Categorías de eventos comunitarios. Son un conjunto FIJO (desplegable, no texto
-// libre) para que no entren valores basura. El backend guarda `category` como
-// string; enviamos el slug y mostramos la etiqueta. Si llega un valor viejo o
-// desconocido, se muestra tal cual (fallback) para no romper la lista.
+// libre) para que no entren valores basura. Los VALORES son los enums oficiales
+// del backend EN INGLÉS (el backend rechaza cualquier otro); mostramos la
+// etiqueta en español. Si llega un valor viejo/desconocido se muestra tal cual.
 const eventCategoryLabels: Record<string, string> = {
-  esterilizacion: 'Esterilización',
-  vacunacion: 'Vacunación',
-  adopcion: 'Adopción',
-  donacion: 'Colecta / Donación',
-  educacion: 'Educación',
-  otro: 'Otro',
+  sterilization: 'Esterilización',
+  vaccination: 'Vacunación',
+  grooming: 'Estética / Baño',
+  donation: 'Colecta / Donación',
+  adoption: 'Adopción',
+  talk: 'Charla / Plática',
+  other: 'Otro',
 };
 
 export const eventCategoryOptions: { value: string; label: string }[] = Object.entries(
