@@ -597,19 +597,9 @@ export class AdminController {
     try {
       const { photosBase64, ...data } = req.body; // photosBase64 is an array of strings
       
-      const userId = (req as any).user?.id;
       const animal = await prisma.animalProfile.create({
         data: {
-          ...data,
-          report: {
-            create: {
-              userId: userId || data.organizationId, // Fallback if no user context
-              species: data.species || 'dog',
-              status: 'closed',
-              address: 'Alta manual desde admin',
-              description: 'Reporte fantasma creado automáticamente por alta de administrador'
-            }
-          }
+          ...data
         }
       });
 
