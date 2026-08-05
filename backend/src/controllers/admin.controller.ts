@@ -1140,7 +1140,7 @@ export class AdminController {
 
   static async createEvent(req: Request, res: Response, next: NextFunction) {
     try {
-      const { imageBase64, eventDate, endDate, organizationId, ...data } = req.body;
+      const { imageBase64, eventDate, endDate, organizationId, location, lat, lng, ...data } = req.body;
       
       let imageUrl = null;
       let imagePublicId = null;
@@ -1173,7 +1173,7 @@ export class AdminController {
   static async updateEvent(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
-      const { imageBase64, eventDate, endDate, organizationId, ...data } = req.body;
+      const { imageBase64, eventDate, endDate, organizationId, location, lat, lng, ...data } = req.body;
       
       const updateData: any = { ...data };
       if (organizationId) updateData.organizationId = organizationId;
