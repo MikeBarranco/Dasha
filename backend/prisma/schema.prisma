@@ -1156,6 +1156,7 @@ enum NeedCategory {
   medicine
   supplies
   transport
+  foster
   other
 }
 
