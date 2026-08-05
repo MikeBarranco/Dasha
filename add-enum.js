@@ -1,0 +1,1 @@
+﻿import { PrismaClient } from '@prisma/client'; const prisma = new PrismaClient(); async function main() { await prisma.$executeRawUnsafe(ALTER TYPE "NeedCategory" ADD VALUE 'foster';); console.log('Added foster to NeedCategory'); } main().catch(e => console.error(e)).finally(() => prisma.$disconnect());
