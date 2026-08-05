@@ -5,11 +5,18 @@ import {
   createNeed,
   updateNeedStatus,
   type CreateNeedInput,
+  type NeedCategory,
 } from '../../lib/api';
-import { needTypeLabels, type Need, type NeedType } from '../../data/needs';
+import { needTypeLabels, type Need } from '../../data/needs';
 import { useAllyPortal } from '../../lib/useAllyPortal';
 
-const typeOptions = Object.entries(needTypeLabels) as [NeedType, string][];
+// El backend solo acepta estas categorías para necesidades (food | transport |
+// foster), así que el selector se restringe a ellas para no provocar un error.
+const typeOptions: [NeedCategory, string][] = [
+  ['food', needTypeLabels.food],
+  ['transport', needTypeLabels.transport],
+  ['foster', needTypeLabels.foster],
+];
 
 const statusMeta: Record<Need['status'], { label: string; className: string }> = {
   open: { label: 'Sin cubrir', className: 'bg-naranja/10 text-naranja' },
@@ -53,7 +60,7 @@ export function PortalNecesidadesPage() {
   const [needs, setNeeds] = useState<Need[] | null>(() => (ctx.preview ? previewNeeds() : null));
   const [error, setError] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
-  const [type, setType] = useState<NeedType>('food');
+  const [type, setType] = useState<NeedCategory>('food');
   const [title, setTitle] = useState('');
   const [quantity, setQuantity] = useState('');
   const [description, setDescription] = useState('');
@@ -96,7 +103,7 @@ export function PortalNecesidadesPage() {
       return;
     }
     const input: CreateNeedInput = {
-      type,
+      category: type,
       title: cleanTitle,
       description: description.trim() || undefined,
       quantity: quantity.trim() || undefined,
@@ -186,7 +193,7 @@ export function PortalNecesidadesPage() {
             <span className="mb-1.5 block text-sm font-medium text-neutral-700">Tipo</span>
             <select
               value={type}
-              onChange={(event) => setType(event.target.value as NeedType)}
+              onChange={(event) => setType(event.target.value as NeedCategory)}
               className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-base text-neutral-700 outline-none focus:ring-2 focus:ring-cobalto/30"
             >
               {typeOptions.map(([value, label]) => (

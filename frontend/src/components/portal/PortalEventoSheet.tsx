@@ -40,7 +40,7 @@ export function PortalEventoSheet({ organizationId, onClose, onCreated }: Portal
 
   const [image, setImage] = useState<string | null>(null);
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState(eventCategoryOptions[0]?.value ?? 'otro');
+  const [category, setCategory] = useState(eventCategoryOptions[0]?.value ?? 'other');
   const [description, setDescription] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [endDate, setEndDate] = useState('');

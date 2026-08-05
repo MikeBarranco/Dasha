@@ -29,8 +29,6 @@ export function AnimalFormSheet({ animal, organizations, onClose, onSaved }: Ani
   const [species, setSpecies] = useState<'dog' | 'cat'>(animal?.species === 'gato' ? 'cat' : 'dog');
   const [status, setStatus] = useState(animal?.status ?? animalStatusOptions[0].value);
   const [organizationId, setOrganizationId] = useState(animal?.organizationId ?? '');
-  const [diagnosis, setDiagnosis] = useState(animal?.diagnosis ?? '');
-  const [treatment, setTreatment] = useState(animal?.treatment ?? '');
   const [history, setHistory] = useState(animal?.history ?? '');
   const [cost, setCost] = useState(animal?.estimatedCost ? String(animal.estimatedCost) : '');
   const [newPhotos, setNewPhotos] = useState<string[]>([]);
@@ -65,8 +63,6 @@ export function AnimalFormSheet({ animal, organizations, onClose, onSaved }: Ani
       species,
       status,
       history: history.trim() || undefined,
-      diagnosis: diagnosis.trim() || undefined,
-      treatment: treatment.trim() || undefined,
       estimatedCost: cost ? Number(cost) : undefined,
       organizationId: organizationId || null,
       ...(newPhotos.length > 0 ? { photosBase64: newPhotos } : {}),
@@ -210,26 +206,6 @@ export function AnimalFormSheet({ animal, organizations, onClose, onSaved }: Ani
                 </option>
               ))}
             </select>
-          </Field>
-
-          <Field label="Diagnóstico">
-            <input
-              value={diagnosis}
-              onChange={(event) => setDiagnosis(event.target.value)}
-              maxLength={120}
-              className={inputClass}
-              placeholder="Ej. Fractura en pata trasera"
-            />
-          </Field>
-
-          <Field label="Tratamiento">
-            <input
-              value={treatment}
-              onChange={(event) => setTreatment(event.target.value)}
-              maxLength={120}
-              className={inputClass}
-              placeholder="Ej. Cirugía y reposo"
-            />
           </Field>
 
           <Field label="Historia">

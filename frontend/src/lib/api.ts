@@ -1060,12 +1060,14 @@ export type OrgApplicationInput = {
   phone: string;
   whatsapp?: string;
   website?: string;
+  // La persona de contacto NO es una columna de esta tabla: el formulario la
+  // recoge y la dobla dentro de `description` antes de enviar (lo pidió Isabel).
   description: string;
-  contactName: string;
+  // El código postal SÍ es columna propia: va separado, nunca dentro de address.
+  zipCode?: string;
   // Ubicación para que el aliado se pinte en el mapa. La obtenemos del centroide
   // de la colonia (por CP) + un pin que el usuario afina; NUNCA le pedimos que
-  // escriba lat/lng. El backend debe guardarlas al aprobar (pendientes-isabel 19i).
-  zipCode?: string;
+  // escriba lat/lng. El backend la guarda al aprobar.
   lat?: number;
   lng?: number;
 };
@@ -1478,7 +1480,7 @@ export type DirectIntakeInput = {
   name: string;
   species: 'dog' | 'cat';
   size: 'small' | 'medium' | 'large';
-  primaryColor: string;
+  color: string;
   description?: string;
   photosBase64: string[];
 };
@@ -1493,7 +1495,8 @@ export async function createDirectIntakeAnimal(
       name: input.name.trim(),
       species: input.species,
       size: input.size,
-      primaryColor: input.primaryColor,
+      // El backend guarda el color en la columna `color` (no `primaryColor`).
+      color: input.color,
       description: input.description?.trim() || undefined,
       photosBase64: input.photosBase64,
     }),
@@ -1798,13 +1801,16 @@ function relativeTime(iso: string): string {
   return days === 1 ? 'ayer' : `hace ${days} d`;
 }
 
+// Valores = enums oficiales del backend en inglés; etiqueta que se muestra en la
+// tarjeta del evento en español. Debe coincidir con adminApi.eventCategoryLabels.
 const eventCategoryPublicLabels: Record<string, string> = {
-  esterilizacion: 'Esterilización',
-  vacunacion: 'Vacunación',
-  adopcion: 'Adopción',
-  donacion: 'Colecta',
-  educacion: 'Educación',
-  otro: 'Evento',
+  sterilization: 'Esterilización',
+  vaccination: 'Vacunación',
+  grooming: 'Estética',
+  donation: 'Colecta',
+  adoption: 'Adopción',
+  talk: 'Charla',
+  other: 'Evento',
 };
 
 function formatEventWhen(iso: string): string {
@@ -2671,8 +2677,14 @@ export async function getOrganizationNeeds(orgId: string): Promise<Need[]> {
   return (data ?? []).map(mapNeed);
 }
 
+// El backend acepta la necesidad con la llave `category` (no `type`) y NO tiene
+// columna de cantidad: la cantidad se concatena al inicio de la descripción
+// (ej. "10 kg - Croquetas"). El selector del formulario solo ofrece las
+// categorías que el backend confirmó para necesidades (food | transport | foster).
+export type NeedCategory = Extract<NeedType, 'food' | 'transport' | 'foster'>;
+
 export type CreateNeedInput = {
-  type: NeedType;
+  category: NeedCategory;
   title: string;
   description?: string;
   quantity?: string;
@@ -2681,9 +2693,18 @@ export type CreateNeedInput = {
 
 // El aliado crea una necesidad para su organización. POST /organizations/:id/needs
 export async function createNeed(orgId: string, input: CreateNeedInput): Promise<void> {
+  const quantity = input.quantity?.trim();
+  const description = input.description?.trim();
+  const fullDescription = [quantity, description].filter(Boolean).join(' - ') || undefined;
+  const body: Record<string, unknown> = {
+    category: input.category,
+    title: input.title.trim(),
+  };
+  if (fullDescription) body.description = fullDescription;
+  if (input.animalId) body.animalId = input.animalId;
   await authedRaw(`/organizations/${orgId}/needs`, {
     method: 'POST',
-    body: JSON.stringify(input),
+    body: JSON.stringify(body),
   });
 }
 
