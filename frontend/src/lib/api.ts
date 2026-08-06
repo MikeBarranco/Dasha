@@ -2623,7 +2623,7 @@ function mapNeed(raw: Record<string, unknown>): Need {
       ? (raw.coveredBy as Record<string, unknown>)
       : null;
   const typeRaw = allyStr(raw.type ?? raw.resourceType ?? raw.resource_type);
-  const statusRaw = allyStr(raw.status);
+  let statusRaw = allyStr(raw.status); if (statusRaw === 'fulfilled') statusRaw = 'covered';
   const created = allyStr(raw.createdAt ?? raw.created_at);
   return {
     id: allyStr(raw.id ?? raw._id),
@@ -2727,7 +2727,7 @@ function mapContribution(raw: Record<string, unknown>): Contribution {
       ? (raw.organization as Record<string, unknown>)
       : null;
   const typeRaw = allyStr(raw.type ?? raw.resourceType ?? raw.resource_type);
-  const statusRaw = allyStr(raw.status);
+  let statusRaw = allyStr(raw.status); if (statusRaw === 'fulfilled') statusRaw = 'covered';
   const created = allyStr(raw.createdAt ?? raw.created_at);
   return {
     id: allyStr(raw.id ?? raw._id),

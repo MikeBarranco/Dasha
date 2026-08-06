@@ -5,14 +5,27 @@ export class NeedController {
   // GET /api/v1/needs - Listar todas las necesidades activas (público)
   static async getNeeds(req: Request, res: Response, next: NextFunction) {
     try {
-      const needs = await prisma.need.findMany({
-        where: { status: 'active' },
-        orderBy: { createdAt: 'desc' },
-        include: {
-          organization: { select: { id: true, name: true, logoUrl: true } }
-        }
-      });
-      res.status(200).json(needs);
+        const needs = await prisma.need.findMany({
+          where: { status: { in: ['active', 'fulfilled'] } },
+          orderBy: { createdAt: 'desc' },
+          include: {
+            organization: { select: { id: true, name: true, logoUrl: true } },
+            contributions: {
+              include: {
+                user: { select: { id: true, name: true, email: true } }
+              },
+              take: 1
+            }
+          }
+        });
+        
+        // Map coveredBy for frontend
+        const mappedNeeds = needs.map(need => ({
+          ...need,
+          coveredBy: need.contributions[0]?.user || null
+        }));
+        
+        res.status(200).json(mappedNeeds);
     } catch (error) {
       next(error);
     }
@@ -22,11 +35,24 @@ export class NeedController {
   static async getOrganizationNeeds(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
-      const needs = await prisma.need.findMany({
-        where: { organizationId: id, status: 'active' },
-        orderBy: { createdAt: 'desc' }
-      });
-      res.status(200).json(needs);
+        const needs = await prisma.need.findMany({
+          where: { organizationId: id, status: { in: ['active', 'fulfilled'] } },
+          orderBy: { createdAt: 'desc' },
+          include: {
+            contributions: {
+              include: { user: { select: { id: true, name: true, email: true } } },
+              take: 1
+            }
+          }
+        });
+        
+        // Map coveredBy for frontend
+        const mappedNeeds = needs.map(need => ({
+          ...need,
+          coveredBy: need.contributions[0]?.user || null
+        }));
+        
+        res.status(200).json(mappedNeeds);
     } catch (error) {
       next(error);
     }

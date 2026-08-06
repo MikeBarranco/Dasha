@@ -9,7 +9,9 @@ export class ForumController {
     try {
       const { category, sort } = req.query; // sort: 'recent' | 'popular'
       
-      const whereClause: any = {};
+      const whereClause: any = {
+        user: { isActive: true }
+      };
       if (category) {
         whereClause.category = category as ForumCategory;
       }
@@ -66,8 +68,11 @@ export class ForumController {
       const post = await prisma.forumPost.findUnique({
         where: { id },
         include: {
-          user: { select: { name: true, role: true } },
+          user: { select: { name: true, role: true, isActive: true } },
           replies: {
+            where: {
+              user: { isActive: true }
+            },
             orderBy: { createdAt: 'asc' },
             include: {
               user: { select: { name: true, role: true } }
@@ -78,6 +83,14 @@ export class ForumController {
 
       if (!post) {
         res.status(404).json({ error: 'Publicación no encontrada' });
+        return;
+      }
+
+      // Si el autor del post está baneado (inactivo), podríamos querer ocultar todo el post,
+      // pero la regla 12 pide explícitamente ocultar "sus respuestas".
+      // Aún así, si el post original es de un baneado, tal vez devolvamos 404.
+      if (post.user && !(post.user as any).isActive) {
+        res.status(404).json({ error: 'El autor de esta publicación ya no está activo.' });
         return;
       }
 

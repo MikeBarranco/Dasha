@@ -385,12 +385,14 @@ export class OrganizationController {
   static async addTeamMember(req: Request, res: Response, next: NextFunction) {
     try {
       const adminId = (req as any).user?.id;
-      const { email, roleInOrg } = req.body;
+      let { email, roleInOrg } = req.body;
       
-      if (!email || !roleInOrg) {
-        res.status(400).json({ error: 'El email y el rol son obligatorios' });
+      if (!email) {
+        res.status(400).json({ error: 'El email es obligatorio' });
         return;
       }
+      
+      roleInOrg = roleInOrg || 'veterinarian';
 
       const myEmployee = await OrganizationController.getPortalContext(req, adminId);
 
@@ -545,7 +547,7 @@ export class OrganizationController {
       const resource = await prisma.resource.create({
         data: {
           providerId: userId,
-          organizationId: myEmployee.organizationId,
+          organization: { connect: { id: myEmployee.organizationId } },
           reportId,
           resourceType: resourceType || 'medical_service',
           title: 'Oferta de recepción/atención médica',
@@ -657,7 +659,7 @@ export class OrganizationController {
           const profile = await tx.animalProfile.create({
             data: {
               reportId,
-              organizationId: emp.organizationId,
+              organization: { connect: { id: emp.organizationId } },
               name: `Rescatado #${report.id.substring(0, 4)}`,
               species: report.species,
               status: 'in_treatment',
@@ -1246,7 +1248,7 @@ export class OrganizationController {
           animal: { organizationId: myEmployee.organizationId }
         },
         include: {
-          user: { select: { name: true, email: true } },
+          user: { select: { name: true, email: true, phone: true } },
           animal: { select: { id: true, name: true } },
         },
         orderBy: { createdAt: 'desc' }
@@ -1261,10 +1263,16 @@ export class OrganizationController {
       const proofsByDonationId = new Map();
       properProofs.forEach(p => proofsByDonationId.set(p.donationId, p));
 
-      const enrichedDonations = donations.map(d => ({
-        ...d,
-        proof: proofsByDonationId.get(d.id) || null
-      }));
+      const enrichedDonations = donations.map(d => {
+        const proofObj = proofsByDonationId.get(d.id);
+        const { user, ...rest } = d;
+        return {
+          ...rest,
+          donor: user,
+          proofUrl: proofObj ? proofObj.proofUrl : null,
+          proof: proofObj || null
+        };
+      });
 
       res.status(200).json(enrichedDonations);
     } catch (error) {
@@ -1470,7 +1478,30 @@ export class OrganizationController {
         updateData.isNeutered = sterilized;
       }
       if (typeof status === 'string') {
-        updateData.status = status;
+        const validStatuses = ['in_treatment', 'recovering', 'looking_for_foster', 'fostered', 'looking_for_adoption', 'adopted', 'deceased'];
+        let mappedStatus = status;
+        
+        // Auto-map from spanish if they accidentally send the label
+        const statusMap: any = {
+          'en tratamiento': 'in_treatment',
+          'recuperándose': 'recovering',
+          'buscando hogar temporal': 'looking_for_foster',
+          'en hogar temporal': 'fostered',
+          'buscando adopción': 'looking_for_adoption',
+          'buscando hogar': 'looking_for_adoption',
+          'adoptado': 'adopted',
+          'fallecido': 'deceased'
+        };
+        
+        if (statusMap[status.toLowerCase()]) {
+          mappedStatus = statusMap[status.toLowerCase()];
+        }
+        
+        if (!validStatuses.includes(mappedStatus)) {
+          res.status(400).json({ error: `Estatus inválido. Valores aceptados: ${validStatuses.join(', ')}` });
+          return;
+        }
+        updateData.status = mappedStatus;
       }
 
       if (Object.keys(updateData).length === 0) {
@@ -1495,7 +1526,7 @@ export class OrganizationController {
     try {
       const userId = (req as any).user?.id;
       const animalId = req.params.id as string;
-      const { type, title, date, notes } = req.body;
+      const { type, title, date, notes, photoUrl, photoUrls } = req.body;
 
       const myEmployee = await prisma.organizationEmployee.findFirst({
         where: { userId }
@@ -1513,6 +1544,8 @@ export class OrganizationController {
       }
 
       const mappedType = OrganizationController.mapToPrismaRecordType(type || 'other');
+      
+      const parsedPhotoUrls = photoUrls ? photoUrls : (photoUrl ? [photoUrl] : null);
 
       const record = await prisma.medicalRecord.create({
         data: {
@@ -1521,9 +1554,19 @@ export class OrganizationController {
           recordType: mappedType as any,
           description: title || 'Sin título',
           prescription: notes || null,
+          photoUrls: parsedPhotoUrls,
           createdAt: date ? new Date(date) : new Date()
         }
       });
+
+      // Update animal flags
+      if (mappedType === 'spay_neuter') {
+        await prisma.animalProfile.update({ where: { id: animalId }, data: { sterilized: true } });
+      } else if (mappedType === 'vaccine') {
+        await prisma.animalProfile.update({ where: { id: animalId }, data: { vaccinated: true } });
+      } else if (mappedType === 'deworming') {
+        await prisma.animalProfile.update({ where: { id: animalId }, data: { dewormed: true } });
+      }
 
       res.status(201).json({
         id: record.id,
