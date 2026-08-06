@@ -1,5 +1,9 @@
-api.staging.dashamx.me, api.dashamx.me {
+api.staging.dashamx.me {
     reverse_proxy backend:3000
+}
+
+api.dashamx.me {
+    reverse_proxy backend-prod:3000
 }
 
 dashamx.me {

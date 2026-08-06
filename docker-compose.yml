@@ -1,7 +1,8 @@
 services:
+  # --- ENTORNO STAGING ---
   db:
     image: postgis/postgis:16-3.4
-    container_name: dasha-db
+    container_name: dasha-db-staging
     restart: unless-stopped
     environment:
       POSTGRES_USER: admin_dasha
@@ -12,13 +13,47 @@ services:
 
   backend:
     build: ./backend
-    container_name: dasha-backend
+    container_name: dasha-backend-staging
     restart: unless-stopped
     environment:
       NODE_ENV: production
       PORT: 3000
-      CORS_ORIGIN: https://dashamx.me,https://app.dashamx.me,https://staging.dashamx.me
+      CORS_ORIGIN: https://staging.dashamx.me
       DATABASE_URL: postgresql://admin_dasha:${DB_PASSWORD:-dasha_dev}@db:5432/dasha_staging?schema=public
+      JWT_SECRET: ${JWT_SECRET:-dasha_super_secret_key_2026_fepro}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      FACEBOOK_APP_ID: ${FACEBOOK_APP_ID}
+      FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET}
+      FRONTEND_URL: https://staging.dashamx.me
+      BACKEND_URL: https://api.staging.dashamx.me
+    depends_on:
+      - db
+
+  # --- ENTORNO PRODUCCIÓN ---
+  db-prod:
+    image: postgis/postgis:16-3.4
+    container_name: dasha-db-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: admin_dasha
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dasha_dev}
+      POSTGRES_DB: dasha_prod
+    volumes:
+      - dasha_prod_data:/var/lib/postgresql/data
+
+  backend-prod:
+    build: ./backend
+    container_name: dasha-backend-prod
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      CORS_ORIGIN: https://dashamx.me,https://app.dashamx.me
+      DATABASE_URL: postgresql://admin_dasha:${DB_PASSWORD:-dasha_dev}@db-prod:5432/dasha_prod?schema=public
       JWT_SECRET: ${JWT_SECRET:-dasha_super_secret_key_2026_fepro}
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
       CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
@@ -32,8 +67,9 @@ services:
       FRONTEND_URL: https://dashamx.me
       BACKEND_URL: https://api.dashamx.me
     depends_on:
-      - db
+      - db-prod
 
+  # --- RUTEO GLOBAL ---
   caddy:
     image: caddy:2-alpine
     container_name: dasha-caddy
@@ -48,8 +84,10 @@ services:
       - caddy_config:/config
     depends_on:
       - backend
+      - backend-prod
 
 volumes:
   dasha_db_data:
+  dasha_prod_data:
   caddy_data:
   caddy_config:
