@@ -1413,7 +1413,7 @@ export class OrganizationController {
         include: {
           medicalRecords: { orderBy: { createdAt: 'desc' } },
           photos: { orderBy: { orderIndex: 'asc' } },
-          timeline: { orderBy: { eventDate: 'desc' } }
+          timeline: { orderBy: { date: 'desc' } }
         },
         orderBy: { createdAt: 'desc' }
       });
