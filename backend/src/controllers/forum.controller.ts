@@ -48,6 +48,8 @@ export class ForumController {
         const { flags, votes, ...rest } = p;
         return {
           ...rest,
+          likes: rest.upvotes ?? 0,
+          likesCount: rest.upvotes ?? 0,
           hasReported: flags ? flags.length > 0 : false,
           isLiked: votes ? votes.length > 0 : false,
           likedByMe: votes ? votes.length > 0 : false // Keep likedByMe for backwards compatibility
@@ -277,7 +279,7 @@ export class ForumController {
         select: { upvotes: true }
       });
 
-      res.status(200).json({ message: 'Like procesado', totalVotes: post.upvotes });
+      res.status(200).json({ message: 'Like procesado', totalVotes: post.upvotes, likes: post.upvotes, likesCount: post.upvotes });
     } catch (error) {
       next(error);
     }

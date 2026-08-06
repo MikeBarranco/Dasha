@@ -6,6 +6,20 @@ export class EventController {
   static async getUpcomingEvents(req: Request, res: Response, next: NextFunction) {
     try {
       const now = new Date();
+      const userId = (req as any).user?.id;
+
+      const includeClause: any = {
+        organization: { select: { name: true, logoUrl: true } },
+        _count: { select: { eventReminders: true } }
+      };
+
+      if (userId) {
+        includeClause.eventReminders = {
+          where: { userId },
+          select: { id: true }
+        };
+      }
+
       const events = await prisma.event.findMany({
         where: {
           isActive: true,
@@ -15,12 +29,20 @@ export class EventController {
           ]
         },
         orderBy: { eventDate: 'asc' },
-        include: {
-          organization: { select: { name: true, logoUrl: true } },
-          _count: { select: { eventReminders: true } }
-        }
+        include: includeClause
       });
-      res.status(200).json(events);
+
+      const mapped = events.map((e: any) => {
+        const { eventReminders, _count, ...rest } = e;
+        return {
+          ...rest,
+          interested: _count?.eventReminders ?? 0,
+          interestedCount: _count?.eventReminders ?? 0,
+          isInterested: eventReminders ? eventReminders.length > 0 : false,
+        };
+      });
+
+      res.status(200).json(mapped);
     } catch (error) {
       next(error);
     }
@@ -113,12 +135,23 @@ export class EventController {
   static async getEventDetails(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
+      const userId = (req as any).user?.id;
+
+      const includeClause: any = {
+        organization: { select: { name: true, logoUrl: true, description: true } },
+        _count: { select: { eventReminders: true } }
+      };
+
+      if (userId) {
+        includeClause.eventReminders = {
+          where: { userId },
+          select: { id: true }
+        };
+      }
+
       const event = await prisma.event.findUnique({
         where: { id },
-        include: {
-          organization: { select: { name: true, logoUrl: true, description: true } },
-          _count: { select: { eventReminders: true } }
-        }
+        include: includeClause
       });
 
       if (!event) {
@@ -126,7 +159,13 @@ export class EventController {
         return;
       }
 
-      res.status(200).json(event);
+      const { eventReminders, _count, ...rest } = event as any;
+      res.status(200).json({
+        ...rest,
+        interested: _count?.eventReminders ?? 0,
+        interestedCount: _count?.eventReminders ?? 0,
+        isInterested: eventReminders ? eventReminders.length > 0 : false,
+      });
     } catch (error) {
       next(error);
     }
