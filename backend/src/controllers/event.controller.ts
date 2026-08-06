@@ -60,12 +60,27 @@ export class EventController {
         imagePublicId = uploadRes.public_id;
       }
 
+      let finalCategory = category || 'other';
+      const categoryMap: Record<string, string> = {
+        'esterilizacion': 'sterilization',
+        'vacunacion': 'vaccination',
+        'estetica': 'grooming',
+        'colecta': 'donation',
+        'adopcion': 'adoption',
+        'charla': 'talk',
+        'otro': 'other',
+        'campaign': 'other'
+      };
+      if (finalCategory && categoryMap[finalCategory.toLowerCase()]) {
+        finalCategory = categoryMap[finalCategory.toLowerCase()];
+      }
+
       const event = await prisma.event.create({
         data: {
           organizationId: orgId,
           title,
           description,
-          category: category || 'campaign',
+          category: finalCategory,
           eventDate: new Date(eventDate),
           endDate: endDate ? new Date(endDate) : null,
           address: address || '',
