@@ -1,13 +1,13 @@
 import { Router } from 'express';
 import { ForumController } from '../controllers/forum.controller';
-import { requireAuth } from '../middlewares/auth.middleware';
+import { requireAuth, optionalAuth } from '../middlewares/auth.middleware';
 
 const router = Router();
 
-// Públicas
-router.get('/posts', ForumController.getPosts);
-router.get('/posts/:id', ForumController.getPostDetails);
-router.get('/posts/:id/replies', ForumController.getReplies);
+// Públicas (con auth opcional para calcular likedByMe)
+router.get('/posts', optionalAuth, ForumController.getPosts);
+router.get('/posts/:id', optionalAuth, ForumController.getPostDetails);
+router.get('/posts/:id/replies', optionalAuth, ForumController.getReplies);
 
 // Requieren sesión
 router.post('/posts', requireAuth, ForumController.createPost);

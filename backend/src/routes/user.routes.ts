@@ -36,6 +36,7 @@ router.get('/contributions', requireAuth, UserController.getMyContributions);
 
 // GET /api/v1/me/adopted (Protegida, mi álbum privado de mascotas adoptadas)
 router.get('/adopted', requireAuth, UserController.getMyAdopted);
+router.get('/adoptions', requireAuth, UserController.getMyAdopted);
 
 // GET /api/v1/me/rescue-assignments
 router.get('/rescue-assignments', requireAuth, UserController.getMyRescueAssignments);

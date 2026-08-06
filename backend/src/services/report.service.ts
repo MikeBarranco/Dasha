@@ -57,12 +57,17 @@ export class ReportService {
   /**
    * Obtiene reportes cercanos usando PostGIS (ST_DWithin)
    */
-  static async getNearbyReports(lat: number, lng: number, radiusKm: number, species?: string, status: string = 'active') {
+  static async getNearbyReports(lat: number, lng: number, radiusKm: number, species?: string, status: string = 'active', userId?: string) {
     const radiusMeters = radiusKm * 1000;
 
     // Prisma $queryRaw nos permite usar la magia espacial
     // Se calcula la distancia en metros entre cada reporte y el punto brindado.
     let reports: any[];
+    
+    // Subquery conditionally added for isFollowing
+    const followSubquery = userId 
+      ? Prisma.sql`, EXISTS(SELECT 1 FROM report_followers rf WHERE rf.report_id = r.id AND rf.user_id = ${userId}::uuid) as "isFollowing"`
+      : Prisma.sql`, false as "isFollowing"`;
     
     if (species) {
       reports = await prisma.$queryRaw`
@@ -73,6 +78,7 @@ export class ReportService {
           ST_Distance(r.location, ST_MakePoint(${lng}, ${lat})::geography) AS distance_meters,
           c.name as colonia,
           (SELECT url FROM report_photos rp WHERE rp.report_id = r.id ORDER BY rp.created_at ASC LIMIT 1) as photo
+          ${followSubquery}
         FROM reports r
         LEFT JOIN colonies c ON r.colony_id = c.id
         WHERE r.status = ${status}::"ReportStatus"
@@ -92,6 +98,7 @@ export class ReportService {
           ST_Distance(r.location, ST_MakePoint(${lng}, ${lat})::geography) AS distance_meters,
           c.name as colonia,
           (SELECT url FROM report_photos rp WHERE rp.report_id = r.id ORDER BY rp.created_at ASC LIMIT 1) as photo
+          ${followSubquery}
         FROM reports r
         LEFT JOIN colonies c ON r.colony_id = c.id
         WHERE r.status = ${status}::"ReportStatus"
@@ -130,14 +137,15 @@ export class ReportService {
       description: row.description,
       status: statusStr,
       activeAssignmentId: row.active_assignment_id || null,
-      createdAt: row.created_at
+      createdAt: row.created_at,
+      isFollowing: row.isFollowing
     };
   }
 
   /**
    * Obtiene TODOS los reportes activos (para la vista principal del mapa) con filtros opcionales
    */
-  static async getAllActiveReports(filters?: { species?: string; condition?: string; urgency?: string; size?: string; }) {
+  static async getAllActiveReports(filters?: { species?: string; condition?: string; urgency?: string; size?: string; }, userId?: string) {
     const conditions = [
       Prisma.sql`r.status IN ('active'::"ReportStatus", 'in_progress'::"ReportStatus")`, 
       Prisma.sql`r.location IS NOT NULL`,
@@ -151,6 +159,10 @@ export class ReportService {
 
     const whereClause = Prisma.join(conditions, ' AND ');
 
+    const followSubquery = userId 
+      ? Prisma.sql`, EXISTS(SELECT 1 FROM report_followers rf WHERE rf.report_id = r.id AND rf.user_id = ${userId}::uuid) as "isFollowing"`
+      : Prisma.sql`, false as "isFollowing"`;
+
     const reports: any[] = await prisma.$queryRaw`
       SELECT 
         r.id, r.species, r.size, r.condition, r.urgency, r.status, r.description, r.created_at,
@@ -159,6 +171,7 @@ export class ReportService {
         c.name as colonia,
         (SELECT url FROM report_photos rp WHERE rp.report_id = r.id ORDER BY rp.created_at ASC LIMIT 1) as photo,
         (SELECT id FROM rescue_assignments ra WHERE ra.report_id = r.id AND ra.status IN ('accepted', 'on_the_way', 'arrived') LIMIT 1) as active_assignment_id
+        ${followSubquery}
       FROM reports r
       LEFT JOIN colonies c ON r.colony_id = c.id
       WHERE ${whereClause}

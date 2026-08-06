@@ -911,13 +911,37 @@ export class AdminController {
 
   static async getAllForumPosts(req: Request, res: Response, next: NextFunction) {
     try {
-      const posts = await prisma.forumPost.findMany({
+      const userId = (req as any).user?.id;
+      const includeClause: any = {
+        user: { select: { name: true, email: true } },
+        _count: { select: { replies: true } }
+      };
+
+      if (userId) {
+        includeClause.flags = {
+          where: { flaggedBy: userId },
+          select: { id: true }
+        };
+        includeClause.votes = {
+          where: { userId, value: 1 },
+          select: { id: true }
+        };
+      }
+
+      const postsRaw = await prisma.forumPost.findMany({
         orderBy: { createdAt: 'desc' },
-        include: {
-          user: { select: { name: true, email: true } },
-          _count: { select: { replies: true } }
-        }
+        include: includeClause
       });
+
+      const posts = postsRaw.map((p: any) => {
+        const { flags, votes, ...rest } = p;
+        return {
+          ...rest,
+          hasReported: flags ? flags.length > 0 : false,
+          likedByMe: votes ? votes.length > 0 : false
+        };
+      });
+
       res.status(200).json(posts);
     } catch (error) {
       next(error);
@@ -1365,6 +1389,16 @@ export class AdminController {
       const targetUsers = await prisma.user.findMany({ where: whereClause, select: { id: true } });
       const { NotificationService } = await import('../services/notification.service.js');
 
+      // Guardar el historial en AuditLog primero (fail fast)
+      const auditLog = await prisma.auditLog.create({
+        data: {
+          adminId,
+          action: 'send_manual_notification',
+          targetType: audience,
+          metadata: { title, body, link, sentCount: targetUsers.length }
+        }
+      });
+
       // Bulk create notifications in DB
       const notificationsData = targetUsers.map(u => ({
         userId: u.id,
@@ -1375,21 +1409,16 @@ export class AdminController {
       }));
       await prisma.notification.createMany({ data: notificationsData });
 
-      // Run push notifications in background without awaiting
+      // Run push notifications in background sin bloquear
       const userIds = targetUsers.map(u => u.id);
-      const pushPayload = JSON.stringify({ title, body, url: link || '/' });
+      const pushPayload = JSON.stringify({ 
+        title, 
+        body, 
+        icon: '/pwa-192x192.png',
+        data: { url: link || '/' } 
+      });
       NotificationService.sendPushToUsersAsync(userIds, pushPayload).catch(err => {
         console.error('Error background bulk push:', err);
-      });
-
-      // Guardar el historial en AuditLog
-      const auditLog = await prisma.auditLog.create({
-        data: {
-          adminId,
-          action: 'send_manual_notification',
-          targetType: audience,
-          metadata: { title, body, link, sentCount: targetUsers.length }
-        }
       });
 
       res.status(200).json({ message: 'Notificaciones enviadas', sentCount: targetUsers.length });

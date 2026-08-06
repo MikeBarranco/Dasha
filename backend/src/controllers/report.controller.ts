@@ -110,13 +110,15 @@ export class ReportController {
   static async getNearby(req: Request, res: Response, next: NextFunction) {
     try {
       const { lat, lng, radius_km, species, status } = req.query as any;
+      const userId = (req as any).user?.id;
       
       const reports = await ReportService.getNearbyReports(
         parseFloat(lat),
         parseFloat(lng),
         parseFloat(radius_km),
         species,
-        status
+        status,
+        userId
       );
 
       res.status(200).json({
@@ -133,8 +135,9 @@ export class ReportController {
     try {
       const { species, condition, urgency, size } = req.query as any;
       const filters = { species, condition, urgency, size };
+      const userId = (req as any).user?.id;
 
-      const reports = await ReportService.getAllActiveReports(filters);
+      const reports = await ReportService.getAllActiveReports(filters, userId);
       // El contrato de Miguel pide regresar el arreglo directamente, sin envolverlo en "data"
       res.status(200).json(reports);
     } catch (error) {

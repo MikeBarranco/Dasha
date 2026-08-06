@@ -7,10 +7,10 @@ import { createReportSchema, getNearbyReportsSchema, updateReportStatusSchema } 
 const router = Router();
 
 // GET /api/v1/reports/nearby (Pública, para ver el mapa)
-router.get('/nearby', validate(getNearbyReportsSchema), ReportController.getNearby);
+router.get('/nearby', optionalAuth, validate(getNearbyReportsSchema), ReportController.getNearby);
 
 // GET /api/v1/reports (Lista de reportes activos para el mapa)
-router.get('/', ReportController.getReports);
+router.get('/', optionalAuth, ReportController.getReports);
 
 // GET /api/v1/reports/check (Prevención de duplicados A.4)
 router.get('/check', ReportController.checkDuplicate);
