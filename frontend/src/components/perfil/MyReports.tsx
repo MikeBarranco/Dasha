@@ -67,7 +67,9 @@ export function MyReports() {
               <button
                 key={report.id}
                 type="button"
-                onClick={() => navigate(`/mapa?reporte=${report.id}`)}
+                onClick={() =>
+                  navigate(report.isLostPet ? `/mapa?perdido=${report.id}` : `/mapa?reporte=${report.id}`)
+                }
                 title={`${report.colonia} · ${report.condition}`}
                 className="group relative aspect-square overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100"
               >

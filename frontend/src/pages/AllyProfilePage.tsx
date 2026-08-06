@@ -24,19 +24,24 @@ import {
 } from 'lucide-react';
 import { ShareButton } from '../components/ui/ShareButton';
 import { Avatar } from '../components/ui/Avatar';
-import { getAlly, getOrganizationNeeds } from '../lib/api';
+import { getAlly, getOrganizationNeeds, getEvents, coverNeed } from '../lib/api';
 import { mockAllies, allyTypeLabels, type Ally } from '../data/mockAllies';
 import { needTypeLabels, type Need } from '../data/needs';
+import { type CommunityEvent } from '../data/mockComunidad';
+import { useAuth } from '../lib/useAuth';
 import { whatsappUrl } from '../lib/whatsapp';
 
 export function AllyProfilePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   // undefined = cargando; null = no encontrado; objeto = aliado.
   const [ally, setAlly] = useState<Ally | null | undefined>(() => (id ? undefined : null));
   const [error, setError] = useState(false);
   const [copied, setCopied] = useState(false);
   const [needs, setNeeds] = useState<Need[]>([]);
+  const [events, setEvents] = useState<CommunityEvent[]>([]);
+  const [coveringId, setCoveringId] = useState<string | null>(null);
 
   const loadAlly = (isActive: () => boolean) => {
     if (!id) return;
@@ -77,6 +82,23 @@ export function AllyProfilePage() {
       })
       .catch(() => {
         if (active) setNeeds([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  // Eventos de ESTE aliado. `GET /events` trae todos; filtramos por su id (igual
+  // que el mapa). El objeto `ally.events` venía vacío, por eso no salían.
+  useEffect(() => {
+    if (!id) return;
+    let active = true;
+    getEvents()
+      .then((data) => {
+        if (active) setEvents(data.filter((event) => event.organizationId === id));
+      })
+      .catch(() => {
+        if (active) setEvents([]);
       });
     return () => {
       active = false;
@@ -133,12 +155,37 @@ export function AllyProfilePage() {
 
   const team = ally.team ?? [];
   const animals = ally.animals ?? [];
-  const events = ally.events ?? [];
   const badges = ally.badges ?? [];
   const payment = ally.paymentInfo ?? null;
   const hasPayment = Boolean(payment && (payment.bank || payment.accountHolder || payment.clabe));
   const waLink = whatsappUrl(ally.whatsapp, `Hola ${ally.name}, los contacto desde la app Dasha.`);
-  const openNeeds = needs.filter((need) => need.status === 'open');
+  // Mostramos las necesidades sin cubrir (con botón para apoyar) y las que ya
+  // alguien reservó (para que se note el estado); las entregadas ya no.
+  const activeNeeds = needs.filter((need) => need.status !== 'delivered');
+
+  // El usuario se compromete a cubrir una necesidad desde el perfil del aliado.
+  // Sin sesión lo mandamos a login; con sesión, marcamos "reservada" al vuelo.
+  const cover = async (need: Need) => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    setCoveringId(need.id);
+    try {
+      await coverNeed(need.id);
+      setNeeds((list) =>
+        list.map((item) =>
+          item.id === need.id
+            ? { ...item, status: 'covered', coveredByName: user.name?.split(' ')[0] ?? 'Ti' }
+            : item,
+        ),
+      );
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'No se pudo registrar tu apoyo. Intenta de nuevo.');
+    } finally {
+      setCoveringId(null);
+    }
+  };
 
   const copyClabe = async () => {
     if (!payment?.clabe) return;
@@ -325,31 +372,51 @@ export function AllyProfilePage() {
           </section>
         )}
 
-        {openNeeds.length > 0 && (
+        {activeNeeds.length > 0 && (
           <section className="mt-4 rounded-2xl border border-naranja/20 bg-naranja/5 p-4">
             <h2 className="flex items-center gap-2 font-display text-base font-bold text-cobalto">
               <HandHeart className="h-4 w-4" /> Necesidades actuales
             </h2>
             <p className="mt-1 text-xs text-neutral-500">
-              Apoyos concretos que este aliado necesita ahora. Contáctalos para ayudar.
+              Apoyos concretos que este aliado necesita ahora. Comprométete a cubrir uno y el aliado
+              te contactará para coordinar la entrega.
             </p>
             <ul className="mt-3 space-y-2">
-              {openNeeds.map((need) => (
-                <li key={need.id} className="rounded-xl border border-neutral-200 bg-white p-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-cobalto/10 px-2.5 py-0.5 text-xs font-medium text-cobalto">
-                      {needTypeLabels[need.type]}
-                    </span>
-                    {need.quantity && (
-                      <span className="text-xs font-medium text-neutral-500">{need.quantity}</span>
+              {activeNeeds.map((need) => {
+                const covered = need.status !== 'open';
+                return (
+                  <li key={need.id} className="rounded-xl border border-neutral-200 bg-white p-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-cobalto/10 px-2.5 py-0.5 text-xs font-medium text-cobalto">
+                        {needTypeLabels[need.type]}
+                      </span>
+                      {need.quantity && (
+                        <span className="text-xs font-medium text-neutral-500">{need.quantity}</span>
+                      )}
+                    </div>
+                    <p className="mt-1 text-sm font-medium text-neutral-800">{need.title}</p>
+                    {need.description && (
+                      <p className="mt-0.5 text-sm text-neutral-600">{need.description}</p>
                     )}
-                  </div>
-                  <p className="mt-1 text-sm font-medium text-neutral-800">{need.title}</p>
-                  {need.description && (
-                    <p className="mt-0.5 text-sm text-neutral-600">{need.description}</p>
-                  )}
-                </li>
-              ))}
+                    {covered ? (
+                      <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-exito">
+                        <Check className="h-3.5 w-3.5" /> Reservada
+                        {need.coveredByName ? ` por ${need.coveredByName}` : ''}
+                      </p>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => cover(need)}
+                        disabled={coveringId === need.id}
+                        className="mt-2 flex items-center gap-1.5 rounded-lg bg-naranja px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                      >
+                        <HandHeart className="h-3.5 w-3.5" />
+                        {coveringId === need.id ? 'Registrando…' : 'Quiero cubrir esto'}
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </section>
         )}
@@ -423,7 +490,7 @@ export function AllyProfilePage() {
             <ul className="space-y-2">
               {events.map((event) => (
                 <li
-                  key={`${event.title}-${event.date}`}
+                  key={event.id}
                   className="flex items-start gap-3 rounded-xl border border-neutral-200 p-3"
                 >
                   <CalendarDays className="mt-0.5 h-4 w-4 flex-shrink-0 text-naranja" />

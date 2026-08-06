@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { X, ImagePlus, Check, PawPrint, AlertCircle } from 'lucide-react';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 import { compressImage } from '../../lib/image';
 import { addAdoptedMoment } from '../../lib/api';
+import { ShareButton } from '../ui/ShareButton';
+import { Lightbox } from '../ui/Lightbox';
 import type { Animal } from '../../data/mockAnimals';
 
 type AdoptadoSheetProps = {
@@ -22,6 +24,8 @@ export function AdoptadoSheet({ animal, editable, onClose, onAdded }: AdoptadoSh
   const [caption, setCaption] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Foto abierta a pantalla completa (para verla en grande).
+  const [lightbox, setLightbox] = useState<string | null>(null);
 
   const pickPhoto = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -80,30 +84,43 @@ export function AdoptadoSheet({ animal, editable, onClose, onAdded }: AdoptadoSh
             </h2>
             <p className="mt-0.5 text-xs font-medium text-purpura">Adoptado · final feliz</p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={saving}
-            aria-label="Cerrar"
-            className="flex-shrink-0 rounded-full bg-neutral-100 p-1.5 text-neutral-600 transition-colors hover:bg-neutral-200 disabled:opacity-50"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          <div className="flex flex-shrink-0 items-center gap-1">
+            <ShareButton
+              title={`${animal.name} — un final feliz en Dasha`}
+              text={`Conoce a ${animal.name}, un rescatado que encontró hogar. 🐾`}
+              url={`/adoptados?animal=${animal.id}`}
+            />
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={saving}
+              aria-label="Cerrar"
+              className="rounded-full bg-neutral-100 p-1.5 text-neutral-600 transition-colors hover:bg-neutral-200 disabled:opacity-50"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-5">
           <div className="grid grid-cols-2 gap-2">
             {animal.photos.map((photo, index) => (
-              <img
+              <button
                 key={`${photo}-${index}`}
-                src={photo}
-                alt=""
-                onError={(event) => {
-                  event.currentTarget.onerror = null;
-                  event.currentTarget.src = '/placeholder-animal.svg';
-                }}
-                className="aspect-square w-full rounded-xl object-cover"
-              />
+                type="button"
+                onClick={() => setLightbox(photo)}
+                className="overflow-hidden rounded-xl"
+              >
+                <img
+                  src={photo}
+                  alt=""
+                  onError={(event) => {
+                    event.currentTarget.onerror = null;
+                    event.currentTarget.src = '/placeholder-animal.svg';
+                  }}
+                  className="aspect-square w-full object-cover transition-transform hover:scale-105"
+                />
+              </button>
             ))}
           </div>
 
@@ -200,6 +217,12 @@ export function AdoptadoSheet({ animal, editable, onClose, onAdded }: AdoptadoSh
           </div>
         )}
       </motion.div>
+
+      <AnimatePresence>
+        {lightbox && (
+          <Lightbox src={lightbox} alt={animal.name} onClose={() => setLightbox(null)} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

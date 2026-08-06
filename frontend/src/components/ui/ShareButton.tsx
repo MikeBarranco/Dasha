@@ -6,10 +6,12 @@ type ShareButtonProps = {
   title: string;
   text: string;
   className?: string;
+  // Ruta a compartir cuando no coincide con la URL actual (ej. ficha de perdido).
+  url?: string;
 };
 
-export function ShareButton({ title, text, className }: ShareButtonProps) {
-  const { share, copied } = useShare(title, text);
+export function ShareButton({ title, text, className, url }: ShareButtonProps) {
+  const { share, copied } = useShare(title, text, url);
 
   return (
     <div className={cn('relative', className)}>

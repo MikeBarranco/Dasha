@@ -81,6 +81,7 @@ export function LostPetDetail({ pet, onClose }: LostPetDetailProps) {
           <ShareButton
             title={`${pet.petName} está perdido`}
             text={`Ayuda a encontrar a ${pet.petName} (${species}) en Dasha.`}
+            url={`/mapa?perdido=${pet.id}`}
             className="absolute right-14 top-3 z-10"
           />
           <button

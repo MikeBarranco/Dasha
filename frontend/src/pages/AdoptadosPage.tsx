@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence } from 'motion/react';
 import { Heart, AlertCircle, RefreshCw, PawPrint } from 'lucide-react';
 import { getAdoptedAnimals, getMyAdoptedAnimals } from '../lib/api';
@@ -8,16 +9,33 @@ import { AdoptadoSheet } from '../components/adoptados/AdoptadoSheet';
 
 export function AdoptadosPage() {
   const { user } = useAuth();
+  const [, setSearchParams] = useSearchParams();
   const [gallery, setGallery] = useState<Animal[] | null>(null);
   const [galleryError, setGalleryError] = useState(false);
   const [mine, setMine] = useState<Animal[]>([]);
   const [selected, setSelected] = useState<Animal | null>(null);
+
+  // Deep link a un adoptado (`?animal=id`), desde un enlace compartido: al cargar
+  // los datos, si el animal está en la lista abrimos su ficha y limpiamos el
+  // parámetro (para que no se reabra solo, ej. tras agregar un momento). Se hace
+  // aquí, en el .then de la carga, y no en un efecto, para no meter setState
+  // síncrono dentro de un efecto.
+  const openFromParam = (list: Animal[]) => {
+    const animalId = new URLSearchParams(window.location.search).get('animal');
+    if (!animalId) return;
+    const found = list.find((animal) => animal.id === animalId);
+    if (found) {
+      setSelected(found);
+      setSearchParams({}, { replace: true });
+    }
+  };
 
   const loadGallery = () => {
     getAdoptedAnimals()
       .then((data) => {
         setGallery(data);
         setGalleryError(false);
+        openFromParam(data);
       })
       .catch(() => {
         setGalleryError(true);
@@ -28,7 +46,10 @@ export function AdoptadosPage() {
   const loadMine = () => {
     if (!user) return;
     getMyAdoptedAnimals()
-      .then(setMine)
+      .then((data) => {
+        setMine(data);
+        openFromParam(data);
+      })
       .catch(() => setMine([]));
   };
 

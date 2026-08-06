@@ -398,16 +398,23 @@ export function ComunidadPage() {
                 className="overflow-hidden rounded-2xl border border-neutral-200 bg-white"
               >
                 <div className="relative">
-                  <img
-                    src={event.image}
-                    alt={event.title}
-                    onError={(e) => {
-                      e.currentTarget.onerror = null;
-                      e.currentTarget.src = '/placeholder-animal.svg';
-                    }}
-                    className="h-40 w-full object-cover"
-                  />
-                  <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-cobalto">
+                  <button
+                    type="button"
+                    onClick={() => setZoomImage(event.image)}
+                    aria-label="Ver la imagen completa"
+                    className="block w-full"
+                  >
+                    <img
+                      src={event.image}
+                      alt={event.title}
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = '/placeholder-animal.svg';
+                      }}
+                      className="h-40 w-full object-cover"
+                    />
+                  </button>
+                  <span className="pointer-events-none absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-cobalto">
                     {event.type}
                   </span>
                 </div>

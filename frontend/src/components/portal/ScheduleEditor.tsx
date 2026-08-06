@@ -24,12 +24,17 @@ const DAYS: Day[] = [
 type Row = { label: string; open: boolean; from: string; to: string };
 
 function parse(value: string): Row[] {
+  // Normalizamos a NFC para que un día con acento (Sáb, Mié) empate aunque el
+  // backend haya guardado el acento en otra forma Unicode (descompuesto); sin
+  // esto, al recargar, esos días se veían "Cerrado" aunque estuvieran abiertos.
   const tokens = (value ?? '')
+    .normalize('NFC')
     .split('·')
     .map((token) => token.trim())
     .filter(Boolean);
   return DAYS.map((day) => {
-    const token = tokens.find((item) => item.startsWith(`${day.label} `));
+    const prefix = `${day.label.normalize('NFC')} `;
+    const token = tokens.find((item) => item.startsWith(prefix));
     const times = token?.match(/(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})/);
     if (times) {
       return { label: day.label, open: true, from: times[1], to: times[2] };
@@ -96,7 +101,16 @@ export function ScheduleEditor({ value, onChange }: ScheduleEditorProps) {
               />
             </div>
           ) : (
-            <span className="flex-1 text-xs text-neutral-400">Sin atención</span>
+            // Área de acción del día cerrado: clic aquí lo abre. Antes era un
+            // <span> inerte (zona muerta) fácil de confundir con el botón de otra
+            // fila; ahora un clic hace lo esperado sobre ESTE día.
+            <button
+              type="button"
+              onClick={() => update(index, { open: true })}
+              className="flex-1 text-left text-xs text-neutral-400 transition-colors hover:text-cobalto"
+            >
+              Sin atención · toca para abrir
+            </button>
           )}
         </div>
       ))}

@@ -163,7 +163,11 @@ export function AdoptDirectlySheet({
                   </button>
                 </div>
               ) : (
-                <CameraCapture onCapture={handleCapture} frame="face" initialFacing="user" />
+                <CameraCapture
+                  onCapture={handleCapture}
+                  initialFacing="user"
+                  hint="Procura que el animalito salga contigo en la foto"
+                />
               )}
 
               <label className="mt-4 block">

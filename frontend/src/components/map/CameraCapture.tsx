@@ -7,6 +7,9 @@ type CameraCaptureProps = {
   onCapture: (file: File, dataUrl: string) => void;
   // Marco-guía opcional para encuadrar: 'card' (identificación) o 'face' (selfie).
   frame?: 'card' | 'face';
+  // Mensaje-guía opcional. Sin `frame` se muestra como banner arriba, sin marco
+  // (ej. adopción: "sal con el animalito"); con `frame` reemplaza su texto.
+  hint?: string;
   initialFacing?: 'environment' | 'user';
   // Si true, ocupa el alto del contenedor (para usarlo en un modal); si no, alto fijo.
   fill?: boolean;
@@ -20,6 +23,7 @@ type CamStatus = 'loading' | 'ready' | 'error';
 export function CameraCapture({
   onCapture,
   frame,
+  hint,
   initialFacing = 'environment',
   fill = false,
 }: CameraCaptureProps) {
@@ -131,17 +135,24 @@ export function CameraCapture({
         }
       />
 
-      {status === 'ready' && frame && (
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 px-6">
-          {frame === 'card' ? (
+      {status === 'ready' && (frame || hint) && (
+        <div
+          className={
+            'pointer-events-none absolute inset-0 flex flex-col items-center gap-3 px-6 ' +
+            (frame ? 'justify-center' : 'justify-start pt-4')
+          }
+        >
+          {frame === 'card' && (
             <div className="aspect-[1.586] w-full max-w-xs rounded-xl border-2 border-dashed border-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]" />
-          ) : (
+          )}
+          {frame === 'face' && (
             <div className="h-56 w-44 rounded-[50%] border-2 border-dashed border-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]" />
           )}
           <p className="rounded-full bg-black/50 px-3 py-1 text-center text-xs text-white">
-            {frame === 'card'
-              ? 'Encuadra tu identificación dentro del marco'
-              : 'Coloca tu rostro dentro del marco'}
+            {hint ??
+              (frame === 'card'
+                ? 'Encuadra tu identificación dentro del marco'
+                : 'Coloca tu rostro dentro del marco')}
           </p>
         </div>
       )}
