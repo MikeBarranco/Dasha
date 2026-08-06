@@ -53,7 +53,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      CORS_ORIGIN: https://dashamx.me,https://app.dashamx.me
+      CORS_ORIGIN: https://dashamx.me,https://www.dashamx.me,https://app.dashamx.me
       DATABASE_URL: postgresql://admin_dasha:${DB_PASSWORD:-dasha_dev}@db-prod:5432/dasha_prod?schema=public
       JWT_SECRET: ${JWT_SECRET:-dasha_super_secret_key_2026_fepro}
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}

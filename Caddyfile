@@ -6,7 +6,8 @@ api.dashamx.me {
     reverse_proxy backend-prod:3000
 }
 
-dashamx.me {
+dashamx.me, www.dashamx.me {
     root * /usr/share/caddy
+    try_files {path} /index.html
     file_server
 }
