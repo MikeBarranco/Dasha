@@ -937,7 +937,7 @@ export class OrganizationController {
 
       const updatedAnimal = await prisma.animalProfile.update({
         where: { id: animalId },
-        data: { name, currentDiagnosis: diagnosis }
+        data: { name, diagnosis }
       });
 
       res.status(200).json(updatedAnimal);
