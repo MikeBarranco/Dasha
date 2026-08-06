@@ -16,7 +16,7 @@ services:
     container_name: dasha-backend-staging
     restart: unless-stopped
     environment:
-      NODE_ENV: production
+      NODE_ENV: staging
       PORT: 3000
       CORS_ORIGIN: https://staging.dashamx.me
       DATABASE_URL: postgresql://admin_dasha:${DB_PASSWORD:-dasha_dev}@db:5432/dasha_staging?schema=public
@@ -29,6 +29,7 @@ services:
       FACEBOOK_APP_ID: ${FACEBOOK_APP_ID}
       FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET}
       SENTRY_DSN: ${SENTRY_DSN}
+      SENTRY_ENVIRONMENT: staging
       FRONTEND_URL: https://staging.dashamx.me
       BACKEND_URL: https://api.staging.dashamx.me
     depends_on:
@@ -64,6 +65,7 @@ services:
       FACEBOOK_APP_ID: ${FACEBOOK_APP_ID}
       FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET}
       SENTRY_DSN: ${SENTRY_DSN}
+      SENTRY_ENVIRONMENT: production
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
       FRONTEND_URL: https://dashamx.me
