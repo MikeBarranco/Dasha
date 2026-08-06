@@ -49,7 +49,8 @@ export class ForumController {
         return {
           ...rest,
           hasReported: flags ? flags.length > 0 : false,
-          likedByMe: votes ? votes.length > 0 : false
+          isLiked: votes ? votes.length > 0 : false,
+          likedByMe: votes ? votes.length > 0 : false // Keep likedByMe for backwards compatibility
         };
       });
 

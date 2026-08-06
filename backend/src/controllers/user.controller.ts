@@ -235,7 +235,8 @@ export class UserController {
 
       // Buscar si el usuario pertenece a alguna organización a través de organization_employees
       const employee = await prisma.organizationEmployee.findFirst({
-        where: { userId, isVerified: true },
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
         select: {
           roleInOrg: true,
           isVerified: true,
@@ -365,7 +366,7 @@ export class UserController {
 
       const needContributions = await prisma.needContribution.findMany({
         where: { userId },
-        include: { need: true },
+        include: { need: { include: { organization: { select: { id: true, name: true, logoUrl: true } } } } },
         orderBy: { createdAt: 'desc' }
       });
 

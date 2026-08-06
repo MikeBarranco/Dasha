@@ -137,8 +137,8 @@ export class ReportService {
       description: row.description,
       status: statusStr,
       activeAssignmentId: row.active_assignment_id || null,
-      createdAt: row.created_at,
-      isFollowing: row.isFollowing
+      isFollowing: row.isFollowing || false,
+      createdAt: row.created_at
     };
   }
 

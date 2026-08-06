@@ -28,6 +28,7 @@ router.delete('/novedades/:id', ChangelogController.deleteEntry);
 // ==========================================
 // GET /api/v1/admin/forum/reports
 router.get('/forum/reports', AdminController.getForumReports);
+router.delete('/forum/reports/:id', AdminController.dismissForumReport);
 
 router.get('/reports', AdminController.getAllReports);
 router.patch('/reports/:id', AdminController.updateReport);
