@@ -571,6 +571,8 @@ model AnimalProfile {
   color           String?       @db.VarChar(100)
   gender          AnimalGender?
   isNeutered      Boolean       @default(false) @map("is_neutered")
+  isVaccinated    Boolean       @default(false) @map("is_vaccinated")
+  isDewormed      Boolean       @default(false) @map("is_dewormed")
   microchipId     String?       @map("microchip_id") @db.VarChar(50)
   story           String?
   status          AnimalStatus

@@ -547,8 +547,8 @@ export class OrganizationController {
       const resource = await prisma.resource.create({
         data: {
           providerId: userId,
-          organization: { connect: { id: myEmployee.organizationId } },
-          reportId,
+          organizationId: myEmployee.organizationId,
+          reportId: reportId,
           resourceType: resourceType || 'medical_service',
           title: 'Oferta de recepción/atención médica',
           description: description || 'La clínica está dispuesta a recibir al animalito.',
@@ -659,7 +659,7 @@ export class OrganizationController {
           const profile = await tx.animalProfile.create({
             data: {
               reportId,
-              organization: { connect: { id: emp.organizationId } },
+              organizationId: emp.organizationId,
               name: `Rescatado #${report.id.substring(0, 4)}`,
               species: report.species,
               status: 'in_treatment',
@@ -1560,12 +1560,12 @@ export class OrganizationController {
       });
 
       // Update animal flags
-      if (mappedType === 'spay_neuter') {
-        await prisma.animalProfile.update({ where: { id: animalId }, data: { sterilized: true } });
-      } else if (mappedType === 'vaccine') {
-        await prisma.animalProfile.update({ where: { id: animalId }, data: { vaccinated: true } });
-      } else if (mappedType === 'deworming') {
-        await prisma.animalProfile.update({ where: { id: animalId }, data: { dewormed: true } });
+      if (type === 'spay_neuter') {
+        await prisma.animalProfile.update({ where: { id: animalId }, data: { isNeutered: true } });
+      } else if (type === 'vaccine') {
+        await prisma.animalProfile.update({ where: { id: animalId }, data: { isVaccinated: true } });
+      } else if (type === 'deworming') {
+        await prisma.animalProfile.update({ where: { id: animalId }, data: { isDewormed: true } });
       }
 
       res.status(201).json({
