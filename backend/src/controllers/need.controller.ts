@@ -138,7 +138,7 @@ export class NeedController {
 
       await prisma.need.update({
         where: { id },
-        data: { status: 'covered' }
+        data: { status: 'fulfilled' }
       });
 
       res.status(201).json({
