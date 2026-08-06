@@ -47,6 +47,23 @@ services:
     volumes:
       - dasha_prod_data:/var/lib/postgresql/data
 
+  # --- RESPALDOS AUTOMÁTICOS (PRODUCCIÓN) ---
+  db-backup:
+    image: prodrigestivill/postgres-backup-local
+    container_name: dasha-db-backup
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: db-prod
+      POSTGRES_DB: dasha_prod
+      POSTGRES_USER: admin_dasha
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dasha_dev}
+      SCHEDULE: "@daily"
+      BACKUP_KEEP_DAYS: 7
+    volumes:
+      - dasha_prod_backups:/backups
+    depends_on:
+      - db-prod
+
   backend-prod:
     build: ./backend
     container_name: dasha-backend-prod
@@ -93,5 +110,6 @@ services:
 volumes:
   dasha_db_data:
   dasha_prod_data:
+  dasha_prod_backups:
   caddy_data:
   caddy_config:
