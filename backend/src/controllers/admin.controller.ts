@@ -352,7 +352,7 @@ export class AdminController {
 
   static async createOrganization(req: Request, res: Response, next: NextFunction) {
     try {
-      const { logoBase64, lat, lng, ...data } = req.body;
+      const { logoBase64, lat, lng, services, ...data } = req.body;
       
       let logoUrl = null;
       let logoPublicId = null;
@@ -378,12 +378,12 @@ export class AdminController {
       if (lat && lng) {
         await prisma.$executeRaw`
           UPDATE organizations
-          SET location = ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)
+          SET location = ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography
           WHERE id = ${org.id}::uuid;
         `;
       }
 
-      res.status(201).json(org);
+      res.status(201).json({ message: 'Aliado creado correctamente', org });
     } catch (error) {
       next(error);
     }
@@ -392,7 +392,7 @@ export class AdminController {
   static async updateOrganization(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
-      const { logoBase64, lat, lng, ...data } = req.body;
+      const { logoBase64, lat, lng, services, ...data } = req.body;
       
       const updateData: any = { ...data };
 
@@ -904,6 +904,34 @@ export class AdminController {
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
       res.status(200).json(allFlags);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async dismissForumReport(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      
+      const deletedPostFlag = await prisma.forumPostFlag.deleteMany({ where: { id } });
+      if (deletedPostFlag.count > 0) {
+        res.status(200).json({ message: 'Denuncia descartada' });
+        return;
+      }
+
+      const deletedReplyFlag = await prisma.forumReplyFlag.deleteMany({ where: { id } });
+      if (deletedReplyFlag.count > 0) {
+        res.status(200).json({ message: 'Denuncia descartada' });
+        return;
+      }
+
+      const deletedReportFlag = await prisma.reportFlag.deleteMany({ where: { id } });
+      if (deletedReportFlag.count > 0) {
+        res.status(200).json({ message: 'Denuncia descartada' });
+        return;
+      }
+
+      res.status(404).json({ error: 'Denuncia no encontrada' });
     } catch (error) {
       next(error);
     }

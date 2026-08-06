@@ -11,8 +11,9 @@ export class NeedController {
           include: {
             organization: { select: { id: true, name: true, logoUrl: true } },
             contributions: {
+              orderBy: { createdAt: 'desc' },
               include: {
-                user: { select: { id: true, name: true, email: true } }
+                user: { select: { id: true, name: true, email: true, avatarUrl: true } }
               },
               take: 1
             }
@@ -40,7 +41,8 @@ export class NeedController {
           orderBy: { createdAt: 'desc' },
           include: {
             contributions: {
-              include: { user: { select: { id: true, name: true, email: true } } },
+              orderBy: { createdAt: 'desc' },
+              include: { user: { select: { id: true, name: true, email: true, avatarUrl: true } } },
               take: 1
             }
           }

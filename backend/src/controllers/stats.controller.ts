@@ -13,7 +13,12 @@ export class StatsController {
       // O podemos contar por los RescueAssignment completados.
       // Miguel puso un ejemplo de 342, contemos reportes rescatados o con asignación completa.
       const rescatesLogrados = await prisma.rescueAssignment.count({
-        where: { status: 'completed' }
+        where: { 
+          status: 'completed',
+          report: {
+            status: { notIn: ['closed', 'duplicate', 'not_found', 'deceased'] }
+          }
+        }
       });
 
       // 3. Voluntarios (usuarios con role = volunteer o volunteerStatus = approved)

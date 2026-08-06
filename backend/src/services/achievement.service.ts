@@ -20,61 +20,17 @@ export class AchievementService {
       const earnedCodes = userAchievements.map(ua => ua.achievement.code);
 
       // 3. Evaluar reglas
-      const codesToGrant: string[] = [];
-
       const availableAchievements = await prisma.achievement.findMany({
         where: { requirementType: 'reports_count' }
       });
 
       for (const ach of availableAchievements) {
         if (reportCount >= ach.requirementValue && !earnedCodes.includes(ach.code)) {
-          codesToGrant.push(ach.code);
-        }
-      }
-
-      // 4. Otorgar los logros correspondientes
-      for (const code of codesToGrant) {
-        // Buscar el ID del logro en el catálogo
-        const achievement = await prisma.achievement.findUnique({
-          where: { code }
-        });
-
-        if (achievement) {
-          // Otorgar logro
-          await prisma.userAchievement.create({
-            data: {
-              userId,
-              achievementId: achievement.id
-            }
-          });
-
-          // Opcional: Sumar los puntos de experiencia del logro al usuario
-          if (achievement.pointsReward > 0) {
-            await prisma.user.update({
-              where: { id: userId },
-              data: {
-                experiencePoints: {
-                  increment: achievement.pointsReward
-                }
-              }
-            });
-          }
-
-          const { NotificationService } = await import('./notification.service.js');
-          await NotificationService.sendNotification({
-            userId,
-            title: '¡Nueva Medalla Desbloqueada! 🏆',
-            body: `Has ganado la medalla: ${achievement.name}. ¡Gracias por tu ayuda!`,
-            type: 'achievement',
-            referenceId: achievement.id,
-            referenceType: 'achievement',
-            link: '/perfil'
-          });
+          await this.grantAchievement(userId, ach);
         }
       }
     } catch (error) {
       console.error('Error al otorgar logros de reportero:', error);
-      // No lanzamos el error para no interrumpir el flujo principal
     }
   }
 

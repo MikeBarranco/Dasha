@@ -385,11 +385,16 @@ export class OrganizationController {
   static async addTeamMember(req: Request, res: Response, next: NextFunction) {
     try {
       const adminId = (req as any).user?.id;
-      const { email, roleInOrg = 'veterinarian' } = req.body;
+      const { email, roleInOrg } = req.body;
       
       if (!email) {
         res.status(400).json({ error: 'El email es obligatorio' });
         return;
+      }
+
+      let finalRole = 'veterinarian';
+      if (roleInOrg === 'admin' || roleInOrg === 'assistant') {
+        finalRole = roleInOrg;
       }
 
       const myEmployee = await OrganizationController.getPortalContext(req, adminId);
@@ -420,7 +425,7 @@ export class OrganizationController {
         data: {
           organizationId: myEmployee.organizationId,
           userId: targetUser.id,
-          roleInOrg: roleInOrg,
+          roleInOrg: finalRole as any,
           isVerified: true,
           invitedEmail: email
         },
@@ -656,8 +661,8 @@ export class OrganizationController {
         if (!existingProfile) {
           const profile = await tx.animalProfile.create({
             data: {
-              reportId,
-              organizationId: emp.organizationId,
+              report: { connect: { id: reportId } },
+              organization: { connect: { id: emp.organizationId } },
               name: `Rescatado #${report.id.substring(0, 4)}`,
               species: report.species,
               status: 'in_treatment',
@@ -985,7 +990,7 @@ export class OrganizationController {
             url: uploadResult.secure_url,
             publicId: uploadResult.public_id,
             isPrimary: false,
-            orderIndex: 99
+            orderIndex: 0
           }
         });
         uploadedPhotos.push(newPhoto);
@@ -1248,27 +1253,19 @@ export class OrganizationController {
         include: {
           user: { select: { name: true, email: true, phone: true } },
           animal: { select: { id: true, name: true } },
+          donationProof: true
         },
         orderBy: { createdAt: 'desc' }
       });
 
-      const donationIds = donations.map(d => d.id);
-      
-      const properProofs = await prisma.donationProof.findMany({
-         where: { donationId: { in: donationIds } }
-      });
-      
-      const proofsByDonationId = new Map();
-      properProofs.forEach(p => proofsByDonationId.set(p.donationId, p));
-
       const enrichedDonations = donations.map(d => {
-        const proofObj = proofsByDonationId.get(d.id);
-        const { user, ...rest } = d;
+        const { user, donationProof, ...rest } = d;
         return {
           ...rest,
-          donor: user,
-          proofUrl: proofObj ? proofObj.proofUrl : null,
-          proof: proofObj || null
+          donor: d.isAnonymous ? { name: 'Anónimo' } : user,
+          donationProof: donationProof,
+          proofUrl: donationProof ? donationProof.proofUrl : null,
+          proof: donationProof || null
         };
       });
 
@@ -1418,7 +1415,8 @@ export class OrganizationController {
         where: { organizationId: targetOrgId },
         include: {
           medicalRecords: { orderBy: { createdAt: 'desc' } },
-          photos: { orderBy: { orderIndex: 'asc' } },
+          vaccinations: { orderBy: { appliedDate: 'desc' } },
+          photos: { orderBy: [{ orderIndex: 'asc' }, { createdAt: 'desc' }] },
           timeline: { orderBy: { date: 'desc' } }
         },
         orderBy: { createdAt: 'desc' }
@@ -1430,6 +1428,11 @@ export class OrganizationController {
           ...animal,
           medicalRecord: {
             sterilized: animal.isNeutered,
+            vaccines: animal.vaccinations.map(v => ({
+              id: v.id,
+              name: v.vaccineName,
+              date: v.appliedDate
+            })),
             entries: animal.medicalRecords.map(r => ({
               id: r.id,
               type: r.recordType,
@@ -1476,17 +1479,20 @@ export class OrganizationController {
         updateData.isNeutered = sterilized;
       }
       if (typeof status === 'string') {
-        const validStatuses = ['in_treatment', 'recovering', 'looking_for_foster', 'fostered', 'looking_for_adoption', 'adopted', 'deceased'];
+        const validStatuses = ['in_treatment', 'recovering', 'looking_for_foster', 'in_foster', 'looking_for_adoption', 'adopted', 'deceased'];
         let mappedStatus = status;
         
-        // Auto-map from spanish if they accidentally send the label
+        // Auto-map from spanish or frontend slugs
         const statusMap: any = {
           'en tratamiento': 'in_treatment',
           'recuperándose': 'recovering',
+          'recuperandose': 'recovering',
           'buscando hogar temporal': 'looking_for_foster',
-          'en hogar temporal': 'fostered',
+          'en hogar temporal': 'in_foster',
+          'fostered': 'in_foster',
           'buscando adopción': 'looking_for_adoption',
           'buscando hogar': 'looking_for_adoption',
+          'looking_for_home': 'looking_for_adoption',
           'adoptado': 'adopted',
           'fallecido': 'deceased'
         };
