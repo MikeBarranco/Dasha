@@ -238,7 +238,8 @@ export class ReportService {
         description: o.description,
         resourceType: o.resourceType,
         organizationName: o.organization?.name || 'Aliado'
-      }))
+      })),
+      isFollowing
     };
   }
 
