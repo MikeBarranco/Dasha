@@ -257,6 +257,12 @@ export function RescateEnVivoPage() {
       );
       setPendingStatus(step.next);
       setPhotoStep(null);
+      // Al arrancar el traslado, el backend liga el aliado destino a la asignación.
+      // Volvemos a pedirla para que el mapa reciba las coordenadas del aliado y
+      // dibuje su pin + la ruta sin que el voluntario tenga que refrescar a mano.
+      if (step.next === 'on_the_way') {
+        await refresh().catch(() => {});
+      }
     } catch (err) {
       alert(err instanceof Error ? err.message : 'No se pudo actualizar el estado.');
     } finally {
@@ -283,7 +289,14 @@ export function RescateEnVivoPage() {
 
       <div className="flex-1">
         <Suspense fallback={<div className="h-full w-full animate-pulse bg-neutral-100" />}>
-          <RescueLiveMap assignment={assignment} position={position} />
+          {/* El mapa arma sus marcadores/ruta al montar. Si el destino (aliado)
+              aparece después de elegirlo, cambiamos el key para re-montarlo y que
+              dibuje el pin del aliado + la ruta sin refrescar la página. */}
+          <RescueLiveMap
+            key={assignment.destination ? 'con-destino' : 'sin-destino'}
+            assignment={assignment}
+            position={position}
+          />
         </Suspense>
       </div>
 
