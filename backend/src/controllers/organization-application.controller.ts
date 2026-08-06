@@ -75,11 +75,10 @@ export class OrganizationApplicationController {
     }
   }
 
-  // GET /api/v1/organization-applications (Admin ve las postulaciones pendientes)
+  // GET /api/v1/organization-applications (Admin ve las postulaciones)
   static async getApplications(req: Request, res: Response, next: NextFunction) {
     try {
       const applications = await prisma.organization.findMany({
-        where: { isApproved: false, isActive: true },
         include: {
           employees: {
             where: { roleInOrg: 'admin' },
@@ -88,7 +87,19 @@ export class OrganizationApplicationController {
         },
         orderBy: { createdAt: 'desc' }
       });
-      res.status(200).json(applications);
+      
+      const mappedApplications = applications.map(app => {
+        let status = 'pending';
+        if (!app.isActive) status = 'rejected';
+        else if (app.isApproved) status = 'approved';
+
+        return {
+          ...app,
+          status
+        };
+      });
+
+      res.status(200).json(mappedApplications);
     } catch (error) {
       next(error);
     }
