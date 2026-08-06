@@ -1143,6 +1143,22 @@ export class AdminController {
         imagePublicId = uploadRes.public_id;
       }
 
+      let finalCategory = data.category || 'other';
+      const categoryMap: Record<string, string> = {
+        'esterilizacion': 'sterilization',
+        'vacunacion': 'vaccination',
+        'estetica': 'grooming',
+        'colecta': 'donation',
+        'adopcion': 'adoption',
+        'charla': 'talk',
+        'otro': 'other',
+        'campaign': 'other'
+      };
+      if (finalCategory && categoryMap[finalCategory.toLowerCase()]) {
+        finalCategory = categoryMap[finalCategory.toLowerCase()];
+      }
+      data.category = finalCategory;
+
       const event = await prisma.event.create({
         data: {
           ...data,
@@ -1176,6 +1192,22 @@ export class AdminController {
         });
         updateData.imageUrl = uploadRes.secure_url;
         updateData.imagePublicId = uploadRes.public_id;
+      }
+
+      if (updateData.category) {
+        const categoryMap: Record<string, string> = {
+          'esterilizacion': 'sterilization',
+          'vacunacion': 'vaccination',
+          'estetica': 'grooming',
+          'colecta': 'donation',
+          'adopcion': 'adoption',
+          'charla': 'talk',
+          'otro': 'other',
+          'campaign': 'other'
+        };
+        if (categoryMap[updateData.category.toLowerCase()]) {
+          updateData.category = categoryMap[updateData.category.toLowerCase()];
+        }
       }
 
       const updated = await prisma.event.update({
