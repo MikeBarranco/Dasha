@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { HeartHandshake, AlertCircle, Check, Receipt, X } from 'lucide-react';
+import { HeartHandshake, AlertCircle, Check, Receipt, X, MessageCircle, Gift } from 'lucide-react';
 import { getMyOrgDonations, approveMyOrgDonation, type Donation } from '../../lib/api';
 import { mockAllies as allies } from '../../data/mockAllies';
 import { useAllyPortal } from '../../lib/useAllyPortal';
+import { whatsappUrl } from '../../lib/whatsapp';
 
 function money(amount: number): string {
   return `$${amount.toLocaleString('es-MX')}`;
@@ -18,7 +19,9 @@ function previewDonations(orgId: string): Donation[] {
     {
       id: 'd1',
       donorName: 'María López',
+      donorPhone: '2211234567',
       amount: 500,
+      itemsDescription: null,
       animalName: nameOf(0),
       proofUrl: null,
       status: 'pending',
@@ -26,8 +29,10 @@ function previewDonations(orgId: string): Donation[] {
     },
     {
       id: 'd2',
-      donorName: 'Anónimo',
-      amount: 300,
+      donorName: 'Carlos Ruiz',
+      donorPhone: '2229876543',
+      amount: 0,
+      itemsDescription: '20 kg de croquetas para cachorro',
       animalName: nameOf(1),
       proofUrl: null,
       status: 'pending',
@@ -35,8 +40,10 @@ function previewDonations(orgId: string): Donation[] {
     },
     {
       id: 'd3',
-      donorName: 'Carlos Ruiz',
+      donorName: 'Anónimo',
+      donorPhone: null,
       amount: 1000,
+      itemsDescription: null,
       animalName: nameOf(0),
       proofUrl: null,
       status: 'approved',
@@ -156,15 +163,29 @@ export function PortalDonacionesPage() {
 
         {list !== null && list.length > 0 && (
           <ul className="space-y-3">
-            {list.map((donation) => (
+            {list.map((donation) => {
+              const waHref = donation.donorPhone
+                ? whatsappUrl(
+                    donation.donorPhone,
+                    `Hola, te contacto desde Dasha porque apoyaste a ${donation.animalName || 'un animalito'}. ¿Coordinamos?`,
+                  )
+                : null;
+              return (
               <li
                 key={donation.id}
                 className="rounded-2xl border border-neutral-200 bg-white p-4"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="font-medium text-neutral-800">
-                      {money(donation.amount)}{' '}
+                    <p className="flex items-center gap-1.5 font-medium text-neutral-800">
+                      {donation.amount > 0 ? (
+                        money(donation.amount)
+                      ) : (
+                        <>
+                          <Gift className="h-4 w-4 flex-shrink-0 text-cobalto" />
+                          {donation.itemsDescription ?? 'Donación en especie'}
+                        </>
+                      )}
                       <span className="text-sm font-normal text-neutral-500">
                         · {donation.donorName}
                       </span>
@@ -184,7 +205,22 @@ export function PortalDonacionesPage() {
                   </span>
                 </div>
 
+                {donation.donorPhone && (
+                  <p className="mt-2 text-xs text-neutral-500">Tel. {donation.donorPhone}</p>
+                )}
+
                 <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {waHref && (
+                    <a
+                      href={waHref}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-1.5 rounded-xl bg-exito px-3 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                    >
+                      <MessageCircle className="h-4 w-4" /> Contactar
+                    </a>
+                  )}
+
                   {donation.proofUrl ? (
                     <button
                       type="button"
@@ -194,9 +230,11 @@ export function PortalDonacionesPage() {
                       <Receipt className="h-4 w-4" /> Ver comprobante
                     </button>
                   ) : (
-                    <span className="flex items-center gap-1.5 rounded-xl bg-neutral-100 px-3 py-2 text-xs text-neutral-500">
-                      <Receipt className="h-3.5 w-3.5" /> Comprobante adjunto
-                    </span>
+                    donation.amount > 0 && (
+                      <span className="flex items-center gap-1.5 rounded-xl bg-neutral-100 px-3 py-2 text-xs text-neutral-500">
+                        <Receipt className="h-3.5 w-3.5" /> Sin comprobante
+                      </span>
+                    )
                   )}
 
                   {donation.status === 'pending' && (
@@ -212,7 +250,8 @@ export function PortalDonacionesPage() {
                   )}
                 </div>
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </div>
