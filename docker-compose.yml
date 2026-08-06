@@ -28,6 +28,7 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       FACEBOOK_APP_ID: ${FACEBOOK_APP_ID}
       FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET}
+      SENTRY_DSN: ${SENTRY_DSN}
       FRONTEND_URL: https://staging.dashamx.me
       BACKEND_URL: https://api.staging.dashamx.me
     depends_on:
@@ -62,6 +63,7 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       FACEBOOK_APP_ID: ${FACEBOOK_APP_ID}
       FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET}
+      SENTRY_DSN: ${SENTRY_DSN}
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
       FRONTEND_URL: https://dashamx.me
