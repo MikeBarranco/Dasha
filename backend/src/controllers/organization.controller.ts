@@ -1448,7 +1448,7 @@ export class OrganizationController {
     try {
       const userId = (req as any).user?.id;
       const animalId = req.params.id as string;
-      const { sterilized } = req.body;
+      const { sterilized, status } = req.body;
 
       const myEmployee = await prisma.organizationEmployee.findFirst({
         where: { userId }
@@ -1465,15 +1465,24 @@ export class OrganizationController {
         return;
       }
 
+      const updateData: any = {};
       if (typeof sterilized === 'boolean') {
-        const updated = await prisma.animalProfile.update({
-          where: { id: animalId },
-          data: { isNeutered: sterilized }
-        });
-        res.status(200).json(updated);
-      } else {
-        res.status(400).json({ error: 'Valor inválido para sterilized' });
+        updateData.isNeutered = sterilized;
       }
+      if (typeof status === 'string') {
+        updateData.status = status;
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        res.status(400).json({ error: 'Debe enviar sterilized o status para actualizar' });
+        return;
+      }
+
+      const updated = await prisma.animalProfile.update({
+        where: { id: animalId },
+        data: updateData
+      });
+      res.status(200).json(updated);
     } catch (error) {
       next(error);
     }
