@@ -1382,9 +1382,10 @@ export async function getDeceasedAnimals(): Promise<Animal[]> {
 }
 
 // Los adoptados del usuario en sesión (para que la familia agregue momentos).
-// GET /me/adopted -> solo los animales que ESTE usuario adoptó.
+// Solo los animales que ESTE usuario adoptó. Ruta confirmada por Isabel:
+// GET /me/adopted-animals (antes /me/adopted daba 404).
 export async function getMyAdoptedAnimals(): Promise<Animal[]> {
-  const data = await authedRaw<RawAnimal[]>('/me/adopted');
+  const data = await authedRaw<RawAnimal[]>('/me/adopted-animals');
   return (data ?? []).map(mapAnimal);
 }
 
@@ -2619,12 +2620,23 @@ function mapNeed(raw: Record<string, unknown>): Need {
       : null;
   const animal =
     raw.animal && typeof raw.animal === 'object' ? (raw.animal as Record<string, unknown>) : null;
-  const coveredBy =
-    raw.coveredBy && typeof raw.coveredBy === 'object'
+  // Quién se comprometió a cubrir la necesidad. Isabel devuelve la relación
+  // `accepter` (+ el campo `acceptedBy`); toleramos también el nombre viejo.
+  const accepter =
+    (raw.accepter && typeof raw.accepter === 'object'
+      ? (raw.accepter as Record<string, unknown>)
+      : null) ??
+    (raw.coveredBy && typeof raw.coveredBy === 'object'
       ? (raw.coveredBy as Record<string, unknown>)
-      : null;
+      : null);
+  const coveredByName = accepter ? allyStr(accepter.name) : allyStr(raw.coveredByName) || null;
+  const isAccepted = Boolean(accepter || raw.acceptedBy || raw.accepted_by || coveredByName);
   const typeRaw = allyStr(raw.type ?? raw.resourceType ?? raw.resource_type);
-  let statusRaw = allyStr(raw.status); if (statusRaw === 'fulfilled') statusRaw = 'covered';
+  let statusRaw = allyStr(raw.status);
+  if (statusRaw === 'fulfilled') statusRaw = 'covered';
+  // Si el backend registró que alguien la aceptó pero el status sigue en "open"
+  // (o vacío), la mostramos como cubierta para que se refleje y persista.
+  if (isAccepted && (statusRaw === '' || statusRaw === 'open')) statusRaw = 'covered';
   const created = allyStr(raw.createdAt ?? raw.created_at);
   return {
     id: allyStr(raw.id ?? raw._id),
@@ -2636,7 +2648,7 @@ function mapNeed(raw: Record<string, unknown>): Need {
     organizationId: org ? allyStr(org.id) : allyStr(raw.organizationId ?? raw.organization_id),
     animalName: animal ? allyStr(animal.name) : allyStr(raw.animalName) || null,
     status: needStatusValues.includes(statusRaw as NeedStatus) ? (statusRaw as NeedStatus) : 'open',
-    coveredByName: coveredBy ? allyStr(coveredBy.name) : allyStr(raw.coveredByName) || null,
+    coveredByName,
     createdAgo: created ? timeAgo(created) : '',
   };
 }
