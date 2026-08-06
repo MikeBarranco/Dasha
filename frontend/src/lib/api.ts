@@ -1329,12 +1329,34 @@ function mapMedical(raw: RawAnimal): MedicalRecord | undefined {
     }))
     .filter((entry) => entry.title);
 
+  // Vacunas: Isabel las devuelve como la relación `vaccinations` DENTRO de
+  // medicalRecord (no en `entries`); las sumamos como entradas tipo "vacuna" para
+  // que la cartilla no salga vacía.
+  const rawVaccines = obj && Array.isArray(obj.vaccinations) ? obj.vaccinations : [];
+  const vaccineEntries: MedicalEntry[] = (rawVaccines as Record<string, unknown>[])
+    .map((item, index) => ({
+      id: String(item.id ?? item._id ?? `vac-${index}`),
+      type: normalizeMedType('vacuna'),
+      title: String(item.name ?? item.vaccineName ?? item.title ?? 'Vacuna'),
+      date: String(
+        item.date ?? item.appliedAt ?? item.applied_at ?? item.createdAt ?? item.created_at ?? '',
+      ),
+      notes: item.notes
+        ? String(item.notes)
+        : item.description
+          ? String(item.description)
+          : undefined,
+    }))
+    .filter((entry) => entry.title);
+
+  const allEntries = [...vaccineEntries, ...entries];
+
   const sterilized = Boolean(
     (obj?.sterilized ?? obj?.isSterilized ?? obj?.esterilizado ?? raw.isSterilized) as unknown,
   );
 
   if (!obj && !raw.isSterilized) return undefined;
-  return { sterilized, entries };
+  return { sterilized, entries: allEntries };
 }
 
 function mapAnimal(raw: RawAnimal): Animal {
@@ -1554,7 +1576,12 @@ export async function removeMyOrgMedicalEntry(
 export type Donation = {
   id: string;
   donorName: string;
+  // Teléfono del donante, para que el aliado lo contacte (Isabel lo incluye en
+  // `user`). null si es anónimo o no lo dio.
+  donorPhone: string | null;
   amount: number;
+  // Descripción de lo donado cuando es en especie (croquetas, transporte…).
+  itemsDescription: string | null;
   animalName: string;
   proofUrl: string | null;
   status: 'pending' | 'approved';
@@ -1562,20 +1589,34 @@ export type Donation = {
 };
 
 function mapDonation(raw: Record<string, unknown>): Donation {
+  // El donante viene en `user` (Isabel) o `donor` (nombre viejo).
   const donor =
-    raw.donor && typeof raw.donor === 'object' ? (raw.donor as Record<string, unknown>) : null;
+    (raw.user && typeof raw.user === 'object' ? (raw.user as Record<string, unknown>) : null) ??
+    (raw.donor && typeof raw.donor === 'object' ? (raw.donor as Record<string, unknown>) : null);
   const animal =
     raw.animal && typeof raw.animal === 'object' ? (raw.animal as Record<string, unknown>) : null;
   const statusStr = String(raw.status ?? '');
   const approved =
-    raw.received === true || statusStr === 'approved' || statusStr === 'received';
-  const proof = raw.proofUrl ?? raw.proof_url ?? raw.receiptUrl ?? raw.receipt_url;
+    raw.received === true || raw.isApproved === true || statusStr === 'approved' || statusStr === 'received';
+  // El comprobante viene en `donationProof` (objeto {url} o string) o en los
+  // nombres viejos. Antes salía "Comprobante adjunto" no visible por no leerlo.
+  const proofRaw = raw.donationProof ?? raw.proofUrl ?? raw.proof_url ?? raw.receiptUrl ?? raw.receipt_url;
+  const proof =
+    typeof proofRaw === 'string'
+      ? proofRaw
+      : proofRaw && typeof proofRaw === 'object'
+        ? String((proofRaw as Record<string, unknown>).url ?? (proofRaw as Record<string, unknown>).imageUrl ?? '')
+        : '';
+  const items = String(raw.itemsDescription ?? raw.items_description ?? raw.description ?? '').trim();
+  const phone = donor ? String(donor.phone ?? donor.whatsapp ?? '').trim() : '';
   return {
     id: String(raw.id ?? ''),
     donorName: String(donor?.name ?? raw.donorName ?? 'Anónimo') || 'Anónimo',
+    donorPhone: phone || null,
     amount: Number(raw.amount ?? 0),
+    itemsDescription: items || null,
     animalName: String(animal?.name ?? raw.animalName ?? ''),
-    proofUrl: typeof proof === 'string' && proof ? proof : null,
+    proofUrl: proof || null,
     status: approved ? 'approved' : 'pending',
     createdAgo: timeAgo(String(raw.createdAt ?? raw.created_at ?? '')),
   };
