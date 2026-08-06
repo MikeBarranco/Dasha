@@ -19,7 +19,7 @@ router.get('/check', ReportController.checkDuplicate);
 router.post('/analyze-photo', requireAuth, ReportController.analyzePhoto);
 
 // GET /api/v1/reports/:id (Un solo reporte específico)
-router.get('/:id', ReportController.getReportById);
+router.get('/:id', optionalAuth, ReportController.getReportById);
 
 // POST /api/v1/reports (Protegida, requiere sesión)
 router.post('/', requireAuth, validate(createReportSchema), ReportController.createReport);

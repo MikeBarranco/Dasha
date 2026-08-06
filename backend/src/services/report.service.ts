@@ -172,7 +172,7 @@ export class ReportService {
   /**
    * Obtiene un reporte específico por su ID
    */
-  static async getReportById(id: string) {
+  static async getReportById(id: string, currentUserId?: string) {
     const reports: any[] = await prisma.$queryRaw`
       SELECT 
         r.id, r.species, r.size, r.condition, r.urgency, r.status, r.description, r.created_at,
@@ -209,6 +209,14 @@ export class ReportService {
       include: { organization: { select: { name: true } } },
       orderBy: { createdAt: 'desc' }
     });
+
+    let isFollowing = false;
+    if (currentUserId) {
+      const follower = await prisma.reportFollower.findUnique({
+        where: { userId_reportId: { userId: currentUserId, reportId: id } }
+      });
+      if (follower) isFollowing = true;
+    }
 
     return {
       ...formattedReport,
