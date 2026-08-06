@@ -385,14 +385,12 @@ export class OrganizationController {
   static async addTeamMember(req: Request, res: Response, next: NextFunction) {
     try {
       const adminId = (req as any).user?.id;
-      let { email, roleInOrg } = req.body;
+      const { email, roleInOrg = 'veterinarian' } = req.body;
       
       if (!email) {
         res.status(400).json({ error: 'El email es obligatorio' });
         return;
       }
-      
-      roleInOrg = roleInOrg || 'veterinarian';
 
       const myEmployee = await OrganizationController.getPortalContext(req, adminId);
 
