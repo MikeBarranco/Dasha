@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { X, Heart, Gift, ImagePlus, Check, Info } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
-import { createDonation, type CreateDonationInput } from '../../lib/api';
+import { createDonation, getMe, updateMe, type CreateDonationInput } from '../../lib/api';
+import { onlyDigits, isValidPhone } from '../../lib/validation';
 import { compressImage } from '../../lib/image';
 import type { Animal } from '../../data/mockAnimals';
 
@@ -26,6 +27,24 @@ export function DonationSheet({ animal, initialMode = 'money', onClose }: Donati
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Si el usuario no tiene teléfono, se lo pedimos aquí: el aliado lo necesita
+  // para contactarlo y coordinar la entrega/confirmar el apoyo. Se guarda una vez.
+  const [needsPhone, setNeedsPhone] = useState(false);
+  const [phone, setPhone] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    getMe()
+      .then((me) => {
+        if (active && !me.phone?.trim()) setNeedsPhone(true);
+      })
+      .catch(() => {
+        // Best-effort: si no pudimos leer el perfil, no bloqueamos la donación.
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const pickProof = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -61,11 +80,21 @@ export function DonationSheet({ animal, initialMode = 'money', onClose }: Donati
       input = { type: 'items', itemsDescription: description };
     }
 
+    if (needsPhone && !isValidPhone(phone)) {
+      setError('Agrega tu teléfono (10 dígitos) para que el aliado pueda contactarte.');
+      return;
+    }
+
     setSubmitting(true);
     // El apoyo real se hace por fuera (transferencia / entrega). Registramos el
     // comprobante para que el aliado lo confirme; solo agradecemos si el registro
-    // se guardó de verdad, y si falla mostramos el error real.
+    // se guardó de verdad, y si falla mostramos el error real. Si faltaba el
+    // teléfono, lo guardamos primero para que el aliado pueda contactar al donante.
     try {
+      if (needsPhone) {
+        await updateMe({ phone });
+        setNeedsPhone(false);
+      }
       await createDonation(animal.id, input);
       setDone(true);
     } catch (err) {
@@ -225,6 +254,24 @@ export function DonationSheet({ animal, initialMode = 'money', onClose }: Donati
                 />
                 <p className="mt-2 text-xs text-neutral-400">
                   {animal.vet} te contactará para coordinar la entrega.
+                </p>
+              </div>
+            )}
+
+            {needsPhone && (
+              <div>
+                <p className="mb-1.5 text-sm font-medium text-neutral-700">Tu teléfono</p>
+                <input
+                  value={phone}
+                  onChange={(event) => setPhone(onlyDigits(event.target.value, 10))}
+                  inputMode="numeric"
+                  maxLength={10}
+                  placeholder="10 dígitos"
+                  className="w-full rounded-xl border border-neutral-200 px-3 py-2.5 text-base outline-none focus:ring-2 focus:ring-cobalto/30"
+                />
+                <p className="mt-1.5 text-xs text-neutral-400">
+                  {animal.vet} necesita tu teléfono para contactarte y coordinar. Se guarda en tu
+                  perfil.
                 </p>
               </div>
             )}
