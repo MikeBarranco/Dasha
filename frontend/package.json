@@ -10,6 +10,8 @@
     "format": "prettier --write .",
     "typecheck": "tsc -b",
     "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "optimize": "node scripts/optimize-images.mjs"
   },
   "dependencies": {
@@ -37,11 +39,13 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
+    "jsdom": "^30.0.1",
     "prettier": "^3.8.4",
     "sharp": "^0.35.1",
     "tailwindcss": "^4.3.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
-    "vite": "^8.0.12"
+    "vite": "^8.0.12",
+    "vitest": "^4.1.10"
   }
 }

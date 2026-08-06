@@ -1131,6 +1131,7 @@ export async function getMyReports(): Promise<Report[]> {
       status: statusLabels[statusRaw] ?? (statusRaw || 'Activo'),
       activeAssignmentId:
         (raw.activeAssignmentId ?? raw.active_assignment_id ?? null) as string | null,
+      isLostPet: Boolean(raw.isLostPet ?? raw.is_lost_pet),
     };
   });
 }

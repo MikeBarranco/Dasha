@@ -18,6 +18,10 @@ export type Report = {
   // Si el usuario en sesión ya sigue este reporte (para recibir avisos de cambio
   // de estado). El backend lo manda cuando hay sesión.
   isFollowing?: boolean;
+  // true si esta entrada es una MASCOTA PERDIDA (no un reporte de calle). El
+  // backend lo marca en GET /me/reports; sirve para que "Mis reportes" abra el
+  // mapa de perdidos (no el de calle) al tocarla.
+  isLostPet?: boolean;
 };
 
 export const mockReports: Report[] = [

@@ -32,14 +32,16 @@ export function MapaPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [reports, setReports] = useState<Report[] | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
-  const [panelOpen, setPanelOpen] = useState(() => Boolean(searchParams.get('aliado')));
+  const [panelOpen, setPanelOpen] = useState(
+    () => Boolean(searchParams.get('aliado') || searchParams.get('perdido')),
+  );
   const [visibleReports, setVisibleReports] = useState<Report[]>([]);
   const [focusReport, setFocusReport] = useState<Report | null>(null);
   const [resetSignal, setResetSignal] = useState(0);
   const [filters, setFilters] = useState<ReportFilters>(emptyFilters);
   const [allies, setAllies] = useState<Ally[]>([]);
   const [mapMode, setMapMode] = useState<MapMode>(() =>
-    searchParams.get('aliado') ? 'aliados' : 'calle',
+    searchParams.get('perdido') ? 'perdidos' : searchParams.get('aliado') ? 'aliados' : 'calle',
   );
   const [allyTypes, setAllyTypes] = useState<AllyType[]>([]);
   const [lostPets, setLostPets] = useState<LostPet[]>([]);
@@ -90,7 +92,19 @@ export function MapaPage() {
       });
     getLostPets()
       .then((data) => {
-        if (isActive()) setLostPets(data);
+        if (!isActive()) return;
+        setLostPets(data);
+        // Deep link a un perdido (`?perdido=id`), desde "Mis reportes" o un enlace
+        // compartido: volamos a su pin y abrimos su ficha (el modo ya arranca en
+        // "perdidos"). Sin esto caía al mapa de calle sin encontrar nada.
+        const focusId = new URLSearchParams(window.location.search).get('perdido');
+        if (focusId) {
+          const target = data.find((pet) => pet.id === focusId);
+          if (target) {
+            setFocusLostPet(target);
+            setDetailLostPet(target);
+          }
+        }
       })
       .catch(() => {
         if (isActive()) setLostPets([]);

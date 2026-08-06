@@ -516,11 +516,11 @@ export function MapView({
         type: 'line',
         source: 'perdidos-zonas',
         layout: { visibility: 'none' },
+        // Borde sólido, delgado y tenue (antes era punteado y se veía duro/feo).
         paint: {
           'line-color': ['get', 'color'],
-          'line-width': 2,
-          'line-opacity': 0.7,
-          'line-dasharray': [2, 2],
+          'line-width': 1.5,
+          'line-opacity': 0.45,
         },
       });
 
