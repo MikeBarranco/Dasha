@@ -1411,7 +1411,9 @@ export class OrganizationController {
       const animals = await prisma.animalProfile.findMany({
         where: { organizationId: targetOrgId },
         include: {
-          medicalRecords: { orderBy: { createdAt: 'desc' } }
+          medicalRecords: { orderBy: { createdAt: 'desc' } },
+          photos: { orderBy: { orderIndex: 'asc' } },
+          timeline: { orderBy: { date: 'desc' } }
         },
         orderBy: { createdAt: 'desc' }
       });
