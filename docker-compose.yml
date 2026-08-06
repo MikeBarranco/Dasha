@@ -17,7 +17,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      CORS_ORIGIN: https://staging.dashamx.me,https://app.dashamx.me
+      CORS_ORIGIN: https://dashamx.me,https://app.dashamx.me,https://staging.dashamx.me
       DATABASE_URL: postgresql://admin_dasha:${DB_PASSWORD:-dasha_dev}@db:5432/dasha_staging?schema=public
       JWT_SECRET: ${JWT_SECRET:-dasha_super_secret_key_2026_fepro}
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
@@ -27,8 +27,10 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       FACEBOOK_APP_ID: ${FACEBOOK_APP_ID}
       FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET}
-      FRONTEND_URL: https://staging.dashamx.me
-      BACKEND_URL: https://api.staging.dashamx.me
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
+      FRONTEND_URL: https://dashamx.me
+      BACKEND_URL: https://api.dashamx.me
     depends_on:
       - db
 
