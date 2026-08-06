@@ -115,7 +115,7 @@ export class NeedController {
     try {
       const id = req.params.id as string;
       const userId = (req as any).user?.id;
-      const { notes } = req.body;
+      const { notes, message } = req.body;
 
       if (!userId) {
         res.status(401).json({ error: 'No autorizado' });
@@ -132,8 +132,13 @@ export class NeedController {
         data: {
           needId: id,
           userId,
-          notes
+          notes: message || notes
         }
+      });
+
+      await prisma.need.update({
+        where: { id },
+        data: { status: 'fulfilled' }
       });
 
       res.status(201).json({

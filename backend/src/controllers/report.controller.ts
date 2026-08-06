@@ -145,7 +145,8 @@ export class ReportController {
   static async getReportById(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
-      const report = await ReportService.getReportById(id);
+      const userId = (req as any).user?.id;
+      const report = await ReportService.getReportById(id, userId);
       
       if (!report) {
         res.status(404).json({ error: 'Reporte no encontrado' });

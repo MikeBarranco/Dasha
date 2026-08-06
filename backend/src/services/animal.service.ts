@@ -38,7 +38,7 @@ export class AnimalService {
       const animal = await tx.animalProfile.create({
         data: {
           ...(data.reportId ? { report: { connect: { id: data.reportId } } } : {}),
-          organizationId: data.organizationId,
+          ...(data.organizationId ? { organization: { connect: { id: data.organizationId } } } : {}),
           name: data.name,
           species: data.species,
           breed: data.breed,
