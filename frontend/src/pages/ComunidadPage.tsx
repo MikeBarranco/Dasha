@@ -92,7 +92,16 @@ export function ComunidadPage() {
   useEffect(() => {
     let active = true;
     getEvents()
-      .then((data) => active && setEvents(data))
+      .then((data) => {
+        if (!active) return;
+        setEvents(data);
+        // "Me interesa" debe seguir marcado tras refrescar: iniciamos "interested"
+        // con los eventos que el backend dice que este usuario ya marcó.
+        const mine = data.filter((event) => event.isInterested).map((event) => event.id);
+        if (mine.length) {
+          setInterested((current) => new Set([...current, ...mine]));
+        }
+      })
       .catch(() => active && setEvents([]));
     getForumPosts()
       .then((data) => {

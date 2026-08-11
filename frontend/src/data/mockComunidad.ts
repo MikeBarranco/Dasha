@@ -7,6 +7,9 @@ export type CommunityEvent = {
   image: string;
   description: string;
   interested: number;
+  // El backend marca si el usuario en sesión ya dio "Me interesa" (para que el
+  // botón siga marcado tras refrescar). Ausente en los datos de ejemplo.
+  isInterested?: boolean;
   // Organización que publica el evento (para filtrar los del propio aliado en su
   // portal). Ausente en los datos de ejemplo.
   organizationId?: string;

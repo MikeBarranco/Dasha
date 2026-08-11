@@ -1007,11 +1007,30 @@ export async function updateMyOrganization(input: MyOrgInput, orgId?: string): P
 
 // Equipo (veterinarios) del propio aliado. Backend: /me/organization/team
 // (spec en pendientes-isabel.md, 11.1). Lectura tolerante a la forma.
+// Rol dentro del equipo del aliado (role_in_org en BD). Se muestra como etiqueta
+// en "Mi equipo" del portal.
+export type TeamRole = 'admin' | 'veterinarian' | 'assistant';
+
+export const teamRoleLabels: Record<TeamRole, string> = {
+  admin: 'Responsable',
+  veterinarian: 'Veterinario',
+  assistant: 'Asistente',
+};
+
+// Normaliza el rol que manda el backend (admin|veterinarian|assistant, o los
+// viejos owner|vet) a uno de los tres valores que pintamos.
+function normalizeTeamRole(raw: unknown): TeamRole {
+  const value = String(raw ?? '').toLowerCase();
+  if (value === 'admin' || value === 'owner') return 'admin';
+  if (value === 'assistant') return 'assistant';
+  return 'veterinarian';
+}
+
 export type TeamMember = {
   userId: string;
   name: string;
   email: string;
-  role: 'owner' | 'vet';
+  role: TeamRole;
   title: string;
   photoUrl: string | null;
 };
@@ -1020,13 +1039,12 @@ function mapTeamMember(raw: Record<string, unknown>): TeamMember {
   const user =
     raw.user && typeof raw.user === 'object' ? (raw.user as Record<string, unknown>) : null;
   const src = user ?? raw;
-  const roleRaw = String(raw.role ?? 'vet');
   const photo = src.photoUrl ?? src.photo_url ?? src.avatarUrl ?? src.avatar_url;
   return {
     userId: String(raw.userId ?? raw.user_id ?? user?.id ?? raw.id ?? ''),
     name: String(src.name ?? 'Sin nombre'),
     email: String(src.email ?? ''),
-    role: roleRaw === 'owner' ? 'owner' : 'vet',
+    role: normalizeTeamRole(raw.role ?? raw.roleInOrg ?? raw.role_in_org),
     title: String(raw.title ?? ''),
     photoUrl: typeof photo === 'string' && photo ? photo : null,
   };
@@ -1891,6 +1909,7 @@ function mapEvent(raw: Record<string, unknown>): CommunityEvent {
     image: image || '/placeholder-animal.svg',
     description: String(raw.description ?? ''),
     interested: Number(raw.interestedCount ?? raw.interested ?? nestedCount(raw, 'interested') ?? 0),
+    isInterested: Boolean(raw.isInterested ?? raw.is_interested ?? false),
     organizationId: String(
       raw.organizationId ?? raw.organization_id ?? org?.id ?? org?._id ?? '',
     ) || undefined,
