@@ -29,6 +29,9 @@ export function LandingFooter() {
             <Link to="/aliados" className="transition-colors hover:text-cobalto">
               Aliados
             </Link>
+            <Link to="/impacto" className="transition-colors hover:text-cobalto">
+              Impacto
+            </Link>
             <Link to="/login" className="transition-colors hover:text-cobalto">
               Iniciar sesión
             </Link>

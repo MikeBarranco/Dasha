@@ -15,13 +15,8 @@ const LocationPicker = lazy(() =>
 
 const sizes = ['Pequeño', 'Mediano', 'Grande'];
 const colorOptions = ['Negro', 'Café', 'Blanco', 'Gris', 'Beige', 'Manchado'];
-// La columna search_radius_km del backend es INTEGER: solo enteros. Nada de
-// medios kilómetros (0.5 reventaba el INSERT con error 22P02).
-const radiusOptions = [
-  { label: '1 km', value: 1 },
-  { label: '3 km', value: 3 },
-  { label: '5 km', value: 5 },
-];
+// Radio de búsqueda FIJO en 1 km (decisión de producto: 3/5 km pintaban un
+// círculo enorme en el mapa). La columna search_radius_km del backend es INTEGER.
 
 type SelectChipProps = {
   label: string;
@@ -67,7 +62,7 @@ export function ReportarPerdidaPage() {
 
   const [lat, setLat] = useState(19.04);
   const [lng, setLng] = useState(-98.2);
-  const [searchRadiusKm, setSearchRadiusKm] = useState(1);
+  const searchRadiusKm = 1;
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -425,19 +420,9 @@ export function ReportarPerdidaPage() {
 
           <div className="mt-5">
             <p className="mb-1 text-sm font-medium text-neutral-700">Zona de búsqueda</p>
-            <p className="mb-2 text-xs text-neutral-400">
-              Qué tan lejos pudo haberse alejado del punto marcado.
+            <p className="text-xs text-neutral-400">
+              Avisaremos a las personas que estén a 1 km a la redonda del punto que marcaste.
             </p>
-            <div className="flex flex-wrap gap-2">
-              {radiusOptions.map((option) => (
-                <SelectChip
-                  key={option.value}
-                  label={option.label}
-                  selected={searchRadiusKm === option.value}
-                  onClick={() => setSearchRadiusKm(option.value)}
-                />
-              ))}
-            </div>
           </div>
         </div>
       )}
