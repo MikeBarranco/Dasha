@@ -21,13 +21,10 @@ export class StatsController {
         }
       });
 
-      // 3. Voluntarios (usuarios con role = volunteer o volunteerStatus = approved)
+      // 3. Voluntarios (usuarios con role = volunteer)
       const voluntarios = await prisma.user.count({
         where: { 
-          OR: [
-            { role: 'volunteer' },
-            { volunteerStatus: 'approved' }
-          ]
+          role: 'volunteer'
         }
       });
 

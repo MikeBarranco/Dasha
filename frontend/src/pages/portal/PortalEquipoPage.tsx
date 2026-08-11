@@ -5,12 +5,21 @@ import {
   getMyOrgTeam,
   addMyOrgTeamMember,
   removeMyOrgTeamMember,
+  teamRoleLabels,
   type TeamMember,
+  type TeamRole,
 } from '../../lib/api';
 import { mockAllies } from '../../data/mockAllies';
 import { useAllyPortal } from '../../lib/useAllyPortal';
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Color del badge según el rol dentro del aliado.
+const roleBadge: Record<TeamRole, string> = {
+  admin: 'bg-cobalto/10 text-cobalto',
+  veterinarian: 'bg-emerald-50 text-emerald-700',
+  assistant: 'bg-neutral-100 text-neutral-600',
+};
 
 // Datos de ejemplo para la vista previa (mientras el backend no exista).
 function previewTeam(orgId: string): TeamMember[] {
@@ -19,7 +28,7 @@ function previewTeam(orgId: string): TeamMember[] {
     userId: `preview-${index}`,
     name: member.name,
     email: '',
-    role: 'vet',
+    role: 'veterinarian',
     title: member.title,
     photoUrl: member.photoUrl ?? null,
   }));
@@ -77,7 +86,7 @@ export function PortalEquipoPage() {
           userId: `preview-${Date.now()}`,
           name: nameFromEmail(clean),
           email: clean,
-          role: 'vet',
+          role: 'veterinarian',
           title: 'Veterinario',
           photoUrl: null,
         },
@@ -181,9 +190,16 @@ export function PortalEquipoPage() {
                   className="h-10 w-10 text-sm"
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-neutral-800">{member.name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="truncate font-medium text-neutral-800">{member.name}</p>
+                    <span
+                      className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${roleBadge[member.role]}`}
+                    >
+                      {teamRoleLabels[member.role]}
+                    </span>
+                  </div>
                   <p className="truncate text-xs text-neutral-500">
-                    {member.email || member.title || 'Veterinario'}
+                    {member.email || member.title}
                   </p>
                 </div>
 

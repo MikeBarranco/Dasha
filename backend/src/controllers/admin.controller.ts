@@ -977,42 +977,51 @@ export class AdminController {
   }
 
   static async deleteForumPost(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = req.params.id as string;
-      
-      await prisma.$transaction(async (tx) => {
-        // Eliminar votos del post y de las respuestas de este post
-        await tx.forumVote.deleteMany({
-          where: {
-            OR: [
-              { postId: id },
-              { reply: { postId: id } }
-            ]
+      try {
+        const id = req.params.id as string;
+        
+        await prisma.$transaction(async (tx) => {
+          const post = await tx.forumPost.findUnique({ where: { id } });
+          if (post) {
+            // Eliminar reportes (flags)
+            await tx.forumPostFlag.deleteMany({ where: { postId: id } });
+            
+            // Eliminar votos del post y de las respuestas de este post
+            await tx.forumVote.deleteMany({
+              where: {
+                OR: [
+                  { postId: id },
+                  { reply: { postId: id } }
+                ]
+              }
+            });
+            
+            // Eliminar flags de las respuestas de este post
+            const replies = await tx.forumReply.findMany({ where: { postId: id } });
+            if (replies.length > 0) {
+              await tx.forumReplyFlag.deleteMany({
+                where: { replyId: { in: replies.map(r => r.id) } }
+              });
+            }
+            
+            // Eliminar respuestas
+            await tx.forumReply.deleteMany({ where: { postId: id } });
+            // Eliminar el post
+            await tx.forumPost.delete({ where: { id } });
+          } else {
+            // Como el frontend unifica los reportes, puede ser un comentario
+            const reply = await tx.forumReply.findUnique({ where: { id } });
+            if (reply) {
+              await tx.forumReplyFlag.deleteMany({ where: { replyId: id } });
+              await tx.forumVote.deleteMany({ where: { replyId: id } });
+              await tx.forumReply.delete({ where: { id } });
+            } else {
+              throw new Error("Registro no encontrado");
+            }
           }
         });
         
-        // Eliminar denuncias de las respuestas
-        await tx.forumReplyFlag.deleteMany({
-          where: { reply: { postId: id } }
-        });
-        
-        // Eliminar respuestas
-        await tx.forumReply.deleteMany({
-          where: { postId: id }
-        });
-        
-        // Eliminar denuncias del post
-        await tx.forumPostFlag.deleteMany({
-          where: { postId: id }
-        });
-        
-        // Eliminar el post
-        await tx.forumPost.delete({
-          where: { id }
-        });
-      });
-      
-      res.status(200).json({ message: 'Post del foro eliminado correctamente' });
+        res.status(200).json({ message: 'Post del foro eliminado correctamente' });
     } catch (error) {
       next(error);
     }
@@ -1276,8 +1285,9 @@ export class AdminController {
   static async deleteEvent(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
-      await prisma.event.delete({
-        where: { id }
+      await prisma.$transaction(async (tx) => {
+        await tx.eventReminder.deleteMany({ where: { eventId: id } });
+        await tx.event.delete({ where: { id } });
       });
       res.status(200).json({ message: 'Evento eliminado correctamente' });
     } catch (error) {
