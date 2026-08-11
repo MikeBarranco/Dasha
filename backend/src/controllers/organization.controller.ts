@@ -1593,9 +1593,7 @@ export class OrganizationController {
       const animalId = req.params.id as string;
       const entryId = req.params.entryId as string;
 
-      const myEmployee = await prisma.organizationEmployee.findFirst({
-        where: { userId }
-      });
+      const myEmployee = await OrganizationController.getPortalContext(req, userId);
 
       if (!myEmployee) {
         res.status(403).json({ error: 'No tienes permisos' });

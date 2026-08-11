@@ -94,6 +94,10 @@ export class NeedController {
       const id = req.params.id as string;
       const data = req.body;
 
+      if (data.status === 'delivered' || data.status === 'covered') {
+        data.status = 'fulfilled';
+      }
+
       const updated = await prisma.need.update({
         where: { id },
         data

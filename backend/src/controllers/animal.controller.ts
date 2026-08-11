@@ -80,7 +80,10 @@ export class AnimalController {
 
   static async getPublicAnimals(req: Request, res: Response, next: NextFunction) {
     try {
-      const status = req.query.status as string;
+      let status = req.query.status as string;
+      if (status === 'adoption') {
+        status = 'adoptable';
+      }
       const animals = await AnimalService.getPublicAnimals(status);
       res.status(200).json(animals);
     } catch (error) {
