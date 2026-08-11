@@ -377,7 +377,15 @@ export class UserController {
       });
 
       res.status(200).json({
-        needs: needContributions,
+        needs: needContributions.map((c: any) => ({
+          id: c.id,
+          title: c.need?.title ?? '',
+          type: c.need?.category ?? 'other',
+          organizationName: c.need?.organization?.name ?? '',
+          status: c.need?.status === 'fulfilled' ? 'covered' : (c.need?.status ?? 'covered'),
+          createdAt: c.createdAt,
+          notes: c.notes,
+        })),
         donations
       });
     } catch (error) {

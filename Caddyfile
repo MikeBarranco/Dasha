@@ -2,7 +2,12 @@ api.staging.dashamx.me {
     reverse_proxy backend:3000
 }
 
-dashamx.me {
+api.dashamx.me {
+    reverse_proxy backend-prod:3000
+}
+
+dashamx.me, www.dashamx.me {
     root * /usr/share/caddy
+    try_files {path} /index.html
     file_server
 }

@@ -455,9 +455,9 @@ export class OrganizationController {
         return;
       }
 
-      // Buscar el empleado a eliminar
-      const employeeToRemove = await prisma.organizationEmployee.findUnique({
-        where: { id: employeeIdToRemove }
+      // Buscar el empleado a eliminar (buscamos por userId porque el frontend manda el userId, no el employeeId)
+      const employeeToRemove = await prisma.organizationEmployee.findFirst({
+        where: { userId: employeeIdToRemove, organizationId: myEmployee.organizationId }
       });
 
       if (!employeeToRemove || employeeToRemove.organizationId !== myEmployee.organizationId) {
