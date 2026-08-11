@@ -16,6 +16,7 @@ async function main() {
   const achievements = [
     { code: 'primer-reporte', name: 'Primer reporte', description: 'Reporta tu primer animal en situación de calle.', iconUrl: '/medals/medalla-primer-reporte.png', category: 'reporter', requirementType: 'reports_count', requirementValue: 1, tier: 'bronze', pointsReward: 50 },
     { code: 'ojo-de-halcon', name: 'Ojo de halcón', description: 'Haz varios reportes y ayuda a detectar animales en riesgo.', iconUrl: '/medals/medalla-ojo-de-halcon.png', category: 'reporter', requirementType: 'reports_count', requirementValue: 5, tier: 'silver', pointsReward: 100 },
+    { code: 'active_citizen', name: 'Ciudadano Activo', description: 'Has creado 5 reportes exitosos.', iconUrl: 'https://res.cloudinary.com/dtg0cd8tq/image/upload/v1700000000/dasha_achievements/active_citizen.png', category: 'reporter', requirementType: 'reports_count', requirementValue: 5, tier: 'silver', pointsReward: 100 },
     { code: 'guardian-ciudad', name: 'Guardián de la ciudad', description: 'Mantente activo reportando en tu zona.', iconUrl: '/medals/medalla-guardian-ciudad.png', category: 'reporter', requirementType: 'reports_count', requirementValue: 20, tier: 'gold', pointsReward: 300 },
     { code: 'ronda-nocturna', name: 'Ronda nocturna', description: 'Reporta animales durante la noche.', iconUrl: '/medals/medalla-ronda-nocturna.png', category: 'reporter', requirementType: 'special', requirementValue: 1, tier: 'silver', pointsReward: 150 },
     
