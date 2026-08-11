@@ -114,6 +114,21 @@ export class RescueAssignmentController {
         
         const { AchievementService } = await import('../services/achievement.service.js');
         await AchievementService.checkAndGrantRescuerAchievements(assignment.volunteerId);
+
+        if (assignment.report.destinationOrgId) {
+          const orgEmployees = await prisma.organizationEmployee.findMany({
+            where: { organizationId: assignment.report.destinationOrgId, roleInOrg: 'admin' }
+          });
+          for (const emp of orgEmployees) {
+            await NotificationService.sendNotification({
+              userId: emp.userId,
+              title: 'Rescate completado',
+              body: 'Un voluntario ha entregado exitosamente a un animal rescatado en tu organización.',
+              type: 'system',
+              link: '/portal'
+            });
+          }
+        }
       } else if (status === 'cancelled') {
         // Lógica de "No encontrado"
         if (cancelledReason === 'not_found') {
