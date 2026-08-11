@@ -1006,17 +1006,18 @@ export class AdminController {
             
             // Eliminar respuestas
             await tx.forumReply.deleteMany({ where: { postId: id } });
-            // Eliminar el post
-            await tx.forumPost.delete({ where: { id } });
+            
+            // Usamos deleteMany en vez de delete para evitar error si hay doble click
+            await tx.forumPost.deleteMany({ where: { id } });
           } else {
             // Como el frontend unifica los reportes, puede ser un comentario
             const reply = await tx.forumReply.findUnique({ where: { id } });
             if (reply) {
               await tx.forumReplyFlag.deleteMany({ where: { replyId: id } });
               await tx.forumVote.deleteMany({ where: { replyId: id } });
-              await tx.forumReply.delete({ where: { id } });
+              await tx.forumReply.deleteMany({ where: { id } });
             } else {
-              throw new Error("Registro no encontrado");
+              // Si ya se borró por un doble click, no hacemos nada y evitamos que falle
             }
           }
         });
