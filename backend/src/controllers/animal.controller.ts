@@ -216,11 +216,53 @@ export class AnimalController {
         }
       });
 
+      // Send notification to organization admins if applicable
+      if (animal.organizationId) {
+        const { NotificationService } = await import('../services/notification.service.js');
+        const admins = await prisma.organizationEmployee.findMany({
+          where: { organizationId: animal.organizationId, roleInOrg: 'admin', isVerified: true }
+        });
+
+        for (const admin of admins) {
+          await NotificationService.sendNotification({
+            userId: admin.userId,
+            title: '¡Nueva solicitud de adopción!',
+            body: `${applicantName || 'Alguien'} ha solicitado adoptar a ${animal.name}.`,
+            link: '/portal/adopciones',
+            type: 'system' as any
+          });
+        }
+      }
+
       res.status(201).json({
         status: 'success',
         message: 'Solicitud de adopción enviada exitosamente',
         data: application
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async checkAdoptionStatus(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      const animalId = req.params.id as string;
+
+      if (!userId) {
+        res.status(401).json({ error: 'No autorizado' });
+        return;
+      }
+
+      const existingApplication = await prisma.adoptionApplication.findFirst({
+        where: {
+          animalId,
+          applicantId: userId,
+          status: { in: ['pending', 'approved'] }
+        }
+      });
+
+      res.status(200).json({ hasApplied: !!existingApplication });
     } catch (error) {
       next(error);
     }

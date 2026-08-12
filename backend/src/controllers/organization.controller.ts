@@ -231,7 +231,13 @@ export class OrganizationController {
         holderName: true,
         isActive: true,
         createdAt: true,
-        updatedAt: true
+        updatedAt: true,
+        _count: {
+          select: {
+            employees: true,
+            animals: true
+          }
+        }
       };
 
       if (user?.role === 'admin' && organizationIdParam) {
@@ -264,10 +270,24 @@ export class OrganizationController {
 
       orgType = organization.orgType;
 
+      // Calcular donaciones para los animales de la organización
+      let totalDonations = 0;
+      if (organization.id) {
+        const donationsCount = await prisma.donation.count({
+          where: { animal: { organizationId: organization.id } }
+        });
+        totalDonations = donationsCount;
+      }
+
       res.status(200).json({
         organization,
         role: roleInOrg,
-        orgType
+        orgType,
+        stats: {
+          teamMembers: organization._count?.employees || 0,
+          rescuedAnimals: organization._count?.animals || 0,
+          totalDonations
+        }
       });
     } catch (error) {
       next(error);
@@ -298,6 +318,15 @@ export class OrganizationController {
     try {
       const userId = (req as any).user?.id;
       const { logoBase64, coverBase64, lat, lng, isVerified, id, createdAt, updatedAt, ...data } = req.body;
+
+      if (data.phone && data.phone.length > 10) {
+        res.status(400).json({ error: 'El número de teléfono no puede tener más de 10 dígitos.' });
+        return;
+      }
+      if (data.whatsapp && data.whatsapp.length > 10) {
+        res.status(400).json({ error: 'El número de WhatsApp no puede tener más de 10 dígitos.' });
+        return;
+      }
       
       const myEmployee = await OrganizationController.getPortalContext(req, userId);
 
@@ -735,10 +764,28 @@ export class OrganizationController {
 
       const animals = await prisma.animalProfile.findMany({
         where: { organizationId: myEmployee.organizationId },
+        include: {
+          photos: { orderBy: { orderIndex: 'asc' } },
+          medicalRecords: { orderBy: { createdAt: 'desc' } }
+        },
         orderBy: { createdAt: 'desc' }
       });
 
-      res.status(200).json(animals);
+      const mappedAnimals = animals.map(animal => ({
+        ...animal,
+        medicalRecord: {
+          sterilized: animal.isNeutered,
+          entries: animal.medicalRecords.map(r => ({
+            id: r.id,
+            type: r.recordType,
+            title: r.description,
+            date: r.createdAt,
+            notes: r.prescription || r.diagnosis || ''
+          }))
+        }
+      }));
+
+      res.status(200).json(mappedAnimals);
     } catch (error) {
       next(error);
     }
