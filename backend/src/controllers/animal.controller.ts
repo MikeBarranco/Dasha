@@ -218,7 +218,7 @@ export class AnimalController {
 
       // Send notification to organization admins if applicable
       if (animal.organizationId) {
-        const { NotificationService } = await import('../services/notification.service');
+        const { NotificationService } = await import('../services/notification.service.js');
         const admins = await prisma.organizationEmployee.findMany({
           where: { organizationId: animal.organizationId, roleInOrg: 'admin', isVerified: true }
         });

@@ -318,6 +318,15 @@ export class OrganizationController {
     try {
       const userId = (req as any).user?.id;
       const { logoBase64, coverBase64, lat, lng, isVerified, id, createdAt, updatedAt, ...data } = req.body;
+
+      if (data.phone && data.phone.length > 10) {
+        res.status(400).json({ error: 'El número de teléfono no puede tener más de 10 dígitos.' });
+        return;
+      }
+      if (data.whatsapp && data.whatsapp.length > 10) {
+        res.status(400).json({ error: 'El número de WhatsApp no puede tener más de 10 dígitos.' });
+        return;
+      }
       
       const myEmployee = await OrganizationController.getPortalContext(req, userId);
 
@@ -755,10 +764,28 @@ export class OrganizationController {
 
       const animals = await prisma.animalProfile.findMany({
         where: { organizationId: myEmployee.organizationId },
+        include: {
+          photos: { orderBy: { orderIndex: 'asc' } },
+          medicalRecords: { orderBy: { createdAt: 'desc' } }
+        },
         orderBy: { createdAt: 'desc' }
       });
 
-      res.status(200).json(animals);
+      const mappedAnimals = animals.map(animal => ({
+        ...animal,
+        medicalRecord: {
+          sterilized: animal.isNeutered,
+          entries: animal.medicalRecords.map(r => ({
+            id: r.id,
+            type: r.recordType,
+            title: r.description,
+            date: r.createdAt,
+            notes: r.prescription || r.diagnosis || ''
+          }))
+        }
+      }));
+
+      res.status(200).json(mappedAnimals);
     } catch (error) {
       next(error);
     }
