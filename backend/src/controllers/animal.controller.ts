@@ -228,7 +228,8 @@ export class AnimalController {
             userId: admin.userId,
             title: '¡Nueva solicitud de adopción!',
             body: `${applicantName || 'Alguien'} ha solicitado adoptar a ${animal.name}.`,
-            data: { url: '/portal/adopciones' }
+            link: '/portal/adopciones',
+            type: 'system' as any
           });
         }
       }
