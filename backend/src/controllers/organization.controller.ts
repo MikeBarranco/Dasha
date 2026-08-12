@@ -766,7 +766,8 @@ export class OrganizationController {
         where: { organizationId: myEmployee.organizationId },
         include: {
           photos: { orderBy: { orderIndex: 'asc' } },
-          medicalRecords: { orderBy: { createdAt: 'desc' } }
+          medicalRecords: { orderBy: { createdAt: 'desc' } },
+          vaccinations: { orderBy: { appliedDate: 'desc' } }
         },
         orderBy: { createdAt: 'desc' }
       });
@@ -775,6 +776,11 @@ export class OrganizationController {
         ...animal,
         medicalRecord: {
           sterilized: animal.isNeutered,
+          vaccinations: animal.vaccinations.map(v => ({
+            id: v.id,
+            name: v.vaccineName,
+            date: v.appliedDate
+          })),
           entries: animal.medicalRecords.map(r => ({
             id: r.id,
             type: r.recordType,
@@ -1475,7 +1481,7 @@ export class OrganizationController {
           ...animal,
           medicalRecord: {
             sterilized: animal.isNeutered,
-            vaccines: animal.vaccinations.map(v => ({
+            vaccinations: animal.vaccinations.map(v => ({
               id: v.id,
               name: v.vaccineName,
               date: v.appliedDate

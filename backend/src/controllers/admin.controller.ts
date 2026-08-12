@@ -221,7 +221,13 @@ export class AdminController {
           photos: true
         }
       });
-      res.status(200).json(reports);
+
+      const mappedReports = reports.map(r => ({
+        ...r,
+        colonia: r.address || 'Sin colonia'
+      }));
+
+      res.status(200).json(mappedReports);
     } catch (error) {
       next(error);
     }
