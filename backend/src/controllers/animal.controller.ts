@@ -257,13 +257,16 @@ export class AnimalController {
       });
 
       if (type === 'money' && proofBase64) {
-        // Here we would normally upload to Cloudinary. Mocking for now:
-        const cloudinaryUrl = 'https://res.cloudinary.com/demo/image/upload/sample.jpg';
+        // Upload proof to Cloudinary
+        const uploadResult = await cloudinary.uploader.upload(proofBase64, {
+          folder: 'dasha/donation_proofs'
+        });
+        
         await prisma.donationProof.create({
           data: {
             donationId: newDonation.id,
-            proofUrl: cloudinaryUrl,
-            publicId: 'mock_public_id',
+            proofUrl: uploadResult.secure_url,
+            publicId: uploadResult.public_id,
             amountDeclared: amountDeclared || 0,
             notes
           }

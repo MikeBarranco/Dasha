@@ -97,6 +97,34 @@ export class LostPetController {
         return { reportId: report.id, lostPetId };
       });
 
+      // 3. Notificar a usuarios a 1km a la redonda
+      try {
+        const { NotificationService } = await import('../services/notification.service.js');
+        const nearbyUsers: any[] = await prisma.$queryRaw`
+          SELECT id 
+          FROM "users" 
+          WHERE ST_DWithin(last_location, ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326), 1000)
+            AND id != ${userId}::uuid
+            AND is_active = true
+        `;
+        // Nota: en PostgreSQL, PostGIS mide distancias en metros si la geografía es geography(Point, 4326)
+        
+        if (nearbyUsers.length > 0) {
+          const pushPromises = nearbyUsers.map(u => 
+            NotificationService.sendNotification({
+              userId: u.id,
+              title: '¡Mascota perdida cerca de ti!',
+              body: `Se ha reportado una mascota perdida a menos de 1km de tu última ubicación: ${petName || 'Mascota'}.`,
+              type: 'system',
+              link: `/map?reportId=${result.reportId}`
+            })
+          );
+          await Promise.allSettled(pushPromises);
+        }
+      } catch (err) {
+        console.error('Error enviando alertas de mascota perdida por cercanía:', err);
+      }
+
       res.status(201).json({
         message: 'Mascota perdida reportada con éxito',
         data: result

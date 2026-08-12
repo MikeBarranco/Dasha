@@ -64,7 +64,7 @@ export class NeedController {
   static async createNeed(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
-      const { title, description, category, urgency } = req.body;
+      const { title, description, category, urgency, targetAmount } = req.body;
       const userId = (req as any).user?.id;
 
       if (!title || !description || !category) {
@@ -78,7 +78,8 @@ export class NeedController {
           title,
           description,
           category,
-          urgency: urgency || 'medium'
+          urgency: urgency || 'medium',
+          targetAmount: targetAmount || 1
         }
       });
 
@@ -147,14 +148,18 @@ export class NeedController {
     try {
       const id = req.params.id as string;
       const userId = (req as any).user?.id;
-      const { notes, message } = req.body;
+      const { notes, message, amount } = req.body;
+      const contributionAmount = amount ? Number(amount) : 1;
 
       if (!userId) {
         res.status(401).json({ error: 'No autorizado' });
         return;
       }
 
-      const need = await prisma.need.findUnique({ where: { id } });
+      const need = await prisma.need.findUnique({ 
+        where: { id },
+        include: { organization: true }
+      });
       if (!need) {
         res.status(404).json({ error: 'Necesidad no encontrada' });
         return;
@@ -164,14 +169,47 @@ export class NeedController {
         data: {
           needId: id,
           userId,
+          amount: contributionAmount,
           notes: message || notes
         }
       });
 
+      const newCoveredAmount = Number(need.coveredAmount) + contributionAmount;
+      const targetAmount = Number(need.targetAmount);
+      
       await prisma.need.update({
         where: { id },
-        data: { status: 'fulfilled' }
+        data: { 
+          coveredAmount: newCoveredAmount,
+          status: newCoveredAmount >= targetAmount ? 'fulfilled' : 'active' 
+        }
       });
+
+      // Notificar a los administradores de la organización
+      try {
+        const { NotificationService } = await import('../services/notification.service.js');
+        const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, phone: true } });
+        const orgAdmins = await prisma.organizationEmployee.findMany({
+          where: { organizationId: need.organizationId, roleInOrg: 'admin' },
+          select: { userId: true }
+        });
+        
+        const userName = user?.name || 'Un usuario';
+        const phoneInfo = user?.phone ? `, Tel: ${user.phone}` : '';
+        
+        const adminPushPromises = orgAdmins.map(admin => 
+          NotificationService.sendNotification({
+            userId: admin.userId,
+            title: '¡Alguien quiere ayudar!',
+            body: `${userName}${phoneInfo} quiere aportar ${contributionAmount} a la necesidad "${need.title}".`,
+            type: 'system',
+            link: '/portal'
+          })
+        );
+        await Promise.allSettled(adminPushPromises);
+      } catch (err) {
+        console.error('Error enviando notificacion de aporte a necesidad', err);
+      }
 
       res.status(201).json({
         message: 'Gracias por ofrecer tu ayuda. La organización ha sido notificada.',
