@@ -1623,7 +1623,7 @@ function mapDonation(raw: Record<string, unknown>): Donation {
     typeof proofRaw === 'string'
       ? proofRaw
       : proofRaw && typeof proofRaw === 'object'
-        ? String((proofRaw as Record<string, unknown>).url ?? (proofRaw as Record<string, unknown>).imageUrl ?? '')
+        ? String((proofRaw as Record<string, unknown>).proofUrl ?? (proofRaw as Record<string, unknown>).url ?? (proofRaw as Record<string, unknown>).imageUrl ?? '')
         : '';
   const items = String(raw.itemsDescription ?? raw.items_description ?? raw.description ?? '').trim();
   const phone = donor ? String(donor.phone ?? donor.whatsapp ?? '').trim() : '';
