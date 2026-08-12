@@ -231,7 +231,13 @@ export class OrganizationController {
         holderName: true,
         isActive: true,
         createdAt: true,
-        updatedAt: true
+        updatedAt: true,
+        _count: {
+          select: {
+            employees: true,
+            animals: true
+          }
+        }
       };
 
       if (user?.role === 'admin' && organizationIdParam) {
@@ -264,10 +270,24 @@ export class OrganizationController {
 
       orgType = organization.orgType;
 
+      // Calcular donaciones para los animales de la organización
+      let totalDonations = 0;
+      if (organization.id) {
+        const donationsCount = await prisma.donation.count({
+          where: { animal: { organizationId: organization.id } }
+        });
+        totalDonations = donationsCount;
+      }
+
       res.status(200).json({
         organization,
         role: roleInOrg,
-        orgType
+        orgType,
+        stats: {
+          teamMembers: organization._count?.employees || 0,
+          rescuedAnimals: organization._count?.animals || 0,
+          totalDonations
+        }
       });
     } catch (error) {
       next(error);
