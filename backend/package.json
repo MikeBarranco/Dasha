@@ -15,7 +15,7 @@
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
     "seed:changelog": "tsx src/seed-changelog.ts",
-    "wipe:staging": "tsx scripts/wipe-staging.ts"
+    "wipe:staging": "node dist/scripts/wipe-staging.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
