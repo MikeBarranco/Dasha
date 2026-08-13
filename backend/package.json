@@ -16,7 +16,9 @@
 
 
 
-    "format": "prettier --write .",`n    "typecheck": "tsc --noEmit",`n    "seed:changelog": "tsx src/seed-changelog.ts"
+    "format": "prettier --write .",
+    "typecheck": "tsc --noEmit",
+    "seed:changelog": "tsx src/seed-changelog.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
