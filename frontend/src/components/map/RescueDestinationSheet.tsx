@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { X, MapPin, Navigation, Loader2, PawPrint } from 'lucide-react';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
-import { getAllies, isFullCycleOrg } from '../../lib/api';
+import { getAllies } from '../../lib/api';
 import type { Ally } from '../../data/mockAllies';
 
 // Antes de aceptar un rescate, el voluntario elige a qué aliado llevará al
-// animalito. Solo aliados de ciclo completo (veterinaria/refugio), ordenados por
-// cercanía al reporte. Se puede continuar sin elegir (por si no hay ninguno cerca).
+// animalito. Cualquier aliado con ubicación, ordenado por cercanía al reporte.
+// Debe elegir uno; solo cuando NO hay aliados puede ir sin destino (así no queda
+// un destino vacío que rompa la ruta al llegar).
 
 function distanceKm(aLat: number, aLng: number, bLat: number, bLng: number): number {
   const R = 6371;
@@ -47,9 +48,9 @@ export function RescueDestinationSheet({
     getAllies()
       .then((data) => {
         if (!active) return;
-        // Solo aliados que reciben animales (veterinaria/refugio) y con ubicación.
+        // Cualquier aliado con ubicación puede ser destino (todos reciben animales).
         const usable = data
-          .filter((ally) => isFullCycleOrg(ally.orgType) && ally.lat && ally.lng)
+          .filter((ally) => ally.lat && ally.lng)
           .map((ally) => ({
             ally,
             km: distanceKm(reportLat, reportLng, ally.lat, ally.lng),
@@ -116,6 +117,20 @@ export function RescueDestinationSheet({
               <p className="mt-2 text-sm text-neutral-500">
                 No hay aliados registrados cerca. Puedes ir en camino y coordinar el destino después.
               </p>
+              <button
+                type="button"
+                onClick={() => onPick(undefined)}
+                disabled={accepting}
+                className="mt-4 inline-flex items-center justify-center gap-2 rounded-xl bg-cobalto px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+              >
+                {accepting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Aceptando…
+                  </>
+                ) : (
+                  'Voy en camino de todas formas'
+                )}
+              </button>
             </div>
           )}
 
@@ -150,23 +165,6 @@ export function RescueDestinationSheet({
               ))}
             </div>
           )}
-        </div>
-
-        <div className="border-t border-neutral-100 p-4">
-          <button
-            type="button"
-            onClick={() => onPick(undefined)}
-            disabled={accepting}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-neutral-200 py-3 text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-50 disabled:opacity-60"
-          >
-            {accepting ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" /> Aceptando…
-              </>
-            ) : (
-              'Voy en camino y decido el destino después'
-            )}
-          </button>
         </div>
       </motion.div>
     </div>

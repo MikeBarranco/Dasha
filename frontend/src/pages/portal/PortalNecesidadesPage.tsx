@@ -37,6 +37,8 @@ function previewNeeds(): Need[] {
       animalName: null,
       status: 'open',
       coveredByName: null,
+      targetAmount: null,
+      coveredAmount: 0,
       createdAgo: 'hoy',
     },
     {
@@ -50,6 +52,8 @@ function previewNeeds(): Need[] {
       animalName: 'Canela',
       status: 'covered',
       coveredByName: 'Luis M.',
+      targetAmount: null,
+      coveredAmount: 0,
       createdAgo: 'ayer',
     },
   ];
@@ -121,6 +125,8 @@ export function PortalNecesidadesPage() {
         animalName: null,
         status: 'open',
         coveredByName: null,
+        targetAmount: null,
+        coveredAmount: 0,
         createdAgo: 'ahora',
       };
       setNeeds((list) => [nueva, ...(list ?? [])]);

@@ -892,12 +892,10 @@ export async function deleteAccount(data?: {
 // lo previsualice con datos de ejemplo (preview) para poder construir y probar.
 export type AllyRole = 'owner' | 'vet';
 
-// Aliados de ciclo completo (reciben perritos, rehabilitan, adoptan) vs aliados
-// de apoyo (foro, cultura, necesidades). El tipo viene de organizations.org_type.
-export const FULL_CYCLE_ORG_TYPES = ['veterinary', 'shelter'];
-export function isFullCycleOrg(orgType: string): boolean {
-  return FULL_CYCLE_ORG_TYPES.includes(orgType);
-}
+// Decisión de producto: TODOS los aliados tienen el portal completo (reciben
+// perritos, rehabilitan, adoptan) y pueden ser destino de un rescate, sin
+// importar su tipo. Ya no hay distinción de "ciclo completo" por org_type; el
+// tipo queda solo como etiqueta.
 
 export type AllyContext = {
   organizationId: string;
@@ -1622,12 +1620,14 @@ function mapDonation(raw: Record<string, unknown>): Donation {
   // El comprobante viene en `donationProof` (objeto {url} o string) o en los
   // nombres viejos. Antes salía "Comprobante adjunto" no visible por no leerlo.
   const proofRaw = raw.donationProof ?? raw.proofUrl ?? raw.proof_url ?? raw.receiptUrl ?? raw.receipt_url;
-  const proof =
-    typeof proofRaw === 'string'
-      ? proofRaw
-      : proofRaw && typeof proofRaw === 'object'
-        ? String((proofRaw as Record<string, unknown>).proofUrl ?? (proofRaw as Record<string, unknown>).url ?? (proofRaw as Record<string, unknown>).imageUrl ?? '')
-        : '';
+  let proof = '';
+  if (typeof proofRaw === 'string') {
+    proof = proofRaw;
+  } else if (proofRaw && typeof proofRaw === 'object') {
+    const obj = proofRaw as Record<string, unknown>;
+    const val = obj.proofUrl ?? obj.url ?? obj.imageUrl;
+    if (typeof val === 'string') proof = val;
+  }
   const items = String(raw.itemsDescription ?? raw.items_description ?? raw.description ?? '').trim();
   const phone = donor ? String(donor.phone ?? donor.whatsapp ?? '').trim() : '';
   return {
@@ -2700,6 +2700,8 @@ function mapNeed(raw: Record<string, unknown>): Need {
   // Si el backend registró que alguien la aceptó pero el status sigue en "open"
   // (o vacío), la mostramos como cubierta para que se refleje y persista.
   if (isAccepted && (statusRaw === '' || statusRaw === 'open')) statusRaw = 'covered';
+  const targetNum = Number(raw.targetAmount ?? raw.target_amount ?? 0);
+  const coveredNum = Number(raw.coveredAmount ?? raw.covered_amount ?? 0);
   const created = allyStr(raw.createdAt ?? raw.created_at);
   return {
     id: allyStr(raw.id ?? raw._id),
@@ -2712,6 +2714,8 @@ function mapNeed(raw: Record<string, unknown>): Need {
     animalName: animal ? allyStr(animal.name) : allyStr(raw.animalName) || null,
     status: needStatusValues.includes(statusRaw as NeedStatus) ? (statusRaw as NeedStatus) : 'open',
     coveredByName,
+    targetAmount: Number.isFinite(targetNum) && targetNum > 0 ? targetNum : null,
+    coveredAmount: Number.isFinite(coveredNum) && coveredNum > 0 ? coveredNum : 0,
     createdAgo: created ? timeAgo(created) : '',
   };
 }
@@ -2735,12 +2739,17 @@ export async function getActiveNeeds(): Promise<Need[]> {
   }
 }
 
-// Un usuario con sesión se compromete a cubrir una necesidad. POST /needs/:id/cover
-// (queda en el documento de Isabel).
-export async function coverNeed(id: string, message?: string): Promise<void> {
+// Un usuario con sesión se compromete a cubrir una necesidad. POST /needs/:id/cover.
+// Isabel acepta `amount` para aportes PARCIALES (suma a coveredAmount y, si se
+// alcanza targetAmount, marca la necesidad como cubierta). Sin `amount` se cubre
+// completa. El backend notifica al aliado con el contacto del usuario.
+export async function coverNeed(id: string, amount?: number, message?: string): Promise<void> {
+  const body: Record<string, unknown> = {};
+  if (typeof amount === 'number' && amount > 0) body.amount = amount;
+  if (message) body.message = message;
   await authedRaw(`/needs/${id}/cover`, {
     method: 'POST',
-    body: JSON.stringify(message ? { message } : {}),
+    body: JSON.stringify(body),
   });
 }
 
