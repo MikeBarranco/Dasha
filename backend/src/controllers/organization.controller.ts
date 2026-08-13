@@ -1749,8 +1749,6 @@ export class OrganizationController {
         await prisma.animalProfile.update({ where: { id: animalId }, data: { isNeutered: true } });
       } else if (type === 'vacuna' || type === 'vaccine') {
         await prisma.animalProfile.update({ where: { id: animalId }, data: { isVaccinated: true } });
-      } else if (type === 'vaccine') {
-        await prisma.animalProfile.update({ where: { id: animalId }, data: { isVaccinated: true } });
       } else if (type === 'deworming') {
         await prisma.animalProfile.update({ where: { id: animalId }, data: { isDewormed: true } });
       }
