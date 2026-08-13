@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { X, MapPin, Navigation, Loader2, PawPrint } from 'lucide-react';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
-import { getAllies, isFullCycleOrg } from '../../lib/api';
+import { getAllies } from '../../lib/api';
 import type { Ally } from '../../data/mockAllies';
 
 // Antes de aceptar un rescate, el voluntario elige a qué aliado llevará al
@@ -47,9 +47,9 @@ export function RescueDestinationSheet({
     getAllies()
       .then((data) => {
         if (!active) return;
-        // Solo aliados que reciben animales (veterinaria/refugio) y con ubicación.
+        // Cualquier aliado con ubicación puede ser destino (todos reciben animales).
         const usable = data
-          .filter((ally) => isFullCycleOrg(ally.orgType) && ally.lat && ally.lng)
+          .filter((ally) => ally.lat && ally.lng)
           .map((ally) => ({
             ally,
             km: distanceKm(reportLat, reportLng, ally.lat, ally.lng),

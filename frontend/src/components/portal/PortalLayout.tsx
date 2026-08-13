@@ -21,7 +21,6 @@ import { useAuth } from '../../lib/useAuth';
 import {
   getMyOrganization,
   getOrganizationForAdmin,
-  isFullCycleOrg,
   type AllyContext,
 } from '../../lib/api';
 import { Onboarding } from '../onboarding/Onboarding';
@@ -117,11 +116,8 @@ export function PortalLayout() {
   // real la impone el backend (cada /me/organization/* valida rol y organización).
   if (context === null) return <Navigate to="/mapa" replace />;
 
-  // Aliado de apoyo (asociación/educativo): se ocultan rescates, perritos y
-  // adopciones; su portal se centra en perfil, equipo, donaciones y necesidades.
-  const sections = isFullCycleOrg(context.orgType)
-    ? portalSections
-    : portalSections.filter((section) => !section.fullCycleOnly);
+  // Todos los aliados ven el portal completo (decisión de producto).
+  const sections = portalSections;
 
   const current = sections.find((section) => location.pathname === section.to) ?? sections[0];
   // Conservar ?orgId= al navegar entre secciones cuando un admin ve el portal.

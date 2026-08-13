@@ -892,12 +892,10 @@ export async function deleteAccount(data?: {
 // lo previsualice con datos de ejemplo (preview) para poder construir y probar.
 export type AllyRole = 'owner' | 'vet';
 
-// Aliados de ciclo completo (reciben perritos, rehabilitan, adoptan) vs aliados
-// de apoyo (foro, cultura, necesidades). El tipo viene de organizations.org_type.
-export const FULL_CYCLE_ORG_TYPES = ['veterinary', 'shelter'];
-export function isFullCycleOrg(orgType: string): boolean {
-  return FULL_CYCLE_ORG_TYPES.includes(orgType);
-}
+// Decisión de producto: TODOS los aliados tienen el portal completo (reciben
+// perritos, rehabilitan, adoptan) y pueden ser destino de un rescate, sin
+// importar su tipo. Ya no hay distinción de "ciclo completo" por org_type; el
+// tipo queda solo como etiqueta.
 
 export type AllyContext = {
   organizationId: string;
