@@ -1620,12 +1620,14 @@ function mapDonation(raw: Record<string, unknown>): Donation {
   // El comprobante viene en `donationProof` (objeto {url} o string) o en los
   // nombres viejos. Antes salía "Comprobante adjunto" no visible por no leerlo.
   const proofRaw = raw.donationProof ?? raw.proofUrl ?? raw.proof_url ?? raw.receiptUrl ?? raw.receipt_url;
-  const proof =
-    typeof proofRaw === 'string'
-      ? proofRaw
-      : proofRaw && typeof proofRaw === 'object'
-        ? String((proofRaw as Record<string, unknown>).proofUrl ?? (proofRaw as Record<string, unknown>).url ?? (proofRaw as Record<string, unknown>).imageUrl ?? '')
-        : '';
+  let proof = '';
+  if (typeof proofRaw === 'string') {
+    proof = proofRaw;
+  } else if (proofRaw && typeof proofRaw === 'object') {
+    const obj = proofRaw as Record<string, unknown>;
+    const val = obj.proofUrl ?? obj.url ?? obj.imageUrl;
+    if (typeof val === 'string') proof = val;
+  }
   const items = String(raw.itemsDescription ?? raw.items_description ?? raw.description ?? '').trim();
   const phone = donor ? String(donor.phone ?? donor.whatsapp ?? '').trim() : '';
   return {
