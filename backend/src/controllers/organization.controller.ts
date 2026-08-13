@@ -1151,7 +1151,38 @@ export class OrganizationController {
         orderBy: { createdAt: 'desc' }
       });
 
-      res.status(200).json(applications);
+      const mappedApplications = applications.map(app => {
+        let extraFields: any = {};
+        if (app.message && app.message.trim().startsWith('{')) {
+          try {
+            extraFields = JSON.parse(app.message);
+          } catch (e) {}
+        } else if (app.message && app.message.includes('Tipo de vivienda:')) {
+          const lines = app.message.split('\n');
+          for (const line of lines) {
+            if (line.startsWith('Nombre:')) extraFields.applicantName = line.replace('Nombre:', '').trim();
+            if (line.startsWith('WhatsApp:')) extraFields.whatsapp = line.replace('WhatsApp:', '').trim();
+            if (line.startsWith('Tipo de vivienda:')) {
+              const val = line.replace('Tipo de vivienda:', '').trim();
+              if (val === 'casa_patio' || val === 'Casa con patio') extraFields.housingType = 'casa_patio';
+              else if (val === 'casa_sin_patio' || val === 'Casa sin patio') extraFields.housingType = 'casa_sin_patio';
+              else if (val === 'departamento' || val === 'Departamento') extraFields.housingType = 'departamento';
+              else extraFields.housingType = val;
+            }
+            if (line.startsWith('¿Ha tenido mascotas?:')) extraFields.hasHadPets = line.replace('¿Ha tenido mascotas?:', '').trim() === 'Sí';
+            if (line.startsWith('Otras mascotas:')) extraFields.otherPets = line.replace('Otras mascotas:', '').trim();
+            if (line.startsWith('Motivo:')) extraFields.reason = line.replace('Motivo:', '').trim();
+          }
+        }
+
+        return {
+          ...app,
+          ...extraFields,
+          message: extraFields.originalMessage || extraFields.message || app.message
+        };
+      });
+
+      res.status(200).json(mappedApplications);
     } catch (error) {
       next(error);
     }
@@ -1432,11 +1463,13 @@ export class OrganizationController {
   /**
    * Helper function: Maps frontend entry type to Prisma RecordType
    */
-  private static mapToPrismaRecordType(type: string): 'vaccination' | 'surgery' | 'checkup' | 'other' {
+  private static mapToPrismaRecordType(type: string): 'vaccination' | 'surgery' | 'checkup' | 'medication' | 'lab' | 'other' {
     const t = type.toLowerCase();
     if (t === 'vacuna' || t === 'vaccine' || t === 'vaccination') return 'vaccination';
     if (t === 'cirugia' || t === 'surgery') return 'surgery';
-    if (t === 'peso' || t === 'weight' || t === 'tratamiento' || t === 'treatment' || t === 'desparasitacion' || t === 'deworming' || t === 'checkup') return 'checkup';
+    if (t === 'peso' || t === 'weight') return 'checkup';
+    if (t === 'tratamiento' || t === 'treatment') return 'medication';
+    if (t === 'desparasitacion' || t === 'deworming') return 'lab';
     return 'other';
   }
 

@@ -204,8 +204,16 @@ export class AnimalController {
       }
 
       let finalMessage = message || '';
-      if (applicantName || whatsapp || reason) {
-        finalMessage = `Nombre: ${applicantName || 'N/A'}\nWhatsApp: ${whatsapp || 'N/A'}\nTipo de vivienda: ${housingType || 'N/A'}\n¿Ha tenido mascotas?: ${hasHadPets ? 'Sí' : 'No'}\nOtras mascotas: ${otherPets || 'Ninguna'}\nMotivo: ${reason || 'N/A'}`;
+      if (applicantName || whatsapp || reason || housingType !== undefined || hasHadPets !== undefined || otherPets !== undefined) {
+        finalMessage = JSON.stringify({
+          applicantName,
+          whatsapp,
+          housingType,
+          hasHadPets,
+          otherPets,
+          reason,
+          originalMessage: message
+        });
       }
 
       const application = await prisma.adoptionApplication.create({
