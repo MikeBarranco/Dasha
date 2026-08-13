@@ -82,6 +82,15 @@ router.post('/organization/animals/:id/medical', requireAuth, OrganizationContro
 // DELETE /api/v1/me/organization/animals/:id/medical/:entryId (borrar registro)
 router.delete('/organization/animals/:id/medical/:entryId', requireAuth, OrganizationController.deleteAnimalMedicalEntry);
 
+// GET /api/v1/me/organization/needs
+router.get('/organization/needs', requireAuth, OrganizationController.getPortalNeeds);
+
+// PATCH /api/v1/me/organization/needs/:id/reopen
+router.patch('/organization/needs/:id/reopen', requireAuth, (req, res, next) => {
+  req.params.needId = req.params.id;
+  OrganizationController.reopenPortalNeed(req, res, next);
+});
+
 // GET /api/v1/me/organization/donations
 router.get('/organization/donations', requireAuth, OrganizationController.getPortalDonations);
 
