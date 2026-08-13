@@ -1307,12 +1307,15 @@ const medEntryTypeMap: Record<string, MedicalEntryType> = {
   vaccination: 'vacuna',
   desparasitacion: 'desparasitacion',
   deworming: 'desparasitacion',
+  lab: 'desparasitacion',
   tratamiento: 'tratamiento',
   treatment: 'tratamiento',
+  medication: 'tratamiento',
   cirugia: 'cirugia',
   surgery: 'cirugia',
   peso: 'peso',
   weight: 'peso',
+  checkup: 'peso',
 };
 
 function normalizeMedType(value: string): MedicalEntryType {
