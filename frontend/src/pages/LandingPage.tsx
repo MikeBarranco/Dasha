@@ -1,8 +1,8 @@
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { ArrowRight, Play } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useAuth } from '../lib/useAuth';
-import { ShapeGrid } from '../components/landing/ShapeGrid';
+import { InteractiveDotBackground } from '../components/landing/InteractiveDotBackground';
 import { ProblemSection } from '../components/landing/ProblemSection';
 import { SolutionSection } from '../components/landing/SolutionSection';
 import { StoriesSection } from '../components/landing/StoriesSection';
@@ -18,33 +18,27 @@ const allyLogos: { src: string; name: string }[] = [];
 export function LandingPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  
+  const cinematicEase: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
   // Con sesión iniciada entra directo a la app, no a la portada.
   if (user) return <Navigate to="/mapa" replace />;
 
   return (
     <div className="relative bg-lino text-neutral-900">
-      {/* Fondo animado (rejilla de hexágonos) fijo detrás de TODA la landing */}
-      <div className="pointer-events-none fixed inset-0 z-0" aria-hidden="true">
-        <ShapeGrid
-          speed={0.1}
-          squareSize={40}
-          direction="diagonal"
-          borderColor="#16497c"
-          hoverFillColor="#f2780b"
-          shape="hexagon"
-          hoverTrailAmount={0}
-        />
+      {/* Fondo animado de puntos interactivos */}
+      <div className="fixed inset-0 z-0 pointer-events-auto" aria-hidden="true">
+        <InteractiveDotBackground />
       </div>
 
-      {/* Todo el contenido va por encima de la rejilla */}
+      {/* Todo el contenido va por encima del fondo */}
       <div className="relative z-10">
         {/* HERO: ocupa toda la pantalla hasta hacer scroll */}
         <div className="relative flex min-h-screen flex-col overflow-hidden">
           {/* Velo suave solo en el hero para que el titular se lea sin competir
-              con la rejilla; se desvanece hacia la derecha (zona del video). */}
+              con el fondo; se desvanece hacia la derecha (zona del video). */}
           <div
-            className="pointer-events-none absolute inset-0 bg-gradient-to-r from-lino via-lino/60 to-transparent"
+            className="pointer-events-none absolute inset-0 bg-gradient-to-b from-lino via-lino/85 to-transparent lg:bg-gradient-to-r lg:via-lino/60"
             aria-hidden="true"
           />
 
@@ -71,66 +65,113 @@ export function LandingPage() {
         </header>
 
         <div className="relative z-10 flex flex-1 items-center">
-          <div className="mx-auto w-full max-w-6xl px-5 py-10 md:px-8">
-            <div className="grid items-center gap-10 md:grid-cols-2 md:gap-12">
-              {/* Izquierda: encabezado + párrafo + llamado a la acción */}
-              <div>
-                <motion.h1
-                  initial={{ opacity: 0, y: 18 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, ease: 'easeOut' }}
-                  className="font-display text-4xl font-bold leading-[1.05] text-cobalto sm:text-5xl lg:text-6xl"
-                >
-                  Convertimos la empatía de Puebla en rescates coordinados.
-                </motion.h1>
-
-                <motion.p
-                  initial={{ opacity: 0, y: 18 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.1, ease: 'easeOut' }}
-                  className="mt-5 max-w-md text-lg leading-relaxed text-neutral-600 sm:text-xl"
-                >
-                  Reportar un animal en la calle ya no se pierde entre mensajes: en Dasha se ve en el
-                  mapa, se coordinan voluntarios y aliados, y le das seguimiento hasta su rescate.
-                </motion.p>
-
-                <motion.div
-                  initial={{ opacity: 0, y: 18 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.2, ease: 'easeOut' }}
-                  className="mt-8"
-                >
-                  <button
-                    type="button"
-                    onClick={() => navigate('/mapa')}
-                    className="group inline-flex items-center justify-center gap-2 rounded-xl bg-naranja px-6 py-3.5 font-semibold text-white shadow-lg shadow-naranja/20 transition-opacity hover:opacity-90"
-                  >
-                    Ver el mapa de rescates
-                    <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-0.5" />
-                  </button>
-                </motion.div>
-              </div>
-
-              {/* Derecha: espacio para el video, con marco estilo iOS */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.97 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.6, delay: 0.15, ease: 'easeOut' }}
-                className="rounded-[1.75rem] border border-white/60 bg-white/70 p-2 shadow-2xl shadow-cobalto/10 backdrop-blur-md ring-1 ring-black/5"
+          <div className="mx-auto w-full max-w-7xl px-6 py-10 md:px-12 relative z-20">
+            <div className="w-full lg:w-1/2 flex flex-col items-start text-left z-20">
+              {/* Encabezado + párrafo + llamado a la acción */}
+              <motion.h1
+                initial={{ opacity: 0, y: 50 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1.8, delay: 0.4, ease: cinematicEase }}
+                className="font-display text-4xl font-bold leading-[1.05] text-cobalto sm:text-5xl lg:text-6xl"
               >
-                <div className="flex aspect-video items-center justify-center overflow-hidden rounded-[1.25rem] bg-gradient-to-br from-cobalto/5 to-naranja/5">
-                  <div className="flex flex-col items-center gap-3 text-neutral-400">
-                    <span className="flex h-14 w-14 items-center justify-center rounded-full bg-cobalto/10 text-cobalto">
-                      <Play className="h-6 w-6" />
-                    </span>
-                    <span className="text-sm font-medium">Video del mapa en acción</span>
-                  </div>
-                </div>
+                Convertimos la empatía de Puebla en rescates coordinados.
+              </motion.h1>
+
+              <motion.p
+                initial={{ opacity: 0, y: 50 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1.8, delay: 0.8, ease: cinematicEase }}
+                className="mt-6 max-w-md text-lg leading-relaxed text-neutral-600 sm:text-xl pointer-events-auto"
+              >
+                Reportar un animal en la calle ya no se pierde entre mensajes: en Dasha se ve en el
+                mapa, se coordinan voluntarios y aliados, y le das seguimiento hasta su rescate.
+              </motion.p>
+
+              <motion.div
+                initial={{ opacity: 0, y: 50 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1.8, delay: 1.2, ease: cinematicEase }}
+                className="mt-8 pointer-events-auto"
+              >
+                <button
+                  type="button"
+                  onClick={() => navigate('/mapa')}
+                  className="group inline-flex items-center justify-center gap-2 rounded-xl bg-naranja px-6 py-3.5 font-semibold text-white shadow-lg shadow-naranja/20 transition-opacity hover:opacity-90"
+                >
+                  Ver el mapa de rescates
+                  <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-0.5" />
+                </button>
               </motion.div>
             </div>
 
-            {/* Aliados: solo aparece cuando existan logos */}
-            {allyLogos.length > 0 && (
+            {/* Perrita en móvil/tablet: debajo del texto, centrada, sobre un
+                círculo suave. En pantalla grande (lg) se usa la composición de
+                la derecha (abajo), no esta. */}
+            <motion.div
+              initial={{ opacity: 0, y: 30, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 1.6, delay: 1.4, ease: cinematicEase }}
+              className="relative mt-10 flex justify-center lg:hidden"
+            >
+              <div
+                className="absolute bottom-0 left-1/2 h-[260px] w-[260px] -translate-x-1/2 rounded-full bg-gradient-to-br from-cobalto/10 to-naranja/10"
+                aria-hidden="true"
+              />
+              <img
+                src="/brand/perrita-perfil-transparente.png"
+                alt="Perrita Dasha"
+                className="relative w-[230px] object-contain object-bottom sm:w-[260px]"
+              />
+            </motion.div>
+          </div>
+
+          {/* Figuras de Fondo Fijas (solo en pantalla grande) */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 2.5, delay: 1.0, ease: cinematicEase }}
+            className="hidden lg:block absolute bottom-[25vh] right-[22%] h-[350px] w-[350px] rounded-full bg-naranja z-0 pointer-events-none"
+            style={{ backgroundImage: 'radial-gradient(white 15%, transparent 16%)', backgroundSize: '20px 20px' }}
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, rotate: -15 }}
+            animate={{ opacity: 1, scale: 1, rotate: -15 }}
+            transition={{ duration: 2.5, delay: 1.5, ease: cinematicEase }}
+            className="hidden lg:block absolute -bottom-[5vh] right-0 h-[550px] w-[500px] bg-cobalto/15 z-0 pointer-events-none"
+            style={{ borderRadius: '40% 60% 70% 30% / 40% 50% 60% 50%' }}
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 2.5, delay: 2.0, ease: cinematicEase }}
+            className="hidden lg:block absolute bottom-[50vh] right-[35%] h-10 w-10 rounded-full bg-purpura z-10 pointer-events-none"
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 2.5, delay: 2.0, ease: cinematicEase }}
+            className="hidden lg:block absolute bottom-[15vh] right-[30%] h-5 w-5 rounded-full bg-naranja z-10 pointer-events-none"
+          />
+
+          {/* CONTENEDOR GRÁFICO (Perrita) */}
+          <motion.div
+            initial={{ opacity: 0, y: 40, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 2.5, delay: 1.8, ease: cinematicEase }}
+            className="hidden lg:block absolute bottom-0 right-0 md:right-[2%] lg:right-[8%] z-10 w-full max-w-[230px] md:max-w-[450px] lg:max-w-[500px] pointer-events-none"
+          >
+            <img 
+              src="/brand/perrita-perfil-transparente.png" 
+              alt="Perrita Dasha" 
+              className="object-contain object-bottom w-full"
+              style={{ maxHeight: '85vh' }}
+            />
+          </motion.div>
+        </div>
+
+          {/* Aliados: solo aparece cuando existan logos */}
+          {allyLogos.length > 0 && (
+            <div className="mx-auto w-full max-w-7xl px-6 pb-10 md:px-12 relative z-20">
               <div className="mt-14 border-t border-neutral-200/70 pt-8">
                 <p className="text-center text-xs font-medium uppercase tracking-wide text-neutral-400">
                   Con el apoyo de aliados de Puebla
@@ -146,10 +187,9 @@ export function LandingPage() {
                   ))}
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
-      </div>
 
         <ProblemSection />
         <SolutionSection />

@@ -231,7 +231,13 @@ export class OrganizationController {
         holderName: true,
         isActive: true,
         createdAt: true,
-        updatedAt: true
+        updatedAt: true,
+        _count: {
+          select: {
+            employees: true,
+            animals: true
+          }
+        }
       };
 
       if (user?.role === 'admin' && organizationIdParam) {
@@ -264,10 +270,24 @@ export class OrganizationController {
 
       orgType = organization.orgType;
 
+      // Calcular donaciones para los animales de la organización
+      let totalDonations = 0;
+      if (organization.id) {
+        const donationsCount = await prisma.donation.count({
+          where: { animal: { organizationId: organization.id } }
+        });
+        totalDonations = donationsCount;
+      }
+
       res.status(200).json({
         organization,
         role: roleInOrg,
-        orgType
+        orgType,
+        stats: {
+          teamMembers: organization._count?.employees || 0,
+          rescuedAnimals: organization._count?.animals || 0,
+          totalDonations
+        }
       });
     } catch (error) {
       next(error);
@@ -298,6 +318,15 @@ export class OrganizationController {
     try {
       const userId = (req as any).user?.id;
       const { logoBase64, coverBase64, lat, lng, isVerified, id, createdAt, updatedAt, ...data } = req.body;
+
+      if (data.phone && data.phone.length > 10) {
+        res.status(400).json({ error: 'El número de teléfono no puede tener más de 10 dígitos.' });
+        return;
+      }
+      if (data.whatsapp && data.whatsapp.length > 10) {
+        res.status(400).json({ error: 'El número de WhatsApp no puede tener más de 10 dígitos.' });
+        return;
+      }
       
       const myEmployee = await OrganizationController.getPortalContext(req, userId);
 
@@ -735,10 +764,34 @@ export class OrganizationController {
 
       const animals = await prisma.animalProfile.findMany({
         where: { organizationId: myEmployee.organizationId },
+        include: {
+          photos: { orderBy: { orderIndex: 'asc' } },
+          medicalRecords: { orderBy: { createdAt: 'desc' } },
+          vaccinations: { orderBy: { appliedDate: 'desc' } }
+        },
         orderBy: { createdAt: 'desc' }
       });
 
-      res.status(200).json(animals);
+      const mappedAnimals = animals.map(animal => ({
+        ...animal,
+        medicalRecord: {
+          sterilized: animal.isNeutered,
+          vaccinations: animal.vaccinations.map(v => ({
+            id: v.id,
+            name: v.vaccineName,
+            date: v.appliedDate
+          })),
+          entries: animal.medicalRecords.map(r => ({
+            id: r.id,
+            type: r.recordType,
+            title: r.description,
+            date: r.createdAt,
+            notes: r.prescription || r.diagnosis || ''
+          }))
+        }
+      }));
+
+      res.status(200).json(mappedAnimals);
     } catch (error) {
       next(error);
     }
@@ -1098,7 +1151,40 @@ export class OrganizationController {
         orderBy: { createdAt: 'desc' }
       });
 
-      res.status(200).json(applications);
+      const mappedApplications = applications.map(app => {
+        let extraFields: any = {};
+        if (app.message && app.message.trim().startsWith('{')) {
+          try {
+            extraFields = JSON.parse(app.message);
+          } catch (e) {
+            console.error('Failed to parse adoption message JSON', e);
+          }
+        } else if (app.message && app.message.includes('Tipo de vivienda:')) {
+          const lines = app.message.split('\n');
+          for (const line of lines) {
+            if (line.startsWith('Nombre:')) extraFields.applicantName = line.replace('Nombre:', '').trim();
+            if (line.startsWith('WhatsApp:')) extraFields.whatsapp = line.replace('WhatsApp:', '').trim();
+            if (line.startsWith('Tipo de vivienda:')) {
+              const val = line.replace('Tipo de vivienda:', '').trim();
+              if (val === 'casa_patio' || val === 'Casa con patio') extraFields.housingType = 'casa_patio';
+              else if (val === 'casa_sin_patio' || val === 'Casa sin patio') extraFields.housingType = 'casa_sin_patio';
+              else if (val === 'departamento' || val === 'Departamento') extraFields.housingType = 'departamento';
+              else extraFields.housingType = val;
+            }
+            if (line.startsWith('¿Ha tenido mascotas?:')) extraFields.hasHadPets = line.replace('¿Ha tenido mascotas?:', '').trim() === 'Sí';
+            if (line.startsWith('Otras mascotas:')) extraFields.otherPets = line.replace('Otras mascotas:', '').trim();
+            if (line.startsWith('Motivo:')) extraFields.reason = line.replace('Motivo:', '').trim();
+          }
+        }
+
+        return {
+          ...app,
+          ...extraFields,
+          message: extraFields.originalMessage || extraFields.message || app.message
+        };
+      });
+
+      res.status(200).json(mappedApplications);
     } catch (error) {
       next(error);
     }
@@ -1226,8 +1312,84 @@ export class OrganizationController {
   }
 
   // ==========================================
-  // PORTAL DE ALIADOS (DONACIONES)
+  // DONACIONES Y NECESIDADES
   // ==========================================
+
+  /**
+   * Obtiene el historial de necesidades de la organización
+   */
+  static async getPortalNeeds(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      
+      const myEmployee = await OrganizationController.getPortalContext(req, userId);
+
+      if (!myEmployee) {
+        res.status(403).json({ error: 'No perteneces a ninguna organización' });
+        return;
+      }
+
+      const needs = await prisma.need.findMany({
+        where: { organizationId: myEmployee.organizationId },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          contributions: {
+            orderBy: { createdAt: 'desc' },
+            include: { user: { select: { id: true, name: true, email: true, avatarUrl: true, phone: true } } },
+            take: 1
+          }
+        }
+      });
+      
+      const mappedNeeds = needs.map(need => ({
+        ...need,
+        coveredBy: need.contributions[0]?.user || null
+      }));
+      
+      res.status(200).json(mappedNeeds);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Reabre una necesidad previamente cubierta (cuando el donante no responde)
+   */
+  static async reopenPortalNeed(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      const needId = req.params.needId as string;
+      const myEmployee = await OrganizationController.getPortalContext(req, userId);
+
+      if (!myEmployee) {
+        res.status(403).json({ error: 'No perteneces a ninguna organización' });
+        return;
+      }
+
+      const need = await prisma.need.findUnique({
+        where: { id: needId }
+      });
+
+      if (!need || need.organizationId !== myEmployee.organizationId) {
+        res.status(404).json({ error: 'Necesidad no encontrada o sin acceso' });
+        return;
+      }
+
+      if (need.status !== 'fulfilled') {
+        res.status(400).json({ error: 'La necesidad no está cubierta' });
+        return;
+      }
+
+      const updated = await prisma.need.update({
+        where: { id: needId },
+        data: { status: 'active' }
+      });
+
+      res.status(200).json(updated);
+    } catch (error) {
+      next(error);
+    }
+  }
 
   /**
    * Obtiene el historial de donaciones a la organización
@@ -1236,9 +1398,7 @@ export class OrganizationController {
     try {
       const userId = (req as any).user?.id;
       
-      const myEmployee = await prisma.organizationEmployee.findFirst({
-        where: { userId }
-      });
+      const myEmployee = await OrganizationController.getPortalContext(req, userId);
 
       if (!myEmployee) {
         res.status(403).json({ error: 'No perteneces a ninguna organización' });
@@ -1379,11 +1539,13 @@ export class OrganizationController {
   /**
    * Helper function: Maps frontend entry type to Prisma RecordType
    */
-  private static mapToPrismaRecordType(type: string): 'vaccination' | 'surgery' | 'checkup' | 'other' {
+  private static mapToPrismaRecordType(type: string): 'vaccination' | 'surgery' | 'checkup' | 'medication' | 'lab' | 'other' {
     const t = type.toLowerCase();
     if (t === 'vacuna' || t === 'vaccine' || t === 'vaccination') return 'vaccination';
     if (t === 'cirugia' || t === 'surgery') return 'surgery';
-    if (t === 'peso' || t === 'weight' || t === 'tratamiento' || t === 'treatment' || t === 'desparasitacion' || t === 'deworming' || t === 'checkup') return 'checkup';
+    if (t === 'peso' || t === 'weight') return 'checkup';
+    if (t === 'tratamiento' || t === 'treatment') return 'medication';
+    if (t === 'desparasitacion' || t === 'deworming') return 'lab';
     return 'other';
   }
 
@@ -1428,7 +1590,7 @@ export class OrganizationController {
           ...animal,
           medicalRecord: {
             sterilized: animal.isNeutered,
-            vaccines: animal.vaccinations.map(v => ({
+            vaccinations: animal.vaccinations.map(v => ({
               id: v.id,
               name: v.vaccineName,
               date: v.appliedDate

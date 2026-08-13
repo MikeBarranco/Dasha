@@ -23,6 +23,12 @@ export const medalCatalog: MedalInfo[] = [
     description: 'Haz varios reportes y ayuda a detectar animales en riesgo.',
   },
   {
+    id: 'ciudadano-activo',
+    name: 'Ciudadano Activo',
+    image: '/medals/medalla-ojo-de-halcon.png',
+    description: 'Has creado 5 reportes exitosos.',
+  },
+  {
     id: 'guardian-ciudad',
     name: 'Guardián de la ciudad',
     image: '/medals/medalla-guardian-ciudad.png',

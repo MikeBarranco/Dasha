@@ -38,13 +38,48 @@ export function SolutionSection() {
           </p>
         </Reveal>
 
-        {/* Imagen centrada del producto (Miguel colocará la captura del mapa) */}
+        {/* Vista estilizada del mapa (mientras no haya una captura real con datos):
+            cuadrícula tipo mapa + ruta punteada + pines + chip "en vivo". */}
         <Reveal delay={0.1} className="mt-12">
           <div className="mx-auto max-w-4xl overflow-hidden rounded-3xl border border-neutral-200 bg-white p-2 shadow-xl shadow-cobalto/5">
-            <div className="flex aspect-video items-center justify-center rounded-2xl bg-gradient-to-br from-cobalto/5 to-naranja/5">
-              <div className="flex flex-col items-center gap-3 text-neutral-400">
-                <MapPin className="h-8 w-8 text-cobalto/40" />
-                <span className="text-sm font-medium">Captura del mapa de Dasha</span>
+            <div className="relative aspect-video overflow-hidden rounded-2xl bg-gradient-to-br from-cobalto/5 to-naranja/5">
+              {/* Cuadrícula de calles */}
+              <div
+                className="absolute inset-0 opacity-[0.12]"
+                style={{
+                  backgroundImage:
+                    'linear-gradient(to right, #1C4E80 1px, transparent 1px), linear-gradient(to bottom, #1C4E80 1px, transparent 1px)',
+                  backgroundSize: '38px 38px',
+                }}
+                aria-hidden="true"
+              />
+              {/* Ruta del rescate */}
+              <svg
+                className="absolute inset-0 h-full w-full"
+                viewBox="0 0 400 225"
+                fill="none"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M64 168 C 140 130, 175 96, 250 78 S 330 64, 344 62"
+                  stroke="#F2780B"
+                  strokeWidth="2.5"
+                  strokeDasharray="6 8"
+                  strokeLinecap="round"
+                />
+              </svg>
+              {/* Pines de reportes */}
+              <MapPin className="absolute left-[16%] top-[70%] h-7 w-7 -translate-x-1/2 -translate-y-full text-cobalto drop-shadow-sm" />
+              <MapPin className="absolute left-[62%] top-[34%] h-9 w-9 -translate-x-1/2 -translate-y-full text-naranja drop-shadow" />
+              <MapPin className="absolute left-[86%] top-[28%] h-6 w-6 -translate-x-1/2 -translate-y-full text-cobalto drop-shadow-sm" />
+              {/* Chip en vivo */}
+              <div className="absolute bottom-3 left-3 flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-xs font-semibold text-cobalto shadow-sm backdrop-blur">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-naranja/60" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-naranja" />
+                </span>
+                Rescates en Puebla, en vivo
               </div>
             </div>
           </div>

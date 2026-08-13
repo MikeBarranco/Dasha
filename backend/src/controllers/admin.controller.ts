@@ -221,7 +221,13 @@ export class AdminController {
           photos: true
         }
       });
-      res.status(200).json(reports);
+
+      const mappedReports = reports.map(r => ({
+        ...r,
+        colonia: r.address || 'Sin colonia'
+      }));
+
+      res.status(200).json(mappedReports);
     } catch (error) {
       next(error);
     }
@@ -367,12 +373,19 @@ export class AdminController {
 
       // We cannot set PostGIS location via Prisma directly in `create` if it's Unsupported.
       // So we first create the org, then update location with raw SQL.
+      
+      const orgData: any = {
+        ...data,
+        logoUrl,
+        logoPublicId
+      };
+      
+      if (data.isVerified === true) {
+        orgData.isApproved = true;
+      }
+
       const org = await prisma.organization.create({
-        data: {
-          ...data,
-          logoUrl,
-          logoPublicId
-        }
+        data: orgData
       });
 
       if (lat && lng) {
@@ -395,6 +408,10 @@ export class AdminController {
       const { logoBase64, lat, lng, services, ...data } = req.body;
       
       const updateData: any = { ...data };
+
+      if (data.isVerified === true) {
+        updateData.isApproved = true;
+      }
 
       if (logoBase64 && logoBase64.startsWith('data:image')) {
         const uploadRes = await cloudinary.uploader.upload(logoBase64, {

@@ -1,7 +1,17 @@
 import { useEffect, useState } from 'react';
-import { Plus, AlertCircle, CheckCircle2, X, HandHeart, Eye } from 'lucide-react';
 import {
-  getOrganizationNeeds,
+  Plus,
+  AlertCircle,
+  CheckCircle2,
+  X,
+  HandHeart,
+  Eye,
+  MessageCircle,
+  RotateCcw,
+} from 'lucide-react';
+import {
+  getPortalNeeds,
+  reopenNeed,
   createNeed,
   updateNeedStatus,
   type CreateNeedInput,
@@ -24,6 +34,14 @@ const statusMeta: Record<Need['status'], { label: string; className: string }> =
   delivered: { label: 'Entregada', className: 'bg-exito/10 text-exito' },
 };
 
+// Link de WhatsApp con mensaje pre-armado para coordinar con quien se comprometió.
+function whatsappLink(need: Need): string {
+  const digits = (need.coveredByPhone ?? '').replace(/\D/g, '');
+  const phone = digits.length === 10 ? `52${digits}` : digits;
+  const msg = `Hola ${need.coveredByName ?? ''}, vi en Dasha que quieres apoyar con "${need.title}". ¿Cómo lo coordinamos? ¡Gracias!`;
+  return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+}
+
 function previewNeeds(): Need[] {
   return [
     {
@@ -37,6 +55,9 @@ function previewNeeds(): Need[] {
       animalName: null,
       status: 'open',
       coveredByName: null,
+      coveredByPhone: null,
+      targetAmount: null,
+      coveredAmount: 0,
       createdAgo: 'hoy',
     },
     {
@@ -50,6 +71,9 @@ function previewNeeds(): Need[] {
       animalName: 'Canela',
       status: 'covered',
       coveredByName: 'Luis M.',
+      coveredByPhone: '2223456789',
+      targetAmount: null,
+      coveredAmount: 0,
       createdAgo: 'ayer',
     },
   ];
@@ -71,7 +95,7 @@ export function PortalNecesidadesPage() {
   useEffect(() => {
     if (ctx.preview) return;
     let active = true;
-    getOrganizationNeeds(ctx.organizationId)
+    getPortalNeeds(ctx.adminOrgId)
       .then((data) => {
         if (!active) return;
         setNeeds(data);
@@ -85,7 +109,7 @@ export function PortalNecesidadesPage() {
     return () => {
       active = false;
     };
-  }, [ctx.preview, ctx.organizationId]);
+  }, [ctx.preview, ctx.adminOrgId]);
 
   const resetForm = () => {
     setType('food');
@@ -121,6 +145,9 @@ export function PortalNecesidadesPage() {
         animalName: null,
         status: 'open',
         coveredByName: null,
+        coveredByPhone: null,
+        targetAmount: null,
+        coveredAmount: 0,
         createdAgo: 'ahora',
       };
       setNeeds((list) => [nueva, ...(list ?? [])]);
@@ -133,7 +160,7 @@ export function PortalNecesidadesPage() {
     setFormError(null);
     try {
       await createNeed(ctx.organizationId, input);
-      const data = await getOrganizationNeeds(ctx.organizationId);
+      const data = await getPortalNeeds(ctx.adminOrgId);
       setNeeds(data);
       resetForm();
       setFormOpen(false);
@@ -163,6 +190,31 @@ export function PortalNecesidadesPage() {
       );
     } catch (err) {
       alert(err instanceof Error ? err.message : 'No se pudo actualizar la necesidad.');
+    } finally {
+      setActingId(null);
+    }
+  };
+
+  const reopen = async (need: Need) => {
+    const mark = () =>
+      setNeeds(
+        (list) =>
+          list?.map((item) =>
+            item.id === need.id
+              ? { ...item, status: 'open', coveredByName: null, coveredByPhone: null }
+              : item,
+          ) ?? list,
+      );
+    if (ctx.preview) {
+      mark();
+      return;
+    }
+    setActingId(need.id);
+    try {
+      await reopenNeed(need.id, ctx.adminOrgId);
+      mark();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'No se pudo reabrir la necesidad.');
     } finally {
       setActingId(null);
     }
@@ -320,23 +372,48 @@ export function PortalNecesidadesPage() {
                 </div>
 
                 {need.status === 'covered' && (
-                  <p className="mt-2 flex items-center gap-1.5 text-sm text-info">
-                    <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
-                    La cubre {need.coveredByName ?? 'un patrocinador'}
-                  </p>
+                  <div className="mt-2 rounded-xl bg-info/5 p-3">
+                    <p className="flex items-center gap-1.5 text-sm font-medium text-info">
+                      <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+                      La cubre {need.coveredByName ?? 'un patrocinador'}
+                    </p>
+                    {need.coveredByPhone && (
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span className="text-xs text-neutral-500">{need.coveredByPhone}</span>
+                        <a
+                          href={whatsappLink(need)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-exito px-2.5 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+                        </a>
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 {need.status !== 'delivered' && (
-                  <div className="mt-3 flex gap-2">
+                  <div className="mt-3 flex flex-wrap gap-2">
                     {need.status === 'covered' && (
-                      <button
-                        type="button"
-                        onClick={() => act(need, 'delivered')}
-                        disabled={actingId === need.id}
-                        className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-exito py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-                      >
-                        <CheckCircle2 className="h-4 w-4" /> Marcar entregada
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => act(need, 'delivered')}
+                          disabled={actingId === need.id}
+                          className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-exito py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                        >
+                          <CheckCircle2 className="h-4 w-4" /> Marcar entregada
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => reopen(need)}
+                          disabled={actingId === need.id}
+                          className="flex items-center justify-center gap-1.5 rounded-xl border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-600 transition-colors hover:bg-neutral-50 disabled:opacity-60"
+                        >
+                          <RotateCcw className="h-4 w-4" /> Reabrir
+                        </button>
+                      </>
                     )}
                     <button
                       type="button"

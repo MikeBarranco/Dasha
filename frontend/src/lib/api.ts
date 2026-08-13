@@ -892,12 +892,10 @@ export async function deleteAccount(data?: {
 // lo previsualice con datos de ejemplo (preview) para poder construir y probar.
 export type AllyRole = 'owner' | 'vet';
 
-// Aliados de ciclo completo (reciben perritos, rehabilitan, adoptan) vs aliados
-// de apoyo (foro, cultura, necesidades). El tipo viene de organizations.org_type.
-export const FULL_CYCLE_ORG_TYPES = ['veterinary', 'shelter'];
-export function isFullCycleOrg(orgType: string): boolean {
-  return FULL_CYCLE_ORG_TYPES.includes(orgType);
-}
+// Decisión de producto: TODOS los aliados tienen el portal completo (reciben
+// perritos, rehabilitan, adoptan) y pueden ser destino de un rescate, sin
+// importar su tipo. Ya no hay distinción de "ciclo completo" por org_type; el
+// tipo queda solo como etiqueta.
 
 export type AllyContext = {
   organizationId: string;
@@ -1307,12 +1305,15 @@ const medEntryTypeMap: Record<string, MedicalEntryType> = {
   vaccination: 'vacuna',
   desparasitacion: 'desparasitacion',
   deworming: 'desparasitacion',
+  lab: 'desparasitacion',
   tratamiento: 'tratamiento',
   treatment: 'tratamiento',
+  medication: 'tratamiento',
   cirugia: 'cirugia',
   surgery: 'cirugia',
   peso: 'peso',
   weight: 'peso',
+  checkup: 'peso',
 };
 
 function normalizeMedType(value: string): MedicalEntryType {
@@ -1619,12 +1620,14 @@ function mapDonation(raw: Record<string, unknown>): Donation {
   // El comprobante viene en `donationProof` (objeto {url} o string) o en los
   // nombres viejos. Antes salía "Comprobante adjunto" no visible por no leerlo.
   const proofRaw = raw.donationProof ?? raw.proofUrl ?? raw.proof_url ?? raw.receiptUrl ?? raw.receipt_url;
-  const proof =
-    typeof proofRaw === 'string'
-      ? proofRaw
-      : proofRaw && typeof proofRaw === 'object'
-        ? String((proofRaw as Record<string, unknown>).url ?? (proofRaw as Record<string, unknown>).imageUrl ?? '')
-        : '';
+  let proof = '';
+  if (typeof proofRaw === 'string') {
+    proof = proofRaw;
+  } else if (proofRaw && typeof proofRaw === 'object') {
+    const obj = proofRaw as Record<string, unknown>;
+    const val = obj.proofUrl ?? obj.url ?? obj.imageUrl;
+    if (typeof val === 'string') proof = val;
+  }
   const items = String(raw.itemsDescription ?? raw.items_description ?? raw.description ?? '').trim();
   const phone = donor ? String(donor.phone ?? donor.whatsapp ?? '').trim() : '';
   return {
@@ -2190,7 +2193,11 @@ function mapAllyAnimalLite(raw: Record<string, unknown>): AllyAnimal {
     id: allyStr(raw.id ?? raw._id),
     name: allyStr(raw.name) || 'Sin nombre',
     photo: photo || '/placeholder-animal.svg',
-    status: allyStr(raw.statusLabel ?? raw.status),
+    // Traducimos el slug del backend (in_treatment, looking_for_adoption…) a
+    // español; antes salía el estado en inglés en el perfil público del aliado.
+    status:
+      animalStatusLabels[String(raw.status ?? '')] ??
+      (allyStr(raw.statusLabel ?? raw.status) || 'En tratamiento'),
   };
 }
 
@@ -2240,6 +2247,33 @@ export async function getAlly(id: string): Promise<Ally | null> {
     animals: animalsRaw.map((animal) => mapAllyAnimalLite(animal as Record<string, unknown>)),
     paymentInfo: mapAllyPaymentInfo(raw.paymentInfo ?? raw.payment_info),
   };
+}
+
+// Perfil del portal con estadísticas del dashboard. Isabel: GET
+// /organizations/portal/profile — en la raíz trae `stats` con los contadores.
+// Soporta ?organizationId= para que un admin vea el portal de un aliado.
+export type PortalStats = {
+  teamMembers: number;
+  rescuedAnimals: number;
+  totalDonations: number;
+};
+
+export async function getPortalStats(orgId?: string): Promise<PortalStats | null> {
+  try {
+    const raw = await authedRaw<Record<string, unknown>>(
+      `/organizations/portal/profile${orgScope(orgId)}`,
+    );
+    const s =
+      raw && typeof raw.stats === 'object' ? (raw.stats as Record<string, unknown>) : null;
+    if (!s) return null;
+    return {
+      teamMembers: Number(s.teamMembers ?? 0) || 0,
+      rescuedAnimals: Number(s.rescuedAnimals ?? 0) || 0,
+      totalDonations: Number(s.totalDonations ?? 0) || 0,
+    };
+  } catch {
+    return null;
+  }
 }
 
 // --- Traslado en vivo tipo Uber (rescue_assignments) ---
@@ -2690,6 +2724,10 @@ function mapNeed(raw: Record<string, unknown>): Need {
       ? (raw.coveredBy as Record<string, unknown>)
       : null);
   const coveredByName = accepter ? allyStr(accepter.name) : allyStr(raw.coveredByName) || null;
+  // El teléfono solo viene en las rutas del portal (Isabel: `coveredBy.phone`).
+  const coveredByPhone = accepter
+    ? allyStr(accepter.phone ?? accepter.telefono) || null
+    : allyStr(raw.coveredByPhone) || null;
   const isAccepted = Boolean(accepter || raw.acceptedBy || raw.accepted_by || coveredByName);
   const typeRaw = allyStr(raw.type ?? raw.resourceType ?? raw.resource_type);
   let statusRaw = allyStr(raw.status);
@@ -2697,6 +2735,8 @@ function mapNeed(raw: Record<string, unknown>): Need {
   // Si el backend registró que alguien la aceptó pero el status sigue en "open"
   // (o vacío), la mostramos como cubierta para que se refleje y persista.
   if (isAccepted && (statusRaw === '' || statusRaw === 'open')) statusRaw = 'covered';
+  const targetNum = Number(raw.targetAmount ?? raw.target_amount ?? 0);
+  const coveredNum = Number(raw.coveredAmount ?? raw.covered_amount ?? 0);
   const created = allyStr(raw.createdAt ?? raw.created_at);
   return {
     id: allyStr(raw.id ?? raw._id),
@@ -2709,6 +2749,9 @@ function mapNeed(raw: Record<string, unknown>): Need {
     animalName: animal ? allyStr(animal.name) : allyStr(raw.animalName) || null,
     status: needStatusValues.includes(statusRaw as NeedStatus) ? (statusRaw as NeedStatus) : 'open',
     coveredByName,
+    coveredByPhone,
+    targetAmount: Number.isFinite(targetNum) && targetNum > 0 ? targetNum : null,
+    coveredAmount: Number.isFinite(coveredNum) && coveredNum > 0 ? coveredNum : 0,
     createdAgo: created ? timeAgo(created) : '',
   };
 }
@@ -2732,12 +2775,35 @@ export async function getActiveNeeds(): Promise<Need[]> {
   }
 }
 
-// Un usuario con sesión se compromete a cubrir una necesidad. POST /needs/:id/cover
-// (queda en el documento de Isabel).
-export async function coverNeed(id: string, message?: string): Promise<void> {
+// Un usuario con sesión se compromete a cubrir una necesidad. POST /needs/:id/cover.
+// Isabel acepta `amount` para aportes PARCIALES (suma a coveredAmount y, si se
+// alcanza targetAmount, marca la necesidad como cubierta). Sin `amount` se cubre
+// completa. El backend notifica al aliado con el contacto del usuario.
+export async function coverNeed(id: string, amount?: number, message?: string): Promise<void> {
+  const body: Record<string, unknown> = {};
+  if (typeof amount === 'number' && amount > 0) body.amount = amount;
+  if (message) body.message = message;
   await authedRaw(`/needs/${id}/cover`, {
     method: 'POST',
-    body: JSON.stringify(message ? { message } : {}),
+    body: JSON.stringify(body),
+  });
+}
+
+// Necesidades del portal CON el teléfono de quien se comprometió (Isabel:
+// GET /organizations/portal/needs). Es para el botón de WhatsApp del aliado; el
+// teléfono NO se expone en las rutas públicas. Soporta ?organizationId= (admin).
+export async function getPortalNeeds(orgId?: string): Promise<Need[]> {
+  const data = await authedRaw<Record<string, unknown>[]>(
+    `/organizations/portal/needs${orgScope(orgId)}`,
+  );
+  return (data ?? []).map(mapNeed);
+}
+
+// Reabrir una necesidad que alguien reservó pero nunca cumplió: vuelve de
+// 'fulfilled' a 'active'. Isabel: PATCH /organizations/portal/needs/:id/reopen (sin body).
+export async function reopenNeed(needId: string, orgId?: string): Promise<void> {
+  await authedRaw(`/organizations/portal/needs/${needId}/reopen${orgScope(orgId)}`, {
+    method: 'PATCH',
   });
 }
 

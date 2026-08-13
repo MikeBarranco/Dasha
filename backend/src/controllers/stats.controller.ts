@@ -5,49 +5,54 @@ export class StatsController {
   static async getStats(req: Request, res: Response, next: NextFunction) {
     try {
       // 1. Reportes Activos (status = active)
+      const reportesTotales = await prisma.report.count();
       const reportesActivos = await prisma.report.count({
         where: { status: 'active' }
       });
 
-      // 2. Rescates Logrados (status = rescued, in_treatment, recovering, etc.)
-      // O podemos contar por los RescueAssignment completados.
-      // Miguel puso un ejemplo de 342, contemos reportes rescatados o con asignación completa.
+      // 2. Rescates Logrados
       const rescatesLogrados = await prisma.rescueAssignment.count({
-        where: { 
-          status: 'completed',
-          report: {
-            status: { notIn: ['closed', 'duplicate', 'not_found', 'deceased'] }
-          }
-        }
+        where: { status: 'completed' }
       });
 
-      // 3. Voluntarios (usuarios con role = volunteer)
+      // 3. Voluntarios Activos
       const voluntarios = await prisma.user.count({
-        where: { 
-          role: 'volunteer'
-        }
+        where: { role: 'volunteer' }
       });
 
-      // 4. Aliados (Organizations)
-      const aliadosRegistrados = await prisma.organization.count();
+      // 4. Aliados (Organizations verificadas/aprobadas)
+      const aliadosRegistrados = await prisma.organization.count({
+        where: { isVerified: true, isApproved: true }
+      });
 
-      // 5. Adopciones Logradas (Animales con estado 'adopted')
+      // 5. Adopciones Logradas
       const adopcionesLogradas = await prisma.animalProfile.count({
         where: { status: 'adopted' }
       });
 
-      // 6. Animales en Búsqueda de Hogar (estado 'looking_for_adoption')
+      // 6. Animales en Búsqueda de Hogar
       const animalesEnAdopcion = await prisma.animalProfile.count({
         where: { status: 'looking_for_adoption', isPublic: true }
       });
 
+      // 7. Donaciones Verificadas
+      const donacionesVerificadas = await prisma.donation.count({
+        where: { status: 'approved' }
+      });
+
       res.status(200).json({
+        reportesTotales,
         reportesActivos,
         rescatesLogrados,
         voluntarios,
+        voluntariosActivos: voluntarios,
         aliadosRegistrados,
         adopcionesLogradas,
-        animalesEnAdopcion
+        adopciones: adopcionesLogradas,
+        animalesEnAdopcion,
+        donacionesVerificadas,
+        porMes: [],
+        rankingColonias: []
       });
     } catch (error) {
       next(error);

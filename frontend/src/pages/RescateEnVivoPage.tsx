@@ -205,11 +205,9 @@ export function RescateEnVivoPage() {
     }
   };
 
-  // Al tocar el paso: para arrancar el traslado ("voy en camino") primero se
-  // elige el aliado destino; si el paso pide foto la abrimos; si no, avanza.
   const handleStep = () => {
     if (!step || advancing) return;
-    if (step.next === 'on_the_way') {
+    if (step.next === 'on_the_way' || (step.next === 'arrived' && !assignment.destination)) {
       setPickingDest(true);
       return;
     }
@@ -253,7 +251,7 @@ export function RescateEnVivoPage() {
       await updateRescueAssignmentStatus(
         assignment.id,
         step.next,
-        step.next === 'on_the_way' ? destinationOrgId : undefined,
+        destinationOrgId,
       );
       setPendingStatus(step.next);
       setPhotoStep(null);
