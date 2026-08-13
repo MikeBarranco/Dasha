@@ -61,7 +61,7 @@ export function InteractiveDotBackground() {
         let currentRadius = dot.baseRadius;
         
         // Color base un poco más oscuro para que contraste con el fondo claro
-        let r = 215, g = 210, b = 200, a = 1;
+        let r = 215, g = 210, b = 200;
 
         if (dist < 120) {
           const factor = (120 - dist) / 120;
@@ -77,7 +77,7 @@ export function InteractiveDotBackground() {
         dot.radius += (currentRadius - dot.radius) * 0.15;
         ctx.beginPath();
         ctx.arc(dot.x, dot.y, dot.radius, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${Math.floor(r)},${Math.floor(g)},${Math.floor(b)},${a})`;
+        ctx.fillStyle = `rgba(${Math.floor(r)},${Math.floor(g)},${Math.floor(b)},1)`;
 
         if (dist < 120) {
           ctx.shadowBlur = 4;

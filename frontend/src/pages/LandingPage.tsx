@@ -19,7 +19,7 @@ export function LandingPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   
-  const cinematicEase = [0.22, 1, 0.36, 1];
+  const cinematicEase: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
   // Con sesión iniciada entra directo a la app, no a la portada.
   if (user) return <Navigate to="/mapa" replace />;
@@ -38,7 +38,7 @@ export function LandingPage() {
           {/* Velo suave solo en el hero para que el titular se lea sin competir
               con el fondo; se desvanece hacia la derecha (zona del video). */}
           <div
-            className="pointer-events-none absolute inset-0 bg-gradient-to-r from-lino via-lino/60 to-transparent"
+            className="pointer-events-none absolute inset-0 bg-gradient-to-b from-lino via-lino/85 to-transparent md:bg-gradient-to-r md:via-lino/60"
             aria-hidden="true"
           />
 
@@ -64,7 +64,7 @@ export function LandingPage() {
           </div>
         </header>
 
-        <div className="relative z-10 flex flex-1 items-center">
+        <div className="relative z-10 flex flex-1 items-start pt-6 md:items-center md:pt-0">
           <div className="mx-auto w-full max-w-7xl px-6 py-10 md:px-12 relative z-20">
             <div className="w-full lg:w-1/2 flex flex-col items-start text-left z-20">
               {/* Encabezado + párrafo + llamado a la acción */}
@@ -138,7 +138,7 @@ export function LandingPage() {
             initial={{ opacity: 0, y: 40, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 2.5, delay: 1.8, ease: cinematicEase }}
-            className="absolute bottom-0 right-[-5%] md:right-[2%] lg:right-[8%] z-10 w-full max-w-[350px] md:max-w-[450px] lg:max-w-[500px] pointer-events-none"
+            className="absolute bottom-0 right-0 md:right-[2%] lg:right-[8%] z-10 w-full max-w-[230px] md:max-w-[450px] lg:max-w-[500px] pointer-events-none"
           >
             <img 
               src="/brand/perrita-perfil-transparente.png" 

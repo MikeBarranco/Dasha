@@ -14,7 +14,7 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { Avatar } from '../../components/ui/Avatar';
-import { getAllies } from '../../lib/api';
+import { getAlly } from '../../lib/api';
 import { mockAllies, allyTypeLabels, type Ally } from '../../data/mockAllies';
 import { useAllyPortal } from '../../lib/useAllyPortal';
 import { openOnboarding } from '../../lib/onboarding';
@@ -46,10 +46,11 @@ export function PortalHomePage() {
 
   useEffect(() => {
     let active = true;
-    getAllies()
-      .then((data) => {
+    // getAlly(:id) trae el detalle COMPLETO (equipo + perritos); getAllies() es la
+    // lista optimizada que no los incluye, por eso salían vacíos hasta "Gestionar".
+    getAlly(ctx.organizationId)
+      .then((real) => {
         if (!active) return;
-        const real = data.find((item) => item.id === ctx.organizationId) ?? null;
         // El mock solo aplica en la vista previa (admin); un aliado real ve su
         // organización real o "no encontrada", nunca una de ejemplo.
         setAlly(

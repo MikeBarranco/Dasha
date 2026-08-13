@@ -1,17 +1,15 @@
 import { Check } from 'lucide-react';
 import type { RescueStatus } from '../../lib/api';
 
-// Hitos del caso de punta a punta: del reporte en la calle hasta la adopción.
-// Se muestran SIEMPRE los siete, aunque falten por cumplir, para que se lea la
-// historia completa del animalito de un vistazo.
+// Hitos del TRASLADO: del reporte en la calle hasta que el voluntario entrega el
+// animalito al aliado. Lo que sigue (rehabilitación, adopción) lo maneja el aliado
+// desde su portal, así que no se muestra aquí (se quedaba sin marcar).
 const milestones = [
   'Reporte creado',
   'Un voluntario tomó el caso',
   'En camino',
   'Llegó con el aliado',
   'Entregado al aliado',
-  'En rehabilitación',
-  'Adoptado',
 ];
 
 // Hasta qué hito llegó el caso según el estado del traslado (índice en la lista).

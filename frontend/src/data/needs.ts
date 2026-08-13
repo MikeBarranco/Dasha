@@ -28,6 +28,11 @@ export type Need = {
   animalName: string | null;
   status: NeedStatus;
   coveredByName: string | null;
+  // Meta económica y lo reunido (Isabel: targetAmount/coveredAmount). Cuando hay
+  // meta se muestra una barra de progreso y se puede aportar parcial; sin meta la
+  // necesidad se cubre completa de una vez.
+  targetAmount: number | null;
+  coveredAmount: number;
   createdAgo: string;
 };
 

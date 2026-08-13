@@ -67,16 +67,20 @@ export function AdoptionSheet({ animal, onClose }: AdoptionSheetProps) {
     };
 
     setSubmitting(true);
-    // La adopción se cierra por fuera con el refugio. Registramos la solicitud
-    // para que el aliado la revise; si el backend aún no existe, no bloqueamos al
-    // interesado.
+    // Registramos la solicitud para que el aliado la revise. Si el backend la
+    // rechaza (ej. 400 "ya tienes una solicitud activa para este animal"),
+    // mostramos ese mensaje en vez de fingir éxito.
     try {
       await createAdoptionRequest(animal.id, input);
-    } catch {
-      /* pendiente de backend: no bloqueamos al interesado */
+      setDone(true);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'No se pudo enviar la solicitud. ¿Quizá ya tienes una activa para este animal?',
+      );
     } finally {
       setSubmitting(false);
-      setDone(true);
     }
   };
 
