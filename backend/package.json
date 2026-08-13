@@ -12,10 +12,11 @@
     "build": "prisma generate && tsc",
     "start": "node dist/index.js",
     "lint": "eslint .",
-    "format": "prettier --write .",
-    "typecheck": "tsc --noEmit",
-    "seed:changelog": "tsx src/seed-changelog.ts",
-    "wipe:staging": "node dist/scripts/wipe-staging.js"
+
+
+
+
+    "format": "prettier --write .",`n    "typecheck": "tsc --noEmit",`n    "seed:changelog": "tsx src/seed-changelog.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

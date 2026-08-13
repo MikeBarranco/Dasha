@@ -977,7 +977,7 @@ export class OrganizationController {
     try {
       const userId = (req as any).user?.id;
       const animalId = req.params.animalId as string;
-      const { name, diagnosis } = req.body;
+      const { name, diagnosis, totalCostNeeded } = req.body;
 
       const myEmployee = await OrganizationController.getPortalContext(req, userId);
 
@@ -993,9 +993,14 @@ export class OrganizationController {
         return;
       }
 
+      const updateData: any = {};
+      if (name !== undefined) updateData.name = name;
+      if (diagnosis !== undefined) updateData.diagnosis = diagnosis;
+      if (totalCostNeeded !== undefined) updateData.totalCostNeeded = totalCostNeeded;
+
       const updatedAnimal = await prisma.animalProfile.update({
         where: { id: animalId },
-        data: { name, diagnosis }
+        data: updateData
       });
 
       res.status(200).json(updatedAnimal);
@@ -1713,21 +1718,37 @@ export class OrganizationController {
       
       const parsedPhotoUrls = photoUrls ? photoUrls : (photoUrl ? [photoUrl] : null);
 
-      const record = await prisma.medicalRecord.create({
-        data: {
-          animalId,
-          veterinarianId: userId,
-          recordType: mappedType as any,
-          description: title || 'Sin título',
-          prescription: notes || null,
-          photoUrls: parsedPhotoUrls,
-          createdAt: date ? new Date(date) : new Date()
-        }
-      });
+      let record: any;
+
+      if (type === 'vacuna' || type === 'vaccine') {
+        record = await prisma.vaccination.create({
+          data: {
+            animalId,
+            veterinarianId: userId,
+            vaccineName: title || 'Vacuna',
+            appliedDate: date ? new Date(date) : new Date(),
+            notes: notes || null
+          }
+        });
+      } else {
+        record = await prisma.medicalRecord.create({
+          data: {
+            animalId,
+            veterinarianId: userId,
+            recordType: mappedType as any,
+            description: title || 'Sin título',
+            prescription: notes || null,
+            photoUrls: parsedPhotoUrls,
+            createdAt: date ? new Date(date) : new Date()
+          }
+        });
+      }
 
       // Update animal flags
       if (type === 'spay_neuter') {
         await prisma.animalProfile.update({ where: { id: animalId }, data: { isNeutered: true } });
+      } else if (type === 'vacuna' || type === 'vaccine') {
+        await prisma.animalProfile.update({ where: { id: animalId }, data: { isVaccinated: true } });
       } else if (type === 'vaccine') {
         await prisma.animalProfile.update({ where: { id: animalId }, data: { isVaccinated: true } });
       } else if (type === 'deworming') {
