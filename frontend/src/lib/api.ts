@@ -2193,7 +2193,11 @@ function mapAllyAnimalLite(raw: Record<string, unknown>): AllyAnimal {
     id: allyStr(raw.id ?? raw._id),
     name: allyStr(raw.name) || 'Sin nombre',
     photo: photo || '/placeholder-animal.svg',
-    status: allyStr(raw.statusLabel ?? raw.status),
+    // Traducimos el slug del backend (in_treatment, looking_for_adoption…) a
+    // español; antes salía el estado en inglés en el perfil público del aliado.
+    status:
+      animalStatusLabels[String(raw.status ?? '')] ??
+      (allyStr(raw.statusLabel ?? raw.status) || 'En tratamiento'),
   };
 }
 
@@ -2243,6 +2247,33 @@ export async function getAlly(id: string): Promise<Ally | null> {
     animals: animalsRaw.map((animal) => mapAllyAnimalLite(animal as Record<string, unknown>)),
     paymentInfo: mapAllyPaymentInfo(raw.paymentInfo ?? raw.payment_info),
   };
+}
+
+// Perfil del portal con estadísticas del dashboard. Isabel: GET
+// /organizations/portal/profile — en la raíz trae `stats` con los contadores.
+// Soporta ?organizationId= para que un admin vea el portal de un aliado.
+export type PortalStats = {
+  teamMembers: number;
+  rescuedAnimals: number;
+  totalDonations: number;
+};
+
+export async function getPortalStats(orgId?: string): Promise<PortalStats | null> {
+  try {
+    const raw = await authedRaw<Record<string, unknown>>(
+      `/organizations/portal/profile${orgScope(orgId)}`,
+    );
+    const s =
+      raw && typeof raw.stats === 'object' ? (raw.stats as Record<string, unknown>) : null;
+    if (!s) return null;
+    return {
+      teamMembers: Number(s.teamMembers ?? 0) || 0,
+      rescuedAnimals: Number(s.rescuedAnimals ?? 0) || 0,
+      totalDonations: Number(s.totalDonations ?? 0) || 0,
+    };
+  } catch {
+    return null;
+  }
 }
 
 // --- Traslado en vivo tipo Uber (rescue_assignments) ---
@@ -2693,6 +2724,10 @@ function mapNeed(raw: Record<string, unknown>): Need {
       ? (raw.coveredBy as Record<string, unknown>)
       : null);
   const coveredByName = accepter ? allyStr(accepter.name) : allyStr(raw.coveredByName) || null;
+  // El teléfono solo viene en las rutas del portal (Isabel: `coveredBy.phone`).
+  const coveredByPhone = accepter
+    ? allyStr(accepter.phone ?? accepter.telefono) || null
+    : allyStr(raw.coveredByPhone) || null;
   const isAccepted = Boolean(accepter || raw.acceptedBy || raw.accepted_by || coveredByName);
   const typeRaw = allyStr(raw.type ?? raw.resourceType ?? raw.resource_type);
   let statusRaw = allyStr(raw.status);
@@ -2714,6 +2749,7 @@ function mapNeed(raw: Record<string, unknown>): Need {
     animalName: animal ? allyStr(animal.name) : allyStr(raw.animalName) || null,
     status: needStatusValues.includes(statusRaw as NeedStatus) ? (statusRaw as NeedStatus) : 'open',
     coveredByName,
+    coveredByPhone,
     targetAmount: Number.isFinite(targetNum) && targetNum > 0 ? targetNum : null,
     coveredAmount: Number.isFinite(coveredNum) && coveredNum > 0 ? coveredNum : 0,
     createdAgo: created ? timeAgo(created) : '',
@@ -2750,6 +2786,24 @@ export async function coverNeed(id: string, amount?: number, message?: string): 
   await authedRaw(`/needs/${id}/cover`, {
     method: 'POST',
     body: JSON.stringify(body),
+  });
+}
+
+// Necesidades del portal CON el teléfono de quien se comprometió (Isabel:
+// GET /organizations/portal/needs). Es para el botón de WhatsApp del aliado; el
+// teléfono NO se expone en las rutas públicas. Soporta ?organizationId= (admin).
+export async function getPortalNeeds(orgId?: string): Promise<Need[]> {
+  const data = await authedRaw<Record<string, unknown>[]>(
+    `/organizations/portal/needs${orgScope(orgId)}`,
+  );
+  return (data ?? []).map(mapNeed);
+}
+
+// Reabrir una necesidad que alguien reservó pero nunca cumplió: vuelve de
+// 'fulfilled' a 'active'. Isabel: PATCH /organizations/portal/needs/:id/reopen (sin body).
+export async function reopenNeed(needId: string, orgId?: string): Promise<void> {
+  await authedRaw(`/organizations/portal/needs/${needId}/reopen${orgScope(orgId)}`, {
+    method: 'PATCH',
   });
 }
 

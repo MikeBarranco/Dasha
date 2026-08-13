@@ -28,6 +28,9 @@ export type Need = {
   animalName: string | null;
   status: NeedStatus;
   coveredByName: string | null;
+  // Teléfono de quien se comprometió (solo en la vista del portal del aliado,
+  // para el botón de WhatsApp). null en las vistas públicas por privacidad.
+  coveredByPhone: string | null;
   // Meta económica y lo reunido (Isabel: targetAmount/coveredAmount). Cuando hay
   // meta se muestra una barra de progreso y se puede aportar parcial; sin meta la
   // necesidad se cubre completa de una vez.
