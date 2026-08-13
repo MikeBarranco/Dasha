@@ -38,7 +38,7 @@ export function LandingPage() {
           {/* Velo suave solo en el hero para que el titular se lea sin competir
               con el fondo; se desvanece hacia la derecha (zona del video). */}
           <div
-            className="pointer-events-none absolute inset-0 bg-gradient-to-b from-lino via-lino/85 to-transparent md:bg-gradient-to-r md:via-lino/60"
+            className="pointer-events-none absolute inset-0 bg-gradient-to-b from-lino via-lino/85 to-transparent lg:bg-gradient-to-r lg:via-lino/60"
             aria-hidden="true"
           />
 
@@ -64,7 +64,7 @@ export function LandingPage() {
           </div>
         </header>
 
-        <div className="relative z-10 flex flex-1 items-start pt-6 md:items-center md:pt-0">
+        <div className="relative z-10 flex flex-1 items-center">
           <div className="mx-auto w-full max-w-7xl px-6 py-10 md:px-12 relative z-20">
             <div className="w-full lg:w-1/2 flex flex-col items-start text-left z-20">
               {/* Encabezado + párrafo + llamado a la acción */}
@@ -103,34 +103,54 @@ export function LandingPage() {
                 </button>
               </motion.div>
             </div>
+
+            {/* Perrita en móvil/tablet: debajo del texto, centrada, sobre un
+                círculo suave. En pantalla grande (lg) se usa la composición de
+                la derecha (abajo), no esta. */}
+            <motion.div
+              initial={{ opacity: 0, y: 30, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 1.6, delay: 1.4, ease: cinematicEase }}
+              className="relative mt-10 flex justify-center lg:hidden"
+            >
+              <div
+                className="absolute bottom-0 left-1/2 h-[260px] w-[260px] -translate-x-1/2 rounded-full bg-gradient-to-br from-cobalto/10 to-naranja/10"
+                aria-hidden="true"
+              />
+              <img
+                src="/brand/perrita-perfil-transparente.png"
+                alt="Perrita Dasha"
+                className="relative w-[230px] object-contain object-bottom sm:w-[260px]"
+              />
+            </motion.div>
           </div>
-          
-          {/* Figuras de Fondo Fijas */}
+
+          {/* Figuras de Fondo Fijas (solo en pantalla grande) */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 2.5, delay: 1.0, ease: cinematicEase }}
-            className="absolute bottom-[25vh] right-[22%] h-[350px] w-[350px] rounded-full bg-naranja z-0 pointer-events-none"
+            className="hidden lg:block absolute bottom-[25vh] right-[22%] h-[350px] w-[350px] rounded-full bg-naranja z-0 pointer-events-none"
             style={{ backgroundImage: 'radial-gradient(white 15%, transparent 16%)', backgroundSize: '20px 20px' }}
           />
           <motion.div
             initial={{ opacity: 0, scale: 0.95, rotate: -15 }}
             animate={{ opacity: 1, scale: 1, rotate: -15 }}
             transition={{ duration: 2.5, delay: 1.5, ease: cinematicEase }}
-            className="absolute -bottom-[5vh] right-0 h-[550px] w-[500px] bg-cobalto/15 z-0 pointer-events-none"
+            className="hidden lg:block absolute -bottom-[5vh] right-0 h-[550px] w-[500px] bg-cobalto/15 z-0 pointer-events-none"
             style={{ borderRadius: '40% 60% 70% 30% / 40% 50% 60% 50%' }}
           />
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 2.5, delay: 2.0, ease: cinematicEase }}
-            className="absolute bottom-[50vh] right-[35%] h-10 w-10 rounded-full bg-purpura z-10 pointer-events-none"
+            className="hidden lg:block absolute bottom-[50vh] right-[35%] h-10 w-10 rounded-full bg-purpura z-10 pointer-events-none"
           />
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 2.5, delay: 2.0, ease: cinematicEase }}
-            className="absolute bottom-[15vh] right-[30%] h-5 w-5 rounded-full bg-naranja z-10 pointer-events-none"
+            className="hidden lg:block absolute bottom-[15vh] right-[30%] h-5 w-5 rounded-full bg-naranja z-10 pointer-events-none"
           />
 
           {/* CONTENEDOR GRÁFICO (Perrita) */}
@@ -138,7 +158,7 @@ export function LandingPage() {
             initial={{ opacity: 0, y: 40, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 2.5, delay: 1.8, ease: cinematicEase }}
-            className="absolute bottom-0 right-0 md:right-[2%] lg:right-[8%] z-10 w-full max-w-[230px] md:max-w-[450px] lg:max-w-[500px] pointer-events-none"
+            className="hidden lg:block absolute bottom-0 right-0 md:right-[2%] lg:right-[8%] z-10 w-full max-w-[230px] md:max-w-[450px] lg:max-w-[500px] pointer-events-none"
           >
             <img 
               src="/brand/perrita-perfil-transparente.png" 
