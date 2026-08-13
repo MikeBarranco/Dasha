@@ -1312,8 +1312,84 @@ export class OrganizationController {
   }
 
   // ==========================================
-  // PORTAL DE ALIADOS (DONACIONES)
+  // DONACIONES Y NECESIDADES
   // ==========================================
+
+  /**
+   * Obtiene el historial de necesidades de la organización
+   */
+  static async getPortalNeeds(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      
+      const myEmployee = await OrganizationController.getPortalContext(req, userId);
+
+      if (!myEmployee) {
+        res.status(403).json({ error: 'No perteneces a ninguna organización' });
+        return;
+      }
+
+      const needs = await prisma.need.findMany({
+        where: { organizationId: myEmployee.organizationId },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          contributions: {
+            orderBy: { createdAt: 'desc' },
+            include: { user: { select: { id: true, name: true, email: true, avatarUrl: true, phone: true } } },
+            take: 1
+          }
+        }
+      });
+      
+      const mappedNeeds = needs.map(need => ({
+        ...need,
+        coveredBy: need.contributions[0]?.user || null
+      }));
+      
+      res.status(200).json(mappedNeeds);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Reabre una necesidad previamente cubierta (cuando el donante no responde)
+   */
+  static async reopenPortalNeed(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      const needId = req.params.needId as string;
+      const myEmployee = await OrganizationController.getPortalContext(req, userId);
+
+      if (!myEmployee) {
+        res.status(403).json({ error: 'No perteneces a ninguna organización' });
+        return;
+      }
+
+      const need = await prisma.need.findUnique({
+        where: { id: needId }
+      });
+
+      if (!need || need.organizationId !== myEmployee.organizationId) {
+        res.status(404).json({ error: 'Necesidad no encontrada o sin acceso' });
+        return;
+      }
+
+      if (need.status !== 'fulfilled') {
+        res.status(400).json({ error: 'La necesidad no está cubierta' });
+        return;
+      }
+
+      const updated = await prisma.need.update({
+        where: { id: needId },
+        data: { status: 'active' }
+      });
+
+      res.status(200).json(updated);
+    } catch (error) {
+      next(error);
+    }
+  }
 
   /**
    * Obtiene el historial de donaciones a la organización
@@ -1322,9 +1398,7 @@ export class OrganizationController {
     try {
       const userId = (req as any).user?.id;
       
-      const myEmployee = await prisma.organizationEmployee.findFirst({
-        where: { userId }
-      });
+      const myEmployee = await OrganizationController.getPortalContext(req, userId);
 
       if (!myEmployee) {
         res.status(403).json({ error: 'No perteneces a ninguna organización' });

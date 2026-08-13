@@ -36,6 +36,9 @@ router.get('/portal/donations', requireAuth, OrganizationController.getPortalDon
 router.patch('/portal/donations/:donationId/approve', requireAuth, OrganizationController.approvePortalDonation);
 router.patch('/portal/donations/:donationId/reject', requireAuth, OrganizationController.rejectPortalDonation);
 
+router.get('/portal/needs', requireAuth, OrganizationController.getPortalNeeds);
+router.patch('/portal/needs/:needId/reopen', requireAuth, OrganizationController.reopenPortalNeed);
+
 // ==========================================
 // DIRECTORIO PUBLICO
 // ==========================================
