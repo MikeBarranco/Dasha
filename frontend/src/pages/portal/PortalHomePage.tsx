@@ -14,10 +14,12 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { Avatar } from '../../components/ui/Avatar';
-import { getAlly } from '../../lib/api';
+import { getAlly, getPortalStats, type PortalStats } from '../../lib/api';
 import { mockAllies, allyTypeLabels, type Ally } from '../../data/mockAllies';
 import { useAllyPortal } from '../../lib/useAllyPortal';
 import { openOnboarding } from '../../lib/onboarding';
+
+const formatMoney = (value: number) => `$${value.toLocaleString('es-MX')}`;
 
 function StatCard({
   icon: Icon,
@@ -40,6 +42,8 @@ function StatCard({
 export function PortalHomePage() {
   const ctx = useAllyPortal();
   const [ally, setAlly] = useState<Ally | null | undefined>(undefined);
+  // Contadores del dashboard (Isabel: /organizations/portal/profile → stats).
+  const [stats, setStats] = useState<PortalStats | null>(null);
   // En modo admin (viendo el portal de un aliado) conservamos ?orgId= al navegar
   // entre secciones para no perder de qué organización se trata.
   const q = ctx.adminOrgId ? `?orgId=${ctx.adminOrgId}` : '';
@@ -70,6 +74,17 @@ export function PortalHomePage() {
       active = false;
     };
   }, [ctx.organizationId, ctx.preview]);
+
+  useEffect(() => {
+    if (ctx.preview) return;
+    let active = true;
+    getPortalStats(ctx.adminOrgId).then((data) => {
+      if (active) setStats(data);
+    });
+    return () => {
+      active = false;
+    };
+  }, [ctx.preview, ctx.adminOrgId]);
 
   if (ally === undefined) {
     return (
@@ -120,7 +135,11 @@ export function PortalHomePage() {
       <section className="grid grid-cols-3 gap-3">
         <StatCard icon={PawPrint} value={animals.length} label="Perritos" />
         <StatCard icon={Users} value={team.length} label="Equipo" />
-        <StatCard icon={HeartHandshake} value="—" label="Donaciones" />
+        <StatCard
+          icon={HeartHandshake}
+          value={stats ? formatMoney(stats.totalDonations) : '—'}
+          label="Donaciones"
+        />
       </section>
 
       <Link

@@ -2193,7 +2193,11 @@ function mapAllyAnimalLite(raw: Record<string, unknown>): AllyAnimal {
     id: allyStr(raw.id ?? raw._id),
     name: allyStr(raw.name) || 'Sin nombre',
     photo: photo || '/placeholder-animal.svg',
-    status: allyStr(raw.statusLabel ?? raw.status),
+    // Traducimos el slug del backend (in_treatment, looking_for_adoption…) a
+    // español; antes salía el estado en inglés en el perfil público del aliado.
+    status:
+      animalStatusLabels[String(raw.status ?? '')] ??
+      (allyStr(raw.statusLabel ?? raw.status) || 'En tratamiento'),
   };
 }
 
@@ -2243,6 +2247,33 @@ export async function getAlly(id: string): Promise<Ally | null> {
     animals: animalsRaw.map((animal) => mapAllyAnimalLite(animal as Record<string, unknown>)),
     paymentInfo: mapAllyPaymentInfo(raw.paymentInfo ?? raw.payment_info),
   };
+}
+
+// Perfil del portal con estadísticas del dashboard. Isabel: GET
+// /organizations/portal/profile — en la raíz trae `stats` con los contadores.
+// Soporta ?organizationId= para que un admin vea el portal de un aliado.
+export type PortalStats = {
+  teamMembers: number;
+  rescuedAnimals: number;
+  totalDonations: number;
+};
+
+export async function getPortalStats(orgId?: string): Promise<PortalStats | null> {
+  try {
+    const raw = await authedRaw<Record<string, unknown>>(
+      `/organizations/portal/profile${orgScope(orgId)}`,
+    );
+    const s =
+      raw && typeof raw.stats === 'object' ? (raw.stats as Record<string, unknown>) : null;
+    if (!s) return null;
+    return {
+      teamMembers: Number(s.teamMembers ?? 0) || 0,
+      rescuedAnimals: Number(s.rescuedAnimals ?? 0) || 0,
+      totalDonations: Number(s.totalDonations ?? 0) || 0,
+    };
+  } catch {
+    return null;
+  }
 }
 
 // --- Traslado en vivo tipo Uber (rescue_assignments) ---
