@@ -1156,7 +1156,9 @@ export class OrganizationController {
         if (app.message && app.message.trim().startsWith('{')) {
           try {
             extraFields = JSON.parse(app.message);
-          } catch (e) {}
+          } catch (e) {
+            console.error('Failed to parse adoption message JSON', e);
+          }
         } else if (app.message && app.message.includes('Tipo de vivienda:')) {
           const lines = app.message.split('\n');
           for (const line of lines) {
