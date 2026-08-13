@@ -2700,6 +2700,8 @@ function mapNeed(raw: Record<string, unknown>): Need {
   // Si el backend registró que alguien la aceptó pero el status sigue en "open"
   // (o vacío), la mostramos como cubierta para que se refleje y persista.
   if (isAccepted && (statusRaw === '' || statusRaw === 'open')) statusRaw = 'covered';
+  const targetNum = Number(raw.targetAmount ?? raw.target_amount ?? 0);
+  const coveredNum = Number(raw.coveredAmount ?? raw.covered_amount ?? 0);
   const created = allyStr(raw.createdAt ?? raw.created_at);
   return {
     id: allyStr(raw.id ?? raw._id),
@@ -2712,6 +2714,8 @@ function mapNeed(raw: Record<string, unknown>): Need {
     animalName: animal ? allyStr(animal.name) : allyStr(raw.animalName) || null,
     status: needStatusValues.includes(statusRaw as NeedStatus) ? (statusRaw as NeedStatus) : 'open',
     coveredByName,
+    targetAmount: Number.isFinite(targetNum) && targetNum > 0 ? targetNum : null,
+    coveredAmount: Number.isFinite(coveredNum) && coveredNum > 0 ? coveredNum : 0,
     createdAgo: created ? timeAgo(created) : '',
   };
 }
@@ -2735,12 +2739,17 @@ export async function getActiveNeeds(): Promise<Need[]> {
   }
 }
 
-// Un usuario con sesión se compromete a cubrir una necesidad. POST /needs/:id/cover
-// (queda en el documento de Isabel).
-export async function coverNeed(id: string, message?: string): Promise<void> {
+// Un usuario con sesión se compromete a cubrir una necesidad. POST /needs/:id/cover.
+// Isabel acepta `amount` para aportes PARCIALES (suma a coveredAmount y, si se
+// alcanza targetAmount, marca la necesidad como cubierta). Sin `amount` se cubre
+// completa. El backend notifica al aliado con el contacto del usuario.
+export async function coverNeed(id: string, amount?: number, message?: string): Promise<void> {
+  const body: Record<string, unknown> = {};
+  if (typeof amount === 'number' && amount > 0) body.amount = amount;
+  if (message) body.message = message;
   await authedRaw(`/needs/${id}/cover`, {
     method: 'POST',
-    body: JSON.stringify(message ? { message } : {}),
+    body: JSON.stringify(body),
   });
 }
 
