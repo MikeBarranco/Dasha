@@ -883,7 +883,15 @@ export class OrganizationController {
           condition: condition || 'stable',
           description: description || 'Ingreso directo al refugio',
           status: 'closed',
-          address: 'Ingreso directo'
+          address: 'Ingreso directo',
+          photos: uploadedPhotos.length > 0 ? {
+            create: uploadedPhotos.map((p, i) => ({
+              url: p.url,
+              publicId: p.publicId,
+              orderIndex: i,
+              uploadedBy: userId
+            }))
+          } : undefined
         }
       });
 
@@ -1721,6 +1729,13 @@ export class OrganizationController {
       const parsedPhotoUrls = photoUrls ? photoUrls : (photoUrl ? [photoUrl] : null);
 
       let record: any;
+      
+      const safeDateStr = (date && date !== 'Hoy') ? date : undefined;
+      let validDate = new Date();
+      if (safeDateStr) {
+        const d = new Date(safeDateStr);
+        if (!isNaN(d.getTime())) validDate = d;
+      }
 
       if (type === 'vacuna' || type === 'vaccine') {
         record = await prisma.vaccination.create({
@@ -1728,7 +1743,7 @@ export class OrganizationController {
             animalId,
             veterinarianId: userId,
             vaccineName: title || 'Vacuna',
-            appliedDate: date ? new Date(date) : new Date(),
+            appliedDate: validDate,
             notes: notes || null
           }
         });
@@ -1741,7 +1756,7 @@ export class OrganizationController {
             description: title || 'Sin título',
             prescription: notes || null,
             photoUrls: parsedPhotoUrls,
-            createdAt: date ? new Date(date) : new Date()
+            createdAt: validDate
           }
         });
       }

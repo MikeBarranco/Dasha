@@ -60,6 +60,11 @@ router.post('/portal/animals/direct-intake', requireAuth, OrganizationController
 
 import { NeedController } from '../controllers/need.controller';
 import { EventController } from '../controllers/event.controller';
+
+// IMPORTANT: /portal/needs MUST be defined before /:id/needs to prevent "portal" from being parsed as a UUID
+router.get('/organizations/portal/needs', requireAuth, NeedController.getMyPortalNeeds);
+router.patch('/organizations/portal/needs/:needId/reopen', requireAuth, OrganizationController.reopenPortalNeed);
+
 router.get('/organizations/:id/needs', NeedController.getOrganizationNeeds);
 router.post('/organizations/:id/needs', requireAuth, NeedController.createNeed);
 router.patch('/organizations/:id/needs/:needId', requireAuth, (req, res, next) => {
