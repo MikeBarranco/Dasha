@@ -117,6 +117,9 @@ export class AnimalService {
         },
         medicalRecords: {
           orderBy: { createdAt: 'desc' }
+        },
+        vaccinations: {
+          orderBy: { appliedDate: 'desc' }
         }
       },
       orderBy: { createdAt: 'desc' }
@@ -126,6 +129,12 @@ export class AnimalService {
       ...animal,
       medicalRecord: {
         sterilized: animal.isNeutered,
+        vaccinations: animal.vaccinations.map(v => ({
+          id: v.id,
+          name: v.vaccineName,
+          date: v.appliedDate,
+          notes: v.notes
+        })),
         entries: animal.medicalRecords.map(r => ({
           id: r.id,
           type: r.recordType,
@@ -151,6 +160,12 @@ export class AnimalService {
             veterinarian: { select: { name: true, email: true } }
           }
         },
+        vaccinations: {
+          orderBy: { appliedDate: 'desc' },
+          include: {
+            veterinarian: { select: { name: true, email: true } }
+          }
+        },
         organization: { select: { name: true } },
         currentFoster: { select: { name: true } },
         timeline: { orderBy: { date: 'asc' } }
@@ -163,6 +178,12 @@ export class AnimalService {
       ...animal,
       medicalRecord: {
         sterilized: animal.isNeutered,
+        vaccinations: animal.vaccinations.map(v => ({
+          id: v.id,
+          name: v.vaccineName,
+          date: v.appliedDate,
+          notes: v.notes
+        })),
         entries: animal.medicalRecords.map(r => ({
           id: r.id,
           type: r.recordType,
