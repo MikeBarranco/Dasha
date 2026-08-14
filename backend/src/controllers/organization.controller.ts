@@ -882,7 +882,7 @@ export class OrganizationController {
           size: size || 'medium',
           condition: condition || 'stable',
           description: description || 'Ingreso directo al refugio',
-          status: 'resolved',
+          status: 'closed',
           address: 'Ingreso directo',
           photos: uploadedPhotos.length > 0 ? {
             create: uploadedPhotos.map((p, i) => ({
