@@ -953,10 +953,12 @@ export class OrganizationController {
         }
       }
 
+      const mappedData = { ...data, recordType: OrganizationController.mapToPrismaRecordType(data.recordType || '') };
+      
       const record = await AnimalService.addMedicalRecord(
         animalId,
         userId, // El ID del veterinario que hace la nota
-        data,
+        mappedData,
         uploadedPhotosData
       );
 

@@ -32,6 +32,29 @@ export class NeedController {
     }
   }
 
+  // GET /api/v1/organizations/portal/needs - Listar necesidades del portal
+  static async getMyPortalNeeds(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      const myEmployee = await prisma.organizationEmployee.findFirst({
+        where: { userId }
+      });
+
+      if (!myEmployee) {
+        res.status(403).json({ error: 'No perteneces a ninguna organización' });
+        return;
+      }
+
+      const needs = await prisma.need.findMany({
+        where: { organizationId: myEmployee.organizationId },
+        orderBy: { createdAt: 'desc' }
+      });
+      res.status(200).json(needs);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // GET /api/v1/organizations/:id/needs - Listar necesidades de una org específica
   static async getOrganizationNeeds(req: Request, res: Response, next: NextFunction) {
     try {

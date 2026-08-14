@@ -28,6 +28,8 @@ router.post('/portal/animals/:animalId/photos', requireAuth, OrganizationControl
 router.post('/portal/animals/:animalId/records', requireAuth, OrganizationController.addPortalAnimalRecord);
 router.post('/portal/animals/:animalId/timeline', requireAuth, OrganizationController.addPortalTimelineEvent);
 
+router.get('/portal/needs', requireAuth, NeedController.getMyPortalNeeds);
+
 router.get('/adoption-requests', requireAuth, OrganizationController.getPortalAdoptions);
 router.patch('/adoption-requests/:applicationId/approve', requireAuth, OrganizationController.approvePortalAdoption);
 router.patch('/adoption-requests/:applicationId/reject', requireAuth, OrganizationController.rejectPortalAdoption);
