@@ -632,6 +632,8 @@ export async function getLostPets(): Promise<LostPet[]> {
       contactPhone:
         String(raw.contactWhatsapp ?? raw.contactPhone ?? raw.whatsapp ?? '') || undefined,
       reward: raw.reward ? String(raw.reward) : undefined,
+      // Colonia del reporte (backend: colonyName). Se muestra en la lista y el popup.
+      colonyName: String(raw.colonyName ?? raw.colony_name ?? raw.colonia ?? '') || undefined,
     };
   });
 }
@@ -1129,8 +1131,11 @@ export async function getMyReports(): Promise<Report[]> {
       raw.colony && typeof raw.colony === 'object'
         ? (raw.colony as Record<string, unknown>)
         : null;
+    // raw.address como ultimo respaldo: los animales de "Dar de alta" (ingreso
+    // directo) no tienen coordenadas ni colonia, y el backend les pone
+    // address = "Ingreso directo" para que no salga "Sin colonia".
     const coloniaName = String(
-      colonyObj?.name ?? raw.colonia ?? raw.colonyName ?? raw.colony_name ?? '',
+      colonyObj?.name ?? raw.colonia ?? raw.colonyName ?? raw.colony_name ?? raw.address ?? '',
     ).trim();
     return {
       id: String(raw.id ?? ''),
@@ -1488,7 +1493,10 @@ export async function updateMyOrgAnimalStatus(
 // puede cualquiera). Mantenemos orgScope por si el admin necesita acotar.
 export async function updateMyOrgAnimalDetails(
   id: string,
-  details: { name?: string; diagnosis?: string },
+  // totalCostNeeded: costo estimado de recuperacion que captura el aliado; es la
+  // META de la barra de apadrinamiento (PATCH /portal/animals/:id lo acepta y
+  // persiste, junto con name/diagnosis).
+  details: { name?: string; diagnosis?: string; totalCostNeeded?: number },
   orgId?: string,
 ): Promise<void> {
   await authedRaw(`/portal/animals/${id}${orgScope(orgId)}`, {

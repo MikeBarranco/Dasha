@@ -77,13 +77,21 @@ export function PortalAnimalSheet({
   const timeline = animal.timeline ?? [];
   const changed = status !== animal.status;
 
-  // Datos del caso editables: nombre provisional y padecimientos.
+  // Datos del caso editables: nombre provisional, padecimientos y costo estimado.
   const [name, setName] = useState(animal.name);
   const [diagnosis, setDiagnosis] = useState(animal.diagnosis);
+  // Costo estimado de recuperacion (meta de la barra de apadrinamiento). Se guarda
+  // como string para el input y se sanea a un entero >= 0 al usarlo (evita NaN y
+  // valores negativos si el usuario escribe algo raro).
+  const [cost, setCost] = useState(animal.totalNeeded ? String(animal.totalNeeded) : '');
+  const costNum = Math.max(0, Math.round(Number(cost) || 0));
   const [savingDetails, setSavingDetails] = useState(false);
   const [detailsSaved, setDetailsSaved] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
-  const detailsChanged = name.trim() !== animal.name || diagnosis.trim() !== animal.diagnosis;
+  const detailsChanged =
+    name.trim() !== animal.name ||
+    diagnosis.trim() !== animal.diagnosis ||
+    costNum !== (animal.totalNeeded ?? 0);
 
   // Galería del caso: fotos del reporte, del voluntario y del aliado. El aliado
   // suma fotos de progreso. Filtramos el placeholder para saber si hay fotos reales.
@@ -107,11 +115,11 @@ export function PortalAnimalSheet({
       if (!preview) {
         await updateMyOrgAnimalDetails(
           animal.id,
-          { name: cleanName, diagnosis: cleanDiagnosis },
+          { name: cleanName, diagnosis: cleanDiagnosis, totalCostNeeded: costNum },
           orgId,
         );
       }
-      onUpdated(animal.id, { name: cleanName, diagnosis: cleanDiagnosis });
+      onUpdated(animal.id, { name: cleanName, diagnosis: cleanDiagnosis, totalNeeded: costNum });
       setDetailsSaved(true);
     } catch (err) {
       setDetailsError(err instanceof Error ? err.message : 'No se pudieron guardar los datos.');
@@ -340,6 +348,32 @@ export function PortalAnimalSheet({
                 className="w-full resize-none rounded-lg border border-neutral-200 px-3 py-2 text-sm text-neutral-700 outline-none focus:ring-2 focus:ring-cobalto/30"
                 placeholder="Qué tiene y qué tratamiento lleva"
               />
+            </label>
+            {/* Costo estimado: meta de la barra de apadrinamiento. inputMode numeric
+                para teclado de números en celular; solo dejamos dígitos para que el
+                usuario no pueda meter letras ni signos y romper la barra. */}
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-neutral-600">
+                Costo estimado de recuperación (opcional)
+              </span>
+              <div className="flex items-center gap-2 rounded-lg border border-neutral-200 px-3 focus-within:ring-2 focus-within:ring-cobalto/30">
+                <span className="text-sm text-neutral-400">$</span>
+                <input
+                  value={cost}
+                  onChange={(event) => {
+                    // Solo dígitos, máx 7 (hasta 9,999,999) para no desbordar.
+                    setCost(event.target.value.replace(/\D/g, '').slice(0, 7));
+                    setDetailsSaved(false);
+                  }}
+                  inputMode="numeric"
+                  className="w-full bg-transparent py-2 text-sm text-neutral-700 outline-none"
+                  placeholder="Ej. 1500"
+                />
+                <span className="text-xs text-neutral-400">MXN</span>
+              </div>
+              <span className="mt-1 block text-[11px] text-neutral-400">
+                Es la meta para la barra de apadrinamiento. Déjalo en blanco si aún no la sabes.
+              </span>
             </label>
             {detailsError && <p className="text-xs text-alerta">{detailsError}</p>}
             {detailsSaved && !detailsChanged && (
