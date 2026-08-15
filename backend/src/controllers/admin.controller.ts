@@ -114,7 +114,11 @@ export class AdminController {
         await tx.caseAction.deleteMany({ where: { actorId: id } });
         await tx.rescueAssignment.deleteMany({ where: { volunteerId: id } });
         await tx.resource.deleteMany({ where: { providerId: id } });
-        await tx.donation.deleteMany({ where: { userId: id } });
+        const userDonations = await tx.donation.findMany({ where: { userId: id }, select: { id: true } });
+            if (userDonations.length > 0) {
+              await tx.donationProof.deleteMany({ where: { donationId: { in: userDonations.map(d => d.id) } } });
+            }
+            await tx.donation.deleteMany({ where: { userId: id } });
         await tx.forumVote.deleteMany({ where: { userId: id } });
         await tx.forumReply.deleteMany({ where: { userId: id } });
         await tx.forumPost.deleteMany({ where: { userId: id } });
@@ -307,7 +311,11 @@ export class AdminController {
           await tx.medicalRecord.deleteMany({ where: { animalId: ap.id } });
           await tx.vaccination.deleteMany({ where: { animalId: ap.id } });
           await tx.resource.deleteMany({ where: { animalId: ap.id } });
-          await tx.donation.deleteMany({ where: { animalId: ap.id } });
+          const donations = await tx.donation.findMany({ where: { animalId: ap.id }, select: { id: true } });
+            if (donations.length > 0) {
+              await tx.donationProof.deleteMany({ where: { donationId: { in: donations.map(d => d.id) } } });
+            }
+            await tx.donation.deleteMany({ where: { animalId: ap.id } });
           await tx.caseAction.deleteMany({ where: { animalId: ap.id } });
           await tx.fosterAssignment.deleteMany({ where: { animalId: ap.id } });
           await tx.adoptionApplication.deleteMany({ where: { animalId: ap.id } });
@@ -466,8 +474,18 @@ export class AdminController {
   static async deleteOrganization(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
-      await prisma.organization.delete({
-        where: { id }
+      await prisma.$transaction(async (tx) => {
+        await tx.report.updateMany({ where: { destinationOrgId: id }, data: { destinationOrgId: null } });
+        await tx.animalProfile.updateMany({ where: { organizationId: id }, data: { organizationId: null } });
+        await tx.resource.updateMany({ where: { organizationId: id }, data: { organizationId: null } });
+        await tx.organizationEmployee.deleteMany({ where: { organizationId: id } });
+        await tx.discountCode.deleteMany({ where: { organizationId: id } });
+        const needs = await tx.need.findMany({ where: { organizationId: id }, select: { id: true } });
+        if (needs.length > 0) {
+          await tx.needContribution.deleteMany({ where: { needId: { in: needs.map(n => n.id) } } });
+          await tx.need.deleteMany({ where: { organizationId: id } });
+        }
+        await tx.organization.delete({ where: { id } });
       });
       res.status(200).json({ message: 'Organización eliminada correctamente' });
     } catch (error) {
