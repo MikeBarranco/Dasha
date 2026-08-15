@@ -105,7 +105,8 @@ export function LostPetDetail({ pet, onClose }: LostPetDetailProps) {
               <Clock className="h-4 w-4" /> Perdido hace {days} {days === 1 ? 'día' : 'días'}
             </span>
             <span className="flex items-center gap-1">
-              <Search className="h-4 w-4" /> Zona de búsqueda de {pet.searchRadiusKm} km
+              {/* Capado a 1 km para ser consistente con el circulo del mapa (datos viejos podian traer 3-5 km) */}
+              <Search className="h-4 w-4" /> Zona de búsqueda de {Math.min(pet.searchRadiusKm || 1, 1)} km
             </span>
           </div>
 

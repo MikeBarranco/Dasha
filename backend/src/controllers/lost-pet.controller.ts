@@ -61,7 +61,10 @@ export class LostPetController {
         });
 
         // B. Crear el LostPet vinculado usando Raw Query (porque lastSeenLocation es Unsupported y obligatorio)
-        const radius = searchRadiusKm || 3;
+        // Radio de busqueda capado a MAXIMO 1 km (decision de producto): un circulo
+        // mayor se ve enorme en el mapa y no aporta. Si llega vacio o algo invalido,
+        // usamos 1. Nunca guardamos mas de 1 km aunque el cliente mande otra cosa.
+        const radius = Math.min(Number(searchRadiusKm) || 1, 1);
         const rewardVal = reward != null ? Number(reward) : null;
         const seenAt = lastSeenAt ? new Date(lastSeenAt) : new Date();
         const safeContactName = contactName || null;

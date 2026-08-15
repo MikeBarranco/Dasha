@@ -709,7 +709,9 @@ export function MapView({
         const source = map.getSource('perdidos-zonas') as maplibregl.GeoJSONSource | undefined;
         const features = inPerdidos
           ? lostPetsRef.current.map((pet) =>
-              circleFeature(pet.lng, pet.lat, pet.searchRadiusKm, lostColor(pet.lostAt)),
+              // Capamos el circulo a 1 km aunque un reporte viejo tenga guardado 3 o 5 km
+              // (asi ninguno se ve enorme en el mapa). Nuevos ya llegan capados del backend.
+              circleFeature(pet.lng, pet.lat, Math.min(pet.searchRadiusKm || 1, 1), lostColor(pet.lostAt)),
             )
           : [];
         source?.setData({ type: 'FeatureCollection', features });
