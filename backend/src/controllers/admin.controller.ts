@@ -222,13 +222,14 @@ export class AdminController {
         orderBy: { createdAt: 'desc' },
         include: {
           user: { select: { name: true, email: true } },
-          photos: true
+          photos: true,
+          colony: { select: { name: true } }
         }
       });
 
       const mappedReports = reports.map(r => ({
         ...r,
-        colonia: r.address || 'Sin colonia'
+        colonia: r.colony?.name || r.address || 'Sin colonia'
       }));
 
       res.status(200).json(mappedReports);
