@@ -157,9 +157,11 @@ export class LostPetController {
           r.created_at as "createdAt",
           ST_X(lp.last_seen_location::geometry) as lng,
           ST_Y(lp.last_seen_location::geometry) as lat,
+          c.name as "colonyName",
           (SELECT url FROM report_photos rp WHERE rp.report_id = r.id ORDER BY rp.created_at ASC LIMIT 1) as photo
         FROM lost_pets lp
         JOIN reports r ON lp.report_id = r.id
+        LEFT JOIN colonies c ON r.colony_id = c.id
         WHERE lp.is_found = false
           AND r.status = 'active'
         ORDER BY r.created_at DESC;
