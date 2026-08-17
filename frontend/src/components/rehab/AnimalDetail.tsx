@@ -75,7 +75,7 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
   const touchStartX = useRef(0);
   const multiTouch = useRef(false);
   const photo = animal.photos[activePhoto];
-  const { dragControls, scrollRef, onPointerDown, onPointerMove, onDragEnd } =
+  const { dragControls, scrollRef, onPointerDown, onPointerMove, onHandlePointerDown, onDragEnd } =
     useSheetDismiss(onClose);
 
   const goNext = () => setActivePhoto((index) => (index + 1) % total);
@@ -107,10 +107,16 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
         onPointerMove={onPointerMove}
         onDragEnd={onDragEnd}
       >
+        {/* Tirador para cerrar arrastrando en celular. touch-none evita que el
+            navegador haga scroll mientras se arrastra; el area es amplia para que
+            sea facil de agarrar. En escritorio (sm:) se oculta. */}
         <div
-          className="pointer-events-none absolute left-1/2 top-2.5 z-20 h-1.5 w-10 -translate-x-1/2 rounded-full bg-white/90 shadow-sm sm:hidden"
+          onPointerDown={onHandlePointerDown}
+          className="absolute left-1/2 top-0 z-20 flex h-8 w-20 -translate-x-1/2 touch-none cursor-grab items-start justify-center pt-2.5 sm:hidden"
           aria-hidden="true"
-        />
+        >
+          <div className="h-1.5 w-10 rounded-full bg-white/90 shadow-sm" />
+        </div>
         <div className="relative">
           <button
             type="button"

@@ -32,9 +32,19 @@ export function useSheetDismiss(onClose: () => void) {
     }
   };
 
+  // Tirador (grabber) de la parte superior: al tocarlo con el dedo iniciamos el
+  // arrastre de una vez, sin importar el scroll. Es la forma confiable de cerrar en
+  // celular cuando la hoja es larga (fotos, donacion, adopcion, cartilla...). Con
+  // mouse no hace nada (en escritorio se cierra con la X o clic afuera).
+  const onHandlePointerDown = (event: React.PointerEvent) => {
+    if (event.pointerType === 'mouse') return;
+    decided.current = true;
+    dragControls.start(event);
+  };
+
   const onDragEnd = (_event: unknown, info: PanInfo) => {
     if (info.offset.y > 120 || info.velocity.y > 500) onClose();
   };
 
-  return { dragControls, scrollRef, onPointerDown, onPointerMove, onDragEnd };
+  return { dragControls, scrollRef, onPointerDown, onPointerMove, onHandlePointerDown, onDragEnd };
 }
