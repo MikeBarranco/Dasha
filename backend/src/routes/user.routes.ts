@@ -64,6 +64,9 @@ router.get('/organization/team', requireAuth, OrganizationController.getMyPortal
 // POST /api/v1/me/organization/team
 router.post('/organization/team', requireAuth, OrganizationController.addTeamMember);
 
+// PATCH /api/v1/me/organization/team/:employeeId (actualizar puesto/título)
+router.patch('/organization/team/:employeeId', requireAuth, OrganizationController.updateTeamMember);
+
 // DELETE /api/v1/me/organization/team/:employeeId
 router.delete('/organization/team/:employeeId', requireAuth, OrganizationController.removeTeamMember);
 

@@ -1,17 +1,18 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { initAnalytics, trackPageView } from '../../lib/analytics';
+import { initAnalytics, grantAnalyticsConsent, trackPageView } from '../../lib/analytics';
 import { hasAnalyticsConsent } from '../../lib/cookieConsent';
 
-// Arranca Analytics una vez (SOLO si el usuario aceptó las cookies de analítica) y
-// registra una vista cada vez que cambia la ruta. Si no hay consentimiento,
-// initAnalytics no corre y trackPageView queda como no-op; al aceptar en el banner
-// de cookies, este arranca Analytics en ese momento.
+// Con Consent Mode: cargamos la etiqueta de Google en cada visita de producción
+// (analítica DENEGADA por defecto → pings anónimos, sin cookies). Si el usuario ya
+// había aceptado "todas" antes, subimos el consentimiento a completo. Luego
+// registramos una vista en cada cambio de ruta.
 export function AnalyticsTracker() {
   const location = useLocation();
 
   useEffect(() => {
-    if (hasAnalyticsConsent()) initAnalytics();
+    initAnalytics();
+    if (hasAnalyticsConsent()) grantAnalyticsConsent();
   }, []);
 
   useEffect(() => {

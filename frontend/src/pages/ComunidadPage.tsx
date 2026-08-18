@@ -15,8 +15,10 @@ import {
   ChevronRight,
   Loader2,
   CornerDownRight,
+  Search,
 } from 'lucide-react';
 import { PageHeader } from '../components/ui/PageHeader';
+import { ShareButton } from '../components/ui/ShareButton';
 import { Avatar } from '../components/ui/Avatar';
 import { cn } from '../lib/cn';
 import { useAuth } from '../lib/useAuth';
@@ -68,6 +70,11 @@ export function ComunidadPage() {
   const [interested, setInterested] = useState<Set<string>>(new Set());
   const [liked, setLiked] = useState<Set<string>>(new Set());
   const [zoomImage, setZoomImage] = useState<string | null>(null);
+  // Evento a resaltar cuando se llega con ?evento=id (desde el perfil del aliado).
+  const [highlightEvent, setHighlightEvent] = useState<string | null>(null);
+  // Buscador y filtro por tipo para la lista de eventos.
+  const [eventQuery, setEventQuery] = useState('');
+  const [eventTypeFilter, setEventTypeFilter] = useState('');
 
   const [text, setText] = useState('');
   const [photo, setPhoto] = useState<string | null>(null);
@@ -100,6 +107,19 @@ export function ComunidadPage() {
         const mine = data.filter((event) => event.isInterested).map((event) => event.id);
         if (mine.length) {
           setInterested((current) => new Set([...current, ...mine]));
+        }
+        // Deep link a un evento concreto (?evento=id), desde el perfil del aliado:
+        // abre la pestaña de eventos, hace scroll a la tarjeta y la resalta un momento.
+        const eventId = new URLSearchParams(window.location.search).get('evento');
+        if (eventId && data.some((event) => event.id === eventId)) {
+          setTab('eventos');
+          setHighlightEvent(eventId);
+          window.setTimeout(() => {
+            document
+              .getElementById(`event-${eventId}`)
+              ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 150);
+          window.setTimeout(() => setHighlightEvent(null), 2500);
         }
       })
       .catch(() => active && setEvents([]));
@@ -333,6 +353,18 @@ export function ComunidadPage() {
     }
   };
 
+  // Tipos presentes (para los chips de filtro) y eventos ya filtrados por
+  // tipo + búsqueda por nombre.
+  const eventTypes = events ? Array.from(new Set(events.map((event) => event.type))) : [];
+  const shownEvents = events
+    ? events.filter(
+        (event) =>
+          (eventTypeFilter === '' || event.type === eventTypeFilter) &&
+          (eventQuery.trim() === '' ||
+            event.title.toLowerCase().includes(eventQuery.trim().toLowerCase())),
+      )
+    : null;
+
   return (
     <div>
       <PageHeader
@@ -376,6 +408,51 @@ export function ComunidadPage() {
 
       {tab === 'eventos' ? (
         <div className="space-y-4">
+          {events !== null && events.length > 0 && (
+            <div className="space-y-3">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+                <input
+                  value={eventQuery}
+                  onChange={(event) => setEventQuery(event.target.value)}
+                  placeholder="Buscar evento por nombre"
+                  className="w-full rounded-xl border border-neutral-200 bg-white py-2.5 pl-9 pr-3 text-sm text-neutral-700 outline-none focus:ring-2 focus:ring-cobalto/30"
+                />
+              </div>
+              {eventTypes.length > 1 && (
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEventTypeFilter('')}
+                    className={cn(
+                      'rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+                      eventTypeFilter === ''
+                        ? 'border-cobalto bg-cobalto text-white'
+                        : 'border-neutral-200 bg-white text-neutral-600 hover:border-cobalto/40',
+                    )}
+                  >
+                    Todos
+                  </button>
+                  {eventTypes.map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setEventTypeFilter(type)}
+                      className={cn(
+                        'rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+                        eventTypeFilter === type
+                          ? 'border-cobalto bg-cobalto text-white'
+                          : 'border-neutral-200 bg-white text-neutral-600 hover:border-cobalto/40',
+                      )}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {events === null &&
             [0, 1].map((index) => (
               <div key={index} className="h-64 animate-pulse rounded-2xl bg-neutral-100" />
@@ -396,15 +473,27 @@ export function ComunidadPage() {
             </div>
           )}
 
-          {events?.map((event, index) => {
+          {events !== null && events.length > 0 && shownEvents?.length === 0 && (
+            <p className="rounded-2xl border border-dashed border-neutral-300 bg-white/60 px-6 py-8 text-center text-sm text-neutral-500">
+              No hay eventos que coincidan con tu búsqueda.
+            </p>
+          )}
+
+          {shownEvents?.map((event, index) => {
             const isInterested = interested.has(event.id);
             return (
               <motion.article
                 key={event.id}
+                id={`event-${event.id}`}
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.05, ease: 'easeOut' }}
-                className="overflow-hidden rounded-2xl border border-neutral-200 bg-white"
+                className={cn(
+                  'overflow-hidden rounded-2xl border bg-white transition-shadow',
+                  highlightEvent === event.id
+                    ? 'border-cobalto ring-2 ring-cobalto/40'
+                    : 'border-neutral-200',
+                )}
               >
                 <div className="relative">
                   <button
@@ -426,6 +515,13 @@ export function ComunidadPage() {
                   <span className="pointer-events-none absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-cobalto">
                     {event.type}
                   </span>
+                  {/* Compartir: copia/comparte el enlace directo a este evento. */}
+                  <ShareButton
+                    title={`${event.title} · Dasha`}
+                    text={`Evento en Dasha: ${event.title}${event.date ? ` (${event.date})` : ''}`}
+                    url={`/comunidad?tab=eventos&evento=${event.id}`}
+                    className="absolute right-3 top-3"
+                  />
                 </div>
                 <div className="p-4">
                   <h3 className="font-display text-lg font-bold text-cobalto">{event.title}</h3>

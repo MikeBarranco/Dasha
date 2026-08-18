@@ -10,6 +10,9 @@ export type LostPet = {
   description?: string;
   contactPhone?: string;
   reward?: string;
+  // Nombre de la colonia donde se perdio (lo regresa el backend en /lost-pets).
+  // Puede venir vacio si el reporte no tiene colonia asignada.
+  colonyName?: string;
 };
 
 // El modo Perdidos del mapa usa datos reales de getLostPets(); aquí solo viven

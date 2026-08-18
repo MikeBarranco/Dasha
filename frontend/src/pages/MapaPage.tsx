@@ -17,6 +17,7 @@ import {
 } from '../lib/reportFilters';
 import { MapModeSwitch } from '../components/map/MapModeSwitch';
 import { AllyFilters } from '../components/map/AllyFilters';
+import { LostPetFilters, type LostSpecies } from '../components/map/LostPetFilters';
 import { type Report } from '../data/mockReports';
 import { type Ally, type AllyType } from '../data/mockAllies';
 import { type LostPet } from '../data/mockLostPets';
@@ -32,9 +33,9 @@ export function MapaPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [reports, setReports] = useState<Report[] | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
-  const [panelOpen, setPanelOpen] = useState(
-    () => Boolean(searchParams.get('aliado') || searchParams.get('perdido')),
-  );
+  // La lista de la zona se abre por defecto en cualquier modo (calle, aliados o
+  // perdidos): al entrar al mapa se ve directo la lista de la zona, no todo Puebla.
+  const [panelOpen, setPanelOpen] = useState(true);
   const [visibleReports, setVisibleReports] = useState<Report[]>([]);
   const [focusReport, setFocusReport] = useState<Report | null>(null);
   const [resetSignal, setResetSignal] = useState(0);
@@ -44,6 +45,7 @@ export function MapaPage() {
     searchParams.get('perdido') ? 'perdidos' : searchParams.get('aliado') ? 'aliados' : 'calle',
   );
   const [allyTypes, setAllyTypes] = useState<AllyType[]>([]);
+  const [lostSpecies, setLostSpecies] = useState<LostSpecies[]>([]);
   const [lostPets, setLostPets] = useState<LostPet[]>([]);
   const [visibleAllies, setVisibleAllies] = useState<Ally[]>([]);
   const [visibleLostPets, setVisibleLostPets] = useState<LostPet[]>([]);
@@ -55,6 +57,17 @@ export function MapaPage() {
   const filteredReports = useMemo(
     () => (reports ? applyReportFilters(reports, filters) : null),
     [reports, filters],
+  );
+
+  // Perdidos filtrados por especie. Sin especie seleccionada se muestran todos.
+  // Lo que pasamos al mapa ya viene filtrado, por eso la lista de la zona y los
+  // pines respetan el filtro automaticamente.
+  const filteredLostPets = useMemo(
+    () =>
+      lostSpecies.length === 0
+        ? lostPets
+        : lostPets.filter((pet) => lostSpecies.includes(pet.species)),
+    [lostPets, lostSpecies],
   );
 
   // Sin datos de ejemplo: si la API falla, se muestran estados vacíos/errores
@@ -138,9 +151,9 @@ export function MapaPage() {
 
   const changeMode = (next: MapMode) => {
     setMapMode(next);
-    // En Aliados y Perdidos la lista de la zona se muestra sola; en Calle se abre
-    // al tocar una colonia.
-    setPanelOpen(next === 'aliados' || next === 'perdidos');
+    // En los tres modos (calle, aliados y perdidos) mostramos la lista de la zona
+    // al entrar, para que siempre se vean los reportes/aliados/perdidos cercanos.
+    setPanelOpen(true);
     setListFocusAlly(null);
     setFocusLostPet(null);
     if (next !== 'aliados' && aliadoId) setSearchParams({});
@@ -288,6 +301,9 @@ export function MapaPage() {
           />
         )}
         {mapMode === 'aliados' && <AllyFilters activeTypes={allyTypes} onChange={setAllyTypes} />}
+        {mapMode === 'perdidos' && (
+          <LostPetFilters activeSpecies={lostSpecies} onChange={setLostSpecies} />
+        )}
       </div>
 
       <div className="relative isolate mt-4 flex h-[60vh] min-h-[420px] overflow-hidden rounded-3xl border border-neutral-200">
@@ -299,7 +315,7 @@ export function MapaPage() {
               <MapView
                 reports={filteredReports}
                 allies={allies}
-                lostPets={lostPets}
+                lostPets={filteredLostPets}
                 mode={mapMode}
                 activeAllyTypes={allyTypes}
                 onSelectReport={openReport}

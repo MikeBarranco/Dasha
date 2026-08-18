@@ -79,6 +79,7 @@ export class OrganizationController {
         select: {
           id: true,
           name: true,
+          acronym: true,
           description: true,
           slogan: true,
           logoUrl: true,
@@ -99,6 +100,7 @@ export class OrganizationController {
             where: { isVerified: true },
             select: {
               roleInOrg: true,
+              positionTitle: true,
               bio: true,
               user: {
                 select: {
@@ -212,6 +214,7 @@ export class OrganizationController {
       const orgSelect = {
         id: true,
         name: true,
+        acronym: true,
         description: true,
         logoUrl: true,
         logoPublicId: true,
@@ -337,6 +340,13 @@ export class OrganizationController {
 
       const updateData: any = { ...data };
 
+      // Siglas: recortamos a 20 y quitamos espacios sobrantes; vacio => null.
+      // Asi ni por API se guarda algo enorme o vacio raro (la columna es VarChar(20)).
+      if (updateData.acronym !== undefined) {
+        const clean = String(updateData.acronym ?? '').trim().slice(0, 20);
+        updateData.acronym = clean || null;
+      }
+
       // Subir logo a Cloudinary si se proporciona
       if (logoBase64 && logoBase64.startsWith('data:image')) {
         const uploadRes = await cloudinary.uploader.upload(logoBase64, {
@@ -408,14 +418,41 @@ export class OrganizationController {
     }
   }
 
+  // Lista CERRADA de puestos/títulos que puede tener un miembro del equipo (además
+  // de su rol de permisos admin/veterinarian/assistant). El frontend muestra estos
+  // mismos en un select; el backend valida contra esta lista para que nadie meta
+  // texto libre por API. DEBE coincidir con teamTitleOptions del frontend.
+  static readonly TEAM_TITLES = [
+    'Veterinario/a',
+    'Médico veterinario/a',
+    'Asistente',
+    'Recepción',
+    'Entrenador/a',
+    'Etólogo/a',
+    'Psicólogo/a',
+    'Terapeuta',
+    'Rescatista',
+    'Coordinador/a',
+    'Estilista canino',
+    'Voluntario/a',
+    'Responsable',
+  ];
+
+  // Devuelve el título solo si está en la lista permitida; si no, null (se ignora).
+  static sanitizeTitle(title: unknown): string | null {
+    if (typeof title !== 'string') return null;
+    const clean = title.trim();
+    return OrganizationController.TEAM_TITLES.includes(clean) ? clean : null;
+  }
+
   /**
    * Invita/Agrega a un nuevo miembro al equipo por email
    */
   static async addTeamMember(req: Request, res: Response, next: NextFunction) {
     try {
       const adminId = (req as any).user?.id;
-      const { email, roleInOrg } = req.body;
-      
+      const { email, roleInOrg, positionTitle } = req.body;
+
       if (!email) {
         res.status(400).json({ error: 'El email es obligatorio' });
         return;
@@ -455,6 +492,7 @@ export class OrganizationController {
           organizationId: myEmployee.organizationId,
           userId: targetUser.id,
           roleInOrg: finalRole as any,
+          positionTitle: OrganizationController.sanitizeTitle(positionTitle),
           isVerified: true,
           invitedEmail: email
         },
@@ -504,6 +542,42 @@ export class OrganizationController {
       });
 
       res.status(200).json({ message: 'Miembro eliminado del equipo' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Actualiza el puesto/título de un miembro del equipo. El frontend manda el
+   * userId como :employeeId (igual que en removeTeamMember). Solo el admin de la
+   * org. El título se valida contra la lista cerrada TEAM_TITLES.
+   */
+  static async updateTeamMember(req: Request, res: Response, next: NextFunction) {
+    try {
+      const adminId = (req as any).user?.id;
+      const targetUserId = req.params.employeeId as string;
+      const { positionTitle } = req.body;
+
+      const myEmployee = await OrganizationController.getPortalContext(req, adminId);
+      if (!myEmployee || myEmployee.roleInOrg !== 'admin') {
+        res.status(403).json({ error: 'No tienes permisos de administrador en esta organización' });
+        return;
+      }
+
+      const employee = await prisma.organizationEmployee.findFirst({
+        where: { userId: targetUserId, organizationId: myEmployee.organizationId }
+      });
+      if (!employee) {
+        res.status(404).json({ error: 'El miembro no pertenece a tu organización' });
+        return;
+      }
+
+      const updated = await prisma.organizationEmployee.update({
+        where: { id: employee.id },
+        data: { positionTitle: OrganizationController.sanitizeTitle(positionTitle) }
+      });
+
+      res.status(200).json({ message: 'Miembro actualizado', member: updated });
     } catch (error) {
       next(error);
     }

@@ -61,6 +61,10 @@ export function LostPetListPanel({ pets, onSelect, onClose }: LostPetListPanelPr
                         {pet.species === 'perro' ? 'Perro' : 'Gato'} · perdido hace {days}{' '}
                         {days === 1 ? 'día' : 'días'}
                       </p>
+                      {/* Colonia del reporte (truncate para no desbordar la tarjeta) */}
+                      <p className="truncate text-xs text-neutral-400">
+                        {pet.colonyName || 'Sin colonia'}
+                      </p>
                     </div>
                     <ChevronRight className="h-4 w-4 flex-shrink-0 text-neutral-300" />
                   </button>

@@ -131,6 +131,126 @@ export class EventController {
     }
   }
 
+  // Normaliza la categoria que manda el frontend (en espanol) al enum del backend.
+  // Mismo mapa que usa createOrganizationEvent.
+  private static normalizeCategory(category: string | undefined): string {
+    const map: Record<string, string> = {
+      esterilizacion: 'sterilization',
+      vacunacion: 'vaccination',
+      estetica: 'grooming',
+      colecta: 'donation',
+      adopcion: 'adoption',
+      charla: 'talk',
+      otro: 'other',
+      campaign: 'other',
+    };
+    if (!category) return 'other';
+    return map[category.toLowerCase()] ?? category;
+  }
+
+  // PATCH /organizations/:id/events/:eventId (Portal Aliados)
+  // Editar un evento ya publicado (p. ej. agregar la foto que faltaba o corregir
+  // la fecha). Solo actualiza los campos que llegan; la ubicacion solo se cambia
+  // si se mandan lat y lng nuevos.
+  static async updateOrganizationEvent(req: Request, res: Response, next: NextFunction) {
+    try {
+      const orgId = req.params.id as string;
+      const eventId = req.params.eventId as string;
+      const userId = (req as any).user?.id;
+      const { title, description, category, eventDate, endDate, address, lat, lng, imageBase64 } = req.body;
+
+      if (!userId) {
+        res.status(401).json({ error: 'No autorizado' });
+        return;
+      }
+
+      // Solo el admin de la organizacion puede editar sus eventos.
+      const isEmployee = await prisma.organizationEmployee.findUnique({
+        where: { organizationId_userId: { organizationId: orgId, userId } }
+      });
+      if (!isEmployee || isEmployee.roleInOrg !== 'admin') {
+        res.status(403).json({ error: 'No tienes permiso para editar eventos de esta organización' });
+        return;
+      }
+
+      // El evento debe existir y pertenecer a esta organizacion.
+      const existing = await prisma.event.findUnique({ where: { id: eventId } });
+      if (!existing || existing.organizationId !== orgId) {
+        res.status(404).json({ error: 'Evento no encontrado' });
+        return;
+      }
+
+      // Armamos el update solo con los campos que llegan (edicion parcial).
+      const updateData: any = {};
+      if (title !== undefined) updateData.title = title;
+      if (description !== undefined) updateData.description = description;
+      if (category !== undefined) updateData.category = EventController.normalizeCategory(category);
+      if (eventDate !== undefined) updateData.eventDate = new Date(eventDate);
+      if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;
+      if (address !== undefined) updateData.address = address || '';
+
+      // Si mandan una imagen nueva (base64), la subimos y reemplazamos la anterior.
+      if (imageBase64) {
+        const { v2: cloudinary } = await import('cloudinary');
+        const uploadRes = await cloudinary.uploader.upload(imageBase64, { folder: 'dasha/events' });
+        updateData.imageUrl = uploadRes.secure_url;
+        updateData.imagePublicId = uploadRes.public_id;
+      }
+
+      const event = await prisma.event.update({ where: { id: eventId }, data: updateData });
+
+      // La ubicacion geografica solo se toca si mandan coordenadas nuevas.
+      if (lat && lng) {
+        await prisma.$executeRaw`
+          UPDATE events
+          SET location = ST_SetSRID(ST_MakePoint(${parseFloat(lng)}, ${parseFloat(lat)}), 4326)
+          WHERE id = ${eventId}::uuid
+        `;
+      }
+
+      res.status(200).json({ status: 'success', message: 'Evento actualizado', event });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // DELETE /organizations/:id/events/:eventId (Portal Aliados)
+  // Cancelar/quitar un evento. Es un borrado SUAVE (isActive=false): el evento
+  // desaparece de todas las listas (getUpcomingEvents filtra isActive=true) sin
+  // romper las llaves foraneas de EventReminder (no tienen cascade).
+  static async deleteOrganizationEvent(req: Request, res: Response, next: NextFunction) {
+    try {
+      const orgId = req.params.id as string;
+      const eventId = req.params.eventId as string;
+      const userId = (req as any).user?.id;
+
+      if (!userId) {
+        res.status(401).json({ error: 'No autorizado' });
+        return;
+      }
+
+      const isEmployee = await prisma.organizationEmployee.findUnique({
+        where: { organizationId_userId: { organizationId: orgId, userId } }
+      });
+      if (!isEmployee || isEmployee.roleInOrg !== 'admin') {
+        res.status(403).json({ error: 'No tienes permiso para eliminar eventos de esta organización' });
+        return;
+      }
+
+      const existing = await prisma.event.findUnique({ where: { id: eventId } });
+      if (!existing || existing.organizationId !== orgId) {
+        res.status(404).json({ error: 'Evento no encontrado' });
+        return;
+      }
+
+      await prisma.event.update({ where: { id: eventId }, data: { isActive: false } });
+
+      res.status(200).json({ status: 'success', message: 'Evento eliminado' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // GET /events/:id
   static async getEventDetails(req: Request, res: Response, next: NextFunction) {
     try {

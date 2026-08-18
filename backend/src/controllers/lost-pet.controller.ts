@@ -61,7 +61,10 @@ export class LostPetController {
         });
 
         // B. Crear el LostPet vinculado usando Raw Query (porque lastSeenLocation es Unsupported y obligatorio)
-        const radius = searchRadiusKm || 3;
+        // Radio de busqueda capado a MAXIMO 1 km (decision de producto): un circulo
+        // mayor se ve enorme en el mapa y no aporta. Si llega vacio o algo invalido,
+        // usamos 1. Nunca guardamos mas de 1 km aunque el cliente mande otra cosa.
+        const radius = Math.min(Number(searchRadiusKm) || 1, 1);
         const rewardVal = reward != null ? Number(reward) : null;
         const seenAt = lastSeenAt ? new Date(lastSeenAt) : new Date();
         const safeContactName = contactName || null;
@@ -140,9 +143,13 @@ export class LostPetController {
    */
   static async getActiveLostPets(req: Request, res: Response, next: NextFunction) {
     try {
-      // Extraemos lat, lng de PostGIS con queryRaw
+      // Extraemos lat, lng de PostGIS con queryRaw.
+      // colonyName: nombre de la colonia del reporte (mismo patron que report.service.ts,
+      // LEFT JOIN a colonies por colony_id). El frontend lo pinta en la lista y el popup
+      // del mapa; si el reporte no tiene colonia asignada llega null y el front muestra
+      // "Sin colonia".
       const lostPets: any[] = await prisma.$queryRaw`
-        SELECT 
+        SELECT
           lp.id as "lostPetId",
           r.id as "reportId",
           lp.pet_name as "petName",
