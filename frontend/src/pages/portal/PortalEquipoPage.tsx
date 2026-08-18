@@ -4,8 +4,10 @@ import { Avatar } from '../../components/ui/Avatar';
 import {
   getMyOrgTeam,
   addMyOrgTeamMember,
+  updateMyOrgTeamMember,
   removeMyOrgTeamMember,
   teamRoleLabels,
+  teamTitleOptions,
   type TeamMember,
   type TeamRole,
 } from '../../lib/api';
@@ -47,6 +49,7 @@ export function PortalEquipoPage() {
   );
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState('');
+  const [newTitle, setNewTitle] = useState('');
   const [adding, setAdding] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
@@ -87,24 +90,45 @@ export function PortalEquipoPage() {
           name: nameFromEmail(clean),
           email: clean,
           role: 'veterinarian',
-          title: 'Veterinario',
+          title: newTitle || 'Veterinario',
+          positionTitle: newTitle || undefined,
           photoUrl: null,
         },
       ]);
       setEmail('');
+      setNewTitle('');
       return;
     }
 
     setAdding(true);
     try {
-      await addMyOrgTeamMember(clean, ctx.adminOrgId);
+      await addMyOrgTeamMember(clean, newTitle || undefined, ctx.adminOrgId);
       setEmail('');
+      setNewTitle('');
       const data = await getMyOrgTeam(ctx.adminOrgId);
       setTeam(data);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'No se pudo vincular. Intenta de nuevo.');
     } finally {
       setAdding(false);
+    }
+  };
+
+  // Cambiar el puesto/título de un miembro (optimista; el backend valida la lista).
+  const changeTitle = async (userId: string, title: string) => {
+    setTeam((current) =>
+      current
+        ? current.map((m) => (m.userId === userId ? { ...m, positionTitle: title || undefined } : m))
+        : current,
+    );
+    if (ctx.preview) return;
+    try {
+      await updateMyOrgTeamMember(userId, title, ctx.adminOrgId);
+    } catch {
+      // Si falla, recargamos para volver al estado real del servidor.
+      getMyOrgTeam(ctx.adminOrgId)
+        .then(setTeam)
+        .catch(() => {});
     }
   };
 
@@ -150,6 +174,19 @@ export function PortalEquipoPage() {
             {adding ? 'Vinculando…' : 'Agregar'}
           </button>
         </div>
+        {/* Puesto (opcional): lista cerrada, para equipos con distintos roles. */}
+        <select
+          value={newTitle}
+          onChange={(event) => setNewTitle(event.target.value)}
+          className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-base text-neutral-700 outline-none focus:ring-2 focus:ring-cobalto/30"
+        >
+          <option value="">Puesto (opcional)</option>
+          {teamTitleOptions.map((title) => (
+            <option key={title} value={title}>
+              {title}
+            </option>
+          ))}
+        </select>
         {formError && <p className="text-sm text-alerta">{formError}</p>}
       </form>
 
@@ -198,9 +235,26 @@ export function PortalEquipoPage() {
                       {teamRoleLabels[member.role]}
                     </span>
                   </div>
-                  <p className="truncate text-xs text-neutral-500">
-                    {member.email || member.title}
-                  </p>
+                  {/* Puesto editable (lista cerrada). Sin puesto = se muestra la
+                      etiqueta del rol arriba. */}
+                  <div className="mt-1 flex items-center gap-2">
+                    <select
+                      value={member.positionTitle ?? ''}
+                      onChange={(event) => changeTitle(member.userId, event.target.value)}
+                      aria-label={`Puesto de ${member.name}`}
+                      className="max-w-[11rem] rounded-lg border border-neutral-200 bg-white px-2 py-1 text-xs text-neutral-600 outline-none focus:ring-2 focus:ring-cobalto/30"
+                    >
+                      <option value="">Sin puesto</option>
+                      {teamTitleOptions.map((title) => (
+                        <option key={title} value={title}>
+                          {title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {member.email && (
+                    <p className="mt-0.5 truncate text-[11px] text-neutral-400">{member.email}</p>
+                  )}
                 </div>
 
                 {confirmId === member.userId ? (

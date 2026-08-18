@@ -12,6 +12,7 @@ router.get('/portal/profile', requireAuth, OrganizationController.getMyPortalPro
 router.patch('/portal/profile', requireAuth, OrganizationController.updateMyPortalProfile);
 router.get('/portal/team', requireAuth, OrganizationController.getMyPortalTeam);
 router.post('/portal/team', requireAuth, OrganizationController.addTeamMember);
+router.patch('/portal/team/:employeeId', requireAuth, OrganizationController.updateTeamMember);
 router.delete('/portal/team/:employeeId', requireAuth, OrganizationController.removeTeamMember);
 router.get('/portal/reports/nearby', requireAuth, OrganizationController.getNearbyReports);
 router.post('/reports/:reportId/offers', requireAuth, OrganizationController.offerResourceForReport);
@@ -66,5 +67,9 @@ router.patch('/:id/needs/:needId', requireAuth, (req, res, next) => {
 import { EventController } from '../controllers/event.controller';
 // POST /api/v1/organizations/:id/events (Crear evento por aliado)
 router.post('/:id/events', requireAuth, EventController.createOrganizationEvent);
+// PATCH /api/v1/organizations/:id/events/:eventId (Editar evento del aliado)
+router.patch('/:id/events/:eventId', requireAuth, EventController.updateOrganizationEvent);
+// DELETE /api/v1/organizations/:id/events/:eventId (Cancelar/quitar evento, borrado suave)
+router.delete('/:id/events/:eventId', requireAuth, EventController.deleteOrganizationEvent);
 
 export default router;

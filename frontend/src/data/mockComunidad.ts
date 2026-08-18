@@ -13,6 +13,12 @@ export type CommunityEvent = {
   // Organización que publica el evento (para filtrar los del propio aliado en su
   // portal). Ausente en los datos de ejemplo.
   organizationId?: string;
+  // Valores crudos que usa el portal del aliado para EDITAR el evento (prellenar el
+  // formulario). Ausentes en los datos de ejemplo y en las tarjetas públicas.
+  categorySlug?: string;
+  eventDateIso?: string;
+  endDateIso?: string;
+  addressRaw?: string;
 };
 
 export type ForumReply = {

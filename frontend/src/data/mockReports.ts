@@ -22,6 +22,11 @@ export type Report = {
   // backend lo marca en GET /me/reports; sirve para que "Mis reportes" abra el
   // mapa de perdidos (no el de calle) al tocarla.
   isLostPet?: boolean;
+  // Id de la mascota perdida (tabla LostPet) para poder marcarla como encontrada
+  // desde "Mis reportes". Solo presente en entradas de perdidos.
+  lostPetId?: string;
+  // true si la mascota perdida ya se marcó como encontrada.
+  lostPetFound?: boolean;
 };
 
 export const mockReports: Report[] = [

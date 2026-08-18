@@ -632,6 +632,8 @@ export async function getLostPets(): Promise<LostPet[]> {
       contactPhone:
         String(raw.contactWhatsapp ?? raw.contactPhone ?? raw.whatsapp ?? '') || undefined,
       reward: raw.reward ? String(raw.reward) : undefined,
+      // Colonia del reporte (backend: colonyName). Se muestra en la lista y el popup.
+      colonyName: String(raw.colonyName ?? raw.colony_name ?? raw.colonia ?? '') || undefined,
     };
   });
 }
@@ -983,6 +985,9 @@ export async function getOrganizationForAdmin(
 // 11.3). En vista previa no se llama; se refleja en pantalla.
 export type MyOrgInput = {
   name: string;
+  // Siglas de la organización (ej. "CAETO"). Cadena vacía = borrar (el backend la
+  // convierte a null). Lista abierta pero corta (máx 20, validada en backend).
+  acronym?: string;
   slogan?: string;
   description?: string;
   // Promoción/oferta del aliado (texto libre hasta 500). Se muestra en su ficha.
@@ -1015,6 +1020,26 @@ export const teamRoleLabels: Record<TeamRole, string> = {
   assistant: 'Asistente',
 };
 
+// Lista CERRADA de puestos/títulos para los miembros del equipo (para equipos
+// multidisciplinarios como un centro de terapia: entrenador, psicóloga, etc.).
+// El aliado elige de esta lista (no texto libre); el backend valida contra la
+// misma lista. DEBE coincidir con OrganizationController.TEAM_TITLES del backend.
+export const teamTitleOptions = [
+  'Veterinario/a',
+  'Médico veterinario/a',
+  'Asistente',
+  'Recepción',
+  'Entrenador/a',
+  'Etólogo/a',
+  'Psicólogo/a',
+  'Terapeuta',
+  'Rescatista',
+  'Coordinador/a',
+  'Estilista canino',
+  'Voluntario/a',
+  'Responsable',
+];
+
 // Normaliza el rol que manda el backend (admin|veterinarian|assistant, o los
 // viejos owner|vet) a uno de los tres valores que pintamos.
 function normalizeTeamRole(raw: unknown): TeamRole {
@@ -1030,6 +1055,9 @@ export type TeamMember = {
   email: string;
   role: TeamRole;
   title: string;
+  // Puesto/título personalizado elegido de teamTitleOptions (ej. "Entrenador/a").
+  // Vacío si no se ha asignado; en ese caso se muestra la etiqueta del rol.
+  positionTitle?: string;
   photoUrl: string | null;
 };
 
@@ -1044,6 +1072,7 @@ function mapTeamMember(raw: Record<string, unknown>): TeamMember {
     email: String(src.email ?? ''),
     role: normalizeTeamRole(raw.role ?? raw.roleInOrg ?? raw.role_in_org),
     title: String(raw.title ?? ''),
+    positionTitle: String(raw.positionTitle ?? raw.position_title ?? '') || undefined,
     photoUrl: typeof photo === 'string' && photo ? photo : null,
   };
 }
@@ -1055,10 +1084,28 @@ export async function getMyOrgTeam(orgId?: string): Promise<TeamMember[]> {
   return (data ?? []).map(mapTeamMember);
 }
 
-export async function addMyOrgTeamMember(email: string, orgId?: string): Promise<void> {
+export async function addMyOrgTeamMember(
+  email: string,
+  positionTitle?: string,
+  orgId?: string,
+): Promise<void> {
   await authedRaw(`/me/organization/team${orgScope(orgId)}`, {
     method: 'POST',
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({ email, positionTitle: positionTitle || undefined }),
+  });
+}
+
+// Actualiza el puesto/título de un miembro (Backend valida contra la lista). El
+// backend identifica al miembro por su userId (como en el DELETE). Cadena vacía =
+// quitar el título (vuelve a mostrarse la etiqueta del rol).
+export async function updateMyOrgTeamMember(
+  userId: string,
+  positionTitle: string,
+  orgId?: string,
+): Promise<void> {
+  await authedRaw(`/me/organization/team/${userId}${orgScope(orgId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ positionTitle }),
   });
 }
 
@@ -1129,8 +1176,15 @@ export async function getMyReports(): Promise<Report[]> {
       raw.colony && typeof raw.colony === 'object'
         ? (raw.colony as Record<string, unknown>)
         : null;
+    const lostPetObj =
+      raw.lostPet && typeof raw.lostPet === 'object'
+        ? (raw.lostPet as Record<string, unknown>)
+        : null;
+    // raw.address como ultimo respaldo: los animales de "Dar de alta" (ingreso
+    // directo) no tienen coordenadas ni colonia, y el backend les pone
+    // address = "Ingreso directo" para que no salga "Sin colonia".
     const coloniaName = String(
-      colonyObj?.name ?? raw.colonia ?? raw.colonyName ?? raw.colony_name ?? '',
+      colonyObj?.name ?? raw.colonia ?? raw.colonyName ?? raw.colony_name ?? raw.address ?? '',
     ).trim();
     return {
       id: String(raw.id ?? ''),
@@ -1148,8 +1202,19 @@ export async function getMyReports(): Promise<Report[]> {
       activeAssignmentId:
         (raw.activeAssignmentId ?? raw.active_assignment_id ?? null) as string | null,
       isLostPet: Boolean(raw.isLostPet ?? raw.is_lost_pet),
+      lostPetId: lostPetObj ? String(lostPetObj.id ?? '') || undefined : undefined,
+      lostPetFound: lostPetObj
+        ? Boolean(lostPetObj.isFound ?? lostPetObj.is_found)
+        : undefined,
     };
   });
+}
+
+// El dueño marca su mascota perdida como ENCONTRADA (Backend:
+// PATCH /lost-pets/:id/found, valida que sea el dueño). No la borra: cierra el
+// reporte y deja de aparecer en el mapa de perdidos.
+export async function markLostPetFound(lostPetId: string): Promise<void> {
+  await authedRaw(`/lost-pets/${lostPetId}/found`, { method: 'PATCH' });
 }
 
 type RawAnimal = {
@@ -1488,7 +1553,10 @@ export async function updateMyOrgAnimalStatus(
 // puede cualquiera). Mantenemos orgScope por si el admin necesita acotar.
 export async function updateMyOrgAnimalDetails(
   id: string,
-  details: { name?: string; diagnosis?: string },
+  // totalCostNeeded: costo estimado de recuperacion que captura el aliado; es la
+  // META de la barra de apadrinamiento (PATCH /portal/animals/:id lo acepta y
+  // persiste, junto con name/diagnosis).
+  details: { name?: string; diagnosis?: string; totalCostNeeded?: number },
   orgId?: string,
 ): Promise<void> {
   await authedRaw(`/portal/animals/${id}${orgScope(orgId)}`, {
@@ -1916,6 +1984,11 @@ function mapEvent(raw: Record<string, unknown>): CommunityEvent {
     organizationId: String(
       raw.organizationId ?? raw.organization_id ?? org?.id ?? org?._id ?? '',
     ) || undefined,
+    // Crudos para editar desde el portal (el backend los regresa en /events).
+    categorySlug: category || undefined,
+    eventDateIso: String(raw.eventDate ?? raw.event_date ?? '') || undefined,
+    endDateIso: String(raw.endDate ?? raw.end_date ?? '') || undefined,
+    addressRaw: String(raw.address ?? '') || undefined,
   };
 }
 
@@ -1959,6 +2032,36 @@ export async function createOrgEvent(orgId: string, input: OrgEventInput): Promi
       imageBase64: input.imageBase64 || undefined,
     }),
   });
+}
+
+// Editar un evento ya publicado (Backend: PATCH /organizations/:id/events/:eventId).
+// Manda todos los campos del formulario; el backend solo cambia la ubicacion si van
+// lat/lng. Solo el admin de la org puede editar.
+export async function updateOrgEvent(
+  orgId: string,
+  eventId: string,
+  input: OrgEventInput,
+): Promise<void> {
+  await authedRaw(`/organizations/${orgId}/events/${eventId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      title: input.title.trim(),
+      description: input.description.trim(),
+      category: input.category,
+      eventDate: input.eventDate,
+      endDate: input.endDate || undefined,
+      address: input.address.trim(),
+      lat: input.lat,
+      lng: input.lng,
+      imageBase64: input.imageBase64 || undefined,
+    }),
+  });
+}
+
+// Cancelar/quitar un evento (Backend: DELETE /organizations/:id/events/:eventId,
+// borrado suave isActive=false). Solo el admin de la org.
+export async function deleteOrgEvent(orgId: string, eventId: string): Promise<void> {
+  await authedRaw(`/organizations/${orgId}/events/${eventId}`, { method: 'DELETE' });
 }
 
 const forumRoleLabels: Record<string, string> = {
@@ -2174,9 +2277,13 @@ function mapAllyMember(raw: Record<string, unknown>): AllyMember {
   const user = userVal && typeof userVal === 'object' ? (userVal as Record<string, unknown>) : raw;
   const photo = raw.photoUrl ?? raw.photo_url ?? user.photoUrl ?? user.photo_url ?? user.avatarUrl;
   const bio = allyStr(raw.bio ?? user.bio);
+  // Título a mostrar: el puesto personalizado si lo hay; si no, la etiqueta del
+  // rol (Responsable/Veterinario/Asistente); y por compatibilidad, un `title` viejo.
+  const position = allyStr(raw.positionTitle ?? raw.position_title);
+  const roleLabel = teamRoleLabels[normalizeTeamRole(raw.roleInOrg ?? raw.role_in_org ?? raw.role)];
   return {
     name: allyStr(user.name ?? raw.name) || 'Sin nombre',
-    title: allyStr(raw.title ?? user.title),
+    title: position || allyStr(raw.title ?? user.title) || roleLabel,
     photoUrl: typeof photo === 'string' && photo ? photo : null,
     bio: bio || undefined,
   };
@@ -2229,6 +2336,7 @@ export async function getAlly(id: string): Promise<Ally | null> {
   return {
     id: allyStr(raw.id ?? raw._id),
     name: allyStr(raw.name),
+    acronym: allyStr(raw.acronym) || undefined,
     description: allyStr(raw.description),
     logoUrl: allyStr(raw.logoUrl ?? raw.logo_url) || null,
     address: allyStr(raw.address),

@@ -11,7 +11,7 @@ const faqs = [
   },
   {
     q: '¿Necesito una cuenta para reportar?',
-    a: 'Para un caso urgente puedes reportar rápido. Crear una cuenta te permite dar seguimiento, ser voluntario y participar en la comunidad.',
+    a: 'Sí, y la creas en segundos con tu cuenta de Google. Así podemos avisarte del avance del rescate, evitar reportes duplicados y que puedas dar seguimiento, ser voluntario y participar en la comunidad.',
   },
   {
     q: '¿Quién atiende los reportes?',

@@ -163,6 +163,8 @@ function buildLostPopup(pet: LostPet, onMore: () => void): HTMLDivElement {
   node.innerHTML =
     `<div class="dasha-popup-name">${escapeHTML(pet.petName)}</div>` +
     `<div class="dasha-popup-count">${species} · perdido hace ${days} día${days === 1 ? '' : 's'}</div>` +
+    // Colonia del reporte (o "Sin colonia" si el backend no la mando)
+    `<div class="dasha-popup-count">${escapeHTML(pet.colonyName || 'Sin colonia')}</div>` +
     (waUrl
       ? `<a href="${waUrl}" target="_blank" rel="noreferrer" style="display:inline-block;margin-top:6px;padding:6px 10px;border-radius:8px;background:#16a34a;color:#fff;font-size:12px;font-weight:600;text-decoration:none;">Contactar por WhatsApp</a>`
       : '') +
@@ -707,7 +709,9 @@ export function MapView({
         const source = map.getSource('perdidos-zonas') as maplibregl.GeoJSONSource | undefined;
         const features = inPerdidos
           ? lostPetsRef.current.map((pet) =>
-              circleFeature(pet.lng, pet.lat, pet.searchRadiusKm, lostColor(pet.lostAt)),
+              // Capamos el circulo a 1 km aunque un reporte viejo tenga guardado 3 o 5 km
+              // (asi ninguno se ve enorme en el mapa). Nuevos ya llegan capados del backend.
+              circleFeature(pet.lng, pet.lat, Math.min(pet.searchRadiusKm || 1, 1), lostColor(pet.lostAt)),
             )
           : [];
         source?.setData({ type: 'FeatureCollection', features });

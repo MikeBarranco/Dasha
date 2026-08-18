@@ -23,6 +23,7 @@ export function PortalPerfilPage() {
   const [org, setOrg] = useState<Ally | null | undefined>(undefined);
 
   const [name, setName] = useState('');
+  const [acronym, setAcronym] = useState('');
   const [slogan, setSlogan] = useState('');
   const [description, setDescription] = useState('');
   const [promo, setPromo] = useState('');
@@ -56,6 +57,7 @@ export function PortalPerfilPage() {
         setOrg(found);
         if (found) {
           setName(found.name ?? '');
+          setAcronym(found.acronym ?? '');
           setSlogan(found.slogan ?? '');
           setDescription(found.description ?? '');
           setPromo(found.promo ?? '');
@@ -100,6 +102,8 @@ export function PortalPerfilPage() {
 
     const input: MyOrgInput = {
       name: cleanName,
+      // Se manda siempre (aunque vacío) para permitir borrar las siglas.
+      acronym: acronym.trim(),
       slogan: slogan.trim() || undefined,
       description: description.trim() || undefined,
       promo: promo.trim() || undefined,
@@ -119,6 +123,7 @@ export function PortalPerfilPage() {
           ? {
               ...current,
               name: cleanName,
+              acronym: input.acronym || undefined,
               slogan: input.slogan,
               description: input.description ?? '',
               promo: input.promo ?? null,
@@ -230,8 +235,21 @@ export function PortalPerfilPage() {
             onChange={(event) => setName(event.target.value)}
             maxLength={80}
             className={inputClass}
-            placeholder="Nombre de tu organización"
+            placeholder="Nombre completo de tu organización"
           />
+        </Field>
+
+        <Field label="Siglas (opcional)">
+          <input
+            value={acronym}
+            onChange={(event) => setAcronym(event.target.value.slice(0, 20))}
+            maxLength={20}
+            className={inputClass}
+            placeholder="Ej. CAETO"
+          />
+          <p className="mt-1 text-xs text-neutral-400">
+            Las siglas de tu organización. Se muestran junto al nombre completo.
+          </p>
         </Field>
 
         <Field label="Eslogan">

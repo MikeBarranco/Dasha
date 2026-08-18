@@ -51,6 +51,8 @@ export type Ally = {
   lng: number;
   schedule?: string;
   slogan?: string;
+  // Siglas de la organización (ej. "CAETO"), además del nombre completo.
+  acronym?: string;
   // Promoción/oferta que el aliado ofrece (texto libre hasta 500), null si no
   // tiene. Ej. "50% de descuento en vacunas los martes".
   promo?: string | null;

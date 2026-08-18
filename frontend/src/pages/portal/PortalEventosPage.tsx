@@ -14,6 +14,8 @@ export function PortalEventosPage() {
   );
   const [error, setError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  // Evento que se está editando (null = ninguno). Tocar una tarjeta lo abre.
+  const [editing, setEditing] = useState<CommunityEvent | null>(null);
 
   // GET /events trae los eventos de toda la comunidad (ya ordenados y filtrados
   // por fecha en el backend); aquí nos quedamos solo con los de esta organización.
@@ -114,9 +116,11 @@ export function PortalEventosPage() {
         {events !== null && events.length > 0 && (
           <div className="space-y-3">
             {events.map((event) => (
-              <article
+              <button
                 key={event.id}
-                className="flex gap-3 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-3"
+                type="button"
+                onClick={() => !ctx.preview && setEditing(event)}
+                className="flex w-full gap-3 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-3 text-left transition-colors hover:border-cobalto/40 hover:bg-neutral-50"
               >
                 <img
                   src={event.image}
@@ -145,8 +149,11 @@ export function PortalEventosPage() {
                       <span className="truncate">{event.place}</span>
                     </p>
                   )}
+                  {!ctx.preview && (
+                    <p className="mt-1 text-xs font-medium text-cobalto">Toca para editar</p>
+                  )}
                 </div>
-              </article>
+              </button>
             ))}
           </div>
         )}
@@ -165,6 +172,15 @@ export function PortalEventosPage() {
             organizationId={ctx.organizationId}
             onClose={() => setCreateOpen(false)}
             onCreated={reloadAfterCreate}
+          />
+        )}
+        {editing && (
+          <PortalEventoSheet
+            organizationId={ctx.organizationId}
+            event={editing}
+            onClose={() => setEditing(null)}
+            onCreated={reloadAfterCreate}
+            onDeleted={reloadAfterCreate}
           />
         )}
       </AnimatePresence>
