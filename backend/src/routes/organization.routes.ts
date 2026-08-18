@@ -12,6 +12,7 @@ router.get('/portal/profile', requireAuth, OrganizationController.getMyPortalPro
 router.patch('/portal/profile', requireAuth, OrganizationController.updateMyPortalProfile);
 router.get('/portal/team', requireAuth, OrganizationController.getMyPortalTeam);
 router.post('/portal/team', requireAuth, OrganizationController.addTeamMember);
+router.patch('/portal/team/:employeeId', requireAuth, OrganizationController.updateTeamMember);
 router.delete('/portal/team/:employeeId', requireAuth, OrganizationController.removeTeamMember);
 router.get('/portal/reports/nearby', requireAuth, OrganizationController.getNearbyReports);
 router.post('/reports/:reportId/offers', requireAuth, OrganizationController.offerResourceForReport);

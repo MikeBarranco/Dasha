@@ -116,6 +116,24 @@ export function AliadosPage() {
         subtitle="Veterinarias, refugios y asociaciones que ayudan a los animalitos en Puebla."
       />
 
+      {/* CTA para que negocios se registren como aliado: va arriba para que se vea
+          primero (antes estaba hasta el final de la lista). */}
+      <Link
+        to="/ser-aliado"
+        className="mb-4 flex items-center gap-3 rounded-2xl border border-naranja/30 bg-naranja/5 p-4 transition-colors hover:bg-naranja/10"
+      >
+        <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-naranja text-white">
+          <Store className="h-5 w-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-base font-bold text-naranja">
+            ¿Tienes una veterinaria o refugio?
+          </p>
+          <p className="text-xs text-neutral-500">Únete como aliado de Dasha y ayúdanos a rescatar.</p>
+        </div>
+        <ArrowRight className="h-5 w-5 flex-shrink-0 text-naranja" />
+      </Link>
+
       <Link
         to="/necesidades"
         className="mb-4 flex items-center gap-3 rounded-2xl border border-cobalto/20 bg-cobalto/5 p-4 transition-colors hover:bg-cobalto/10"
@@ -176,22 +194,6 @@ export function AliadosPage() {
           ))}
         </div>
       )}
-
-      <Link
-        to="/ser-aliado"
-        className="mt-6 flex items-center gap-3 rounded-2xl border border-naranja/30 bg-naranja/5 p-4 transition-colors hover:bg-naranja/10"
-      >
-        <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-naranja text-white">
-          <Store className="h-5 w-5" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="font-display text-base font-bold text-naranja">
-            ¿Tienes una veterinaria o refugio?
-          </p>
-          <p className="text-xs text-neutral-500">Únete como aliado de Dasha y ayúdanos a rescatar.</p>
-        </div>
-        <ArrowRight className="h-5 w-5 flex-shrink-0 text-naranja" />
-      </Link>
     </div>
   );
 }
