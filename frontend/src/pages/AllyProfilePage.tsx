@@ -494,18 +494,21 @@ export function AllyProfilePage() {
             <h2 className="mb-3 font-display text-lg font-bold text-cobalto">Próximos eventos</h2>
             <ul className="space-y-2">
               {events.map((event) => (
-                <li
-                  key={event.id}
-                  className="flex items-start gap-3 rounded-xl border border-neutral-200 p-3"
-                >
-                  <CalendarDays className="mt-0.5 h-4 w-4 flex-shrink-0 text-naranja" />
-                  <div>
-                    <p className="text-sm font-medium text-neutral-700">{event.title}</p>
-                    <p className="text-xs text-neutral-400">
-                      {event.date}
-                      {event.place ? ` · ${event.place}` : ''}
-                    </p>
-                  </div>
+                <li key={event.id}>
+                  {/* Lleva a Comunidad → Eventos y resalta este evento (?evento=id). */}
+                  <Link
+                    to={`/comunidad?tab=eventos&evento=${event.id}`}
+                    className="flex items-start gap-3 rounded-xl border border-neutral-200 p-3 transition-colors hover:border-cobalto/40 hover:bg-neutral-50"
+                  >
+                    <CalendarDays className="mt-0.5 h-4 w-4 flex-shrink-0 text-naranja" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-neutral-700">{event.title}</p>
+                      <p className="text-xs text-neutral-400">
+                        {event.date}
+                        {event.place ? ` · ${event.place}` : ''}
+                      </p>
+                    </div>
+                  </Link>
                 </li>
               ))}
             </ul>
