@@ -1,19 +1,27 @@
 import { useRef, useState } from 'react';
 import { motion } from 'motion/react';
-import { X, ImagePlus, Loader2, CalendarPlus } from 'lucide-react';
+import { X, ImagePlus, Loader2, CalendarPlus, Save, Trash2 } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
-import { createOrgEvent, getColoniesByCp, type Colonia } from '../../lib/api';
+import { createOrgEvent, updateOrgEvent, deleteOrgEvent, getColoniesByCp, type Colonia } from '../../lib/api';
 import { eventCategoryOptions } from '../../lib/adminApi';
 import { OrgLocationPicker } from '../map/OrgLocationPicker';
 import { compressImage } from '../../lib/image';
 import { onlyDigits } from '../../lib/validation';
+import type { CommunityEvent } from '../../data/mockComunidad';
+
+const PLACEHOLDER = '/placeholder-animal.svg';
 
 type PortalEventoSheetProps = {
   // Id de la organización que publica (real o el que un admin está viendo).
   organizationId: string;
+  // Si viene un evento, el sheet entra en modo EDICIÓN (prellena y guarda cambios).
+  // Sin evento, es creación.
+  event?: CommunityEvent;
   onClose: () => void;
   onCreated: () => void;
+  // Se llama tras eliminar (solo en modo edición).
+  onDeleted?: () => void;
 };
 
 // Valor mínimo para <input type="datetime-local">: el momento actual, en hora
@@ -35,16 +43,43 @@ function toIso(local: string): string | undefined {
   return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
 }
 
-export function PortalEventoSheet({ organizationId, onClose, onCreated }: PortalEventoSheetProps) {
+// Convierte una fecha ISO del backend al formato local "YYYY-MM-DDTHH:mm" que
+// necesita <input type="datetime-local"> para prellenar al editar.
+function isoToLocalInput(iso?: string): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(
+    date.getHours(),
+  )}:${pad(date.getMinutes())}`;
+}
+
+export function PortalEventoSheet({
+  organizationId,
+  event: editEvent,
+  onClose,
+  onCreated,
+  onDeleted,
+}: PortalEventoSheetProps) {
   useLockBodyScroll();
 
-  const [image, setImage] = useState<string | null>(null);
-  const [title, setTitle] = useState('');
-  const [category, setCategory] = useState(eventCategoryOptions[0]?.value ?? 'other');
-  const [description, setDescription] = useState('');
-  const [eventDate, setEventDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [address, setAddress] = useState('');
+  const isEdit = Boolean(editEvent);
+
+  // En edición mostramos la imagen actual (URL); solo mandamos imageBase64 si el
+  // aliado elige una NUEVA (imageChanged), para no re-subir la misma.
+  const initialImage =
+    editEvent && editEvent.image && editEvent.image !== PLACEHOLDER ? editEvent.image : null;
+  const [image, setImage] = useState<string | null>(initialImage);
+  const [imageChanged, setImageChanged] = useState(false);
+  const [title, setTitle] = useState(editEvent?.title ?? '');
+  const [category, setCategory] = useState(
+    editEvent?.categorySlug ?? eventCategoryOptions[0]?.value ?? 'other',
+  );
+  const [description, setDescription] = useState(editEvent?.description ?? '');
+  const [eventDate, setEventDate] = useState(isoToLocalInput(editEvent?.eventDateIso));
+  const [endDate, setEndDate] = useState(isoToLocalInput(editEvent?.endDateIso));
+  const [address, setAddress] = useState(editEvent?.addressRaw ?? editEvent?.place ?? '');
 
   const [zipCode, setZipCode] = useState('');
   const [colonies, setColonies] = useState<Colonia[]>([]);
@@ -56,6 +91,8 @@ export function PortalEventoSheet({ organizationId, onClose, onCreated }: Portal
   const [addingImage, setAddingImage] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const minDate = nowLocalInput();
 
@@ -66,6 +103,7 @@ export function PortalEventoSheet({ organizationId, onClose, onCreated }: Portal
     try {
       const dataUrl = await compressImage(files[0]);
       setImage(dataUrl);
+      setImageChanged(true);
     } catch {
       setError('No se pudo procesar la imagen.');
     } finally {
@@ -133,23 +171,50 @@ export function PortalEventoSheet({ organizationId, onClose, onCreated }: Portal
     }
     setSaving(true);
     setError(null);
+    // Solo mandamos imagen si es nueva (en edición, undefined conserva la actual).
+    const imageBase64 = imageChanged ? (image ?? undefined) : undefined;
+    const payload = {
+      title: title.trim(),
+      description: description.trim(),
+      category,
+      eventDate: startIso,
+      endDate: toIso(endDate),
+      address: address.trim(),
+      lat: coords?.lat,
+      lng: coords?.lng,
+      imageBase64,
+    };
     try {
-      await createOrgEvent(organizationId, {
-        title: title.trim(),
-        description: description.trim(),
-        category,
-        eventDate: startIso,
-        endDate: toIso(endDate),
-        address: address.trim(),
-        lat: coords?.lat,
-        lng: coords?.lng,
-        imageBase64: image ?? undefined,
-      });
+      if (isEdit && editEvent) {
+        await updateOrgEvent(organizationId, editEvent.id, payload);
+      } else {
+        await createOrgEvent(organizationId, payload);
+      }
       onCreated();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo publicar el evento. Intenta de nuevo.');
+      setError(
+        err instanceof Error
+          ? err.message
+          : isEdit
+            ? 'No se pudo guardar el evento. Intenta de nuevo.'
+            : 'No se pudo publicar el evento. Intenta de nuevo.',
+      );
       setSaving(false);
+    }
+  };
+
+  const remove = async () => {
+    if (!editEvent) return;
+    setDeleting(true);
+    setError(null);
+    try {
+      await deleteOrgEvent(organizationId, editEvent.id);
+      onDeleted?.();
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo eliminar el evento. Intenta de nuevo.');
+      setDeleting(false);
     }
   };
 
@@ -171,7 +236,9 @@ export function PortalEventoSheet({ organizationId, onClose, onCreated }: Portal
         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
       >
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-neutral-100 bg-white px-5 py-4">
-          <h2 className="font-display text-lg font-bold text-cobalto">Publicar un evento</h2>
+          <h2 className="font-display text-lg font-bold text-cobalto">
+            {isEdit ? 'Editar evento' : 'Publicar un evento'}
+          </h2>
           <button
             type="button"
             onClick={onClose}
@@ -199,7 +266,10 @@ export function PortalEventoSheet({ organizationId, onClose, onCreated }: Portal
                   <img src={image} alt="" className="h-full w-full object-cover" />
                   <button
                     type="button"
-                    onClick={() => setImage(null)}
+                    onClick={() => {
+                      setImage(null);
+                      setImageChanged(true);
+                    }}
                     aria-label="Quitar imagen"
                     className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white"
                   >
@@ -275,7 +345,7 @@ export function PortalEventoSheet({ organizationId, onClose, onCreated }: Portal
               <input
                 type="datetime-local"
                 value={eventDate}
-                min={minDate}
+                min={isEdit ? undefined : minDate}
                 onChange={(event) => setEventDate(event.target.value)}
                 className={inputClass}
               />
@@ -379,19 +449,23 @@ export function PortalEventoSheet({ organizationId, onClose, onCreated }: Portal
             <button
               type="button"
               onClick={onClose}
-              disabled={saving}
+              disabled={saving || deleting}
               className="flex-1 rounded-xl border border-neutral-200 py-3 font-medium text-neutral-700 transition-colors hover:bg-neutral-50 disabled:opacity-60"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              disabled={!canSave}
+              disabled={!canSave || deleting}
               className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-cobalto py-3 font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               {saving ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> Publicando…
+                  <Loader2 className="h-4 w-4 animate-spin" /> {isEdit ? 'Guardando…' : 'Publicando…'}
+                </>
+              ) : isEdit ? (
+                <>
+                  <Save className="h-4 w-4" /> Guardar cambios
                 </>
               ) : (
                 <>
@@ -400,6 +474,54 @@ export function PortalEventoSheet({ organizationId, onClose, onCreated }: Portal
               )}
             </button>
           </div>
+
+          {/* Eliminar (solo en edición): borrado suave; se pide confirmación. */}
+          {isEdit && (
+            <div className="border-t border-neutral-100 pt-4">
+              {confirmDelete ? (
+                <div className="rounded-xl border border-alerta/30 bg-alerta/5 p-3">
+                  <p className="text-sm text-neutral-700">
+                    ¿Seguro que quieres eliminar este evento? Dejará de aparecer en Comunidad.
+                  </p>
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setConfirmDelete(false)}
+                      disabled={deleting}
+                      className="flex-1 rounded-lg border border-neutral-200 py-2 text-sm font-medium text-neutral-600 transition-colors hover:bg-white disabled:opacity-60"
+                    >
+                      No, conservar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={remove}
+                      disabled={deleting}
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-alerta py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                    >
+                      {deleting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" /> Eliminando…
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="h-4 w-4" /> Sí, eliminar
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(true)}
+                  disabled={saving}
+                  className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-alerta/30 py-2.5 text-sm font-medium text-alerta transition-colors hover:bg-alerta/5 disabled:opacity-60"
+                >
+                  <Trash2 className="h-4 w-4" /> Eliminar evento
+                </button>
+              )}
+            </div>
+          )}
         </form>
       </motion.div>
     </div>

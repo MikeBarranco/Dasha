@@ -1924,6 +1924,11 @@ function mapEvent(raw: Record<string, unknown>): CommunityEvent {
     organizationId: String(
       raw.organizationId ?? raw.organization_id ?? org?.id ?? org?._id ?? '',
     ) || undefined,
+    // Crudos para editar desde el portal (el backend los regresa en /events).
+    categorySlug: category || undefined,
+    eventDateIso: String(raw.eventDate ?? raw.event_date ?? '') || undefined,
+    endDateIso: String(raw.endDate ?? raw.end_date ?? '') || undefined,
+    addressRaw: String(raw.address ?? '') || undefined,
   };
 }
 
@@ -1967,6 +1972,36 @@ export async function createOrgEvent(orgId: string, input: OrgEventInput): Promi
       imageBase64: input.imageBase64 || undefined,
     }),
   });
+}
+
+// Editar un evento ya publicado (Backend: PATCH /organizations/:id/events/:eventId).
+// Manda todos los campos del formulario; el backend solo cambia la ubicacion si van
+// lat/lng. Solo el admin de la org puede editar.
+export async function updateOrgEvent(
+  orgId: string,
+  eventId: string,
+  input: OrgEventInput,
+): Promise<void> {
+  await authedRaw(`/organizations/${orgId}/events/${eventId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      title: input.title.trim(),
+      description: input.description.trim(),
+      category: input.category,
+      eventDate: input.eventDate,
+      endDate: input.endDate || undefined,
+      address: input.address.trim(),
+      lat: input.lat,
+      lng: input.lng,
+      imageBase64: input.imageBase64 || undefined,
+    }),
+  });
+}
+
+// Cancelar/quitar un evento (Backend: DELETE /organizations/:id/events/:eventId,
+// borrado suave isActive=false). Solo el admin de la org.
+export async function deleteOrgEvent(orgId: string, eventId: string): Promise<void> {
+  await authedRaw(`/organizations/${orgId}/events/${eventId}`, { method: 'DELETE' });
 }
 
 const forumRoleLabels: Record<string, string> = {
