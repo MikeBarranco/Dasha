@@ -246,6 +246,11 @@ export function AllyProfilePage() {
           />
           <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
             <h1 className="font-display text-2xl font-bold text-cobalto">{ally.name}</h1>
+            {ally.acronym && (
+              <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-semibold text-neutral-600">
+                {ally.acronym}
+              </span>
+            )}
             {ally.isVerified && <BadgeCheck className="h-5 w-5 flex-shrink-0 text-info" />}
             <span className="rounded-full bg-cobalto/10 px-2.5 py-0.5 text-xs font-medium text-cobalto">
               {allyTypeLabels[ally.orgType]}

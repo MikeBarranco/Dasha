@@ -506,6 +506,7 @@ model RescueAssignment {
 model Organization {
   id              String                                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name            String                                 @db.VarChar(200)
+  acronym         String?                                @db.VarChar(20)
   description     String?
   logoUrl         String?                                @map("logo_url")
   logoPublicId    String?                                @map("logo_public_id") @db.VarChar(255)
@@ -547,6 +548,7 @@ model OrganizationEmployee {
   organizationId String    @map("organization_id") @db.Uuid
   userId         String    @map("user_id") @db.Uuid
   roleInOrg      RoleInOrg @map("role_in_org")
+  positionTitle  String?   @map("position_title") @db.VarChar(60)
   isVerified     Boolean   @default(false) @map("is_verified")
   invitedEmail   String?   @map("invited_email") @db.VarChar(255)
   bio            String?   @db.VarChar(500)

@@ -985,6 +985,9 @@ export async function getOrganizationForAdmin(
 // 11.3). En vista previa no se llama; se refleja en pantalla.
 export type MyOrgInput = {
   name: string;
+  // Siglas de la organización (ej. "CAETO"). Cadena vacía = borrar (el backend la
+  // convierte a null). Lista abierta pero corta (máx 20, validada en backend).
+  acronym?: string;
   slogan?: string;
   description?: string;
   // Promoción/oferta del aliado (texto libre hasta 500). Se muestra en su ficha.
@@ -2272,6 +2275,7 @@ export async function getAlly(id: string): Promise<Ally | null> {
   return {
     id: allyStr(raw.id ?? raw._id),
     name: allyStr(raw.name),
+    acronym: allyStr(raw.acronym) || undefined,
     description: allyStr(raw.description),
     logoUrl: allyStr(raw.logoUrl ?? raw.logo_url) || null,
     address: allyStr(raw.address),

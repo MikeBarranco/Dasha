@@ -79,6 +79,7 @@ export class OrganizationController {
         select: {
           id: true,
           name: true,
+          acronym: true,
           description: true,
           slogan: true,
           logoUrl: true,
@@ -212,6 +213,7 @@ export class OrganizationController {
       const orgSelect = {
         id: true,
         name: true,
+        acronym: true,
         description: true,
         logoUrl: true,
         logoPublicId: true,
@@ -336,6 +338,13 @@ export class OrganizationController {
       }
 
       const updateData: any = { ...data };
+
+      // Siglas: recortamos a 20 y quitamos espacios sobrantes; vacio => null.
+      // Asi ni por API se guarda algo enorme o vacio raro (la columna es VarChar(20)).
+      if (updateData.acronym !== undefined) {
+        const clean = String(updateData.acronym ?? '').trim().slice(0, 20);
+        updateData.acronym = clean || null;
+      }
 
       // Subir logo a Cloudinary si se proporciona
       if (logoBase64 && logoBase64.startsWith('data:image')) {
