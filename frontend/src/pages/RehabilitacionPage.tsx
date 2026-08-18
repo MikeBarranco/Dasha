@@ -17,6 +17,12 @@ function normalize(value: string): string {
     .replace(/\p{Diacritic}/gu, '');
 }
 
+// % apadrinado de un animal. Sin costo fijado (totalNeeded 0) devolvemos 1
+// ("cubierto") para no dividir entre 0 y mandarlo al final del orden.
+function fundedRatio(animal: Animal): number {
+  return animal.totalNeeded > 0 ? animal.totalRaised / animal.totalNeeded : 1;
+}
+
 function slugify(value: string): string {
   return normalize(value)
     .replace(/[^a-z0-9]+/g, '-')
@@ -116,7 +122,10 @@ export function RehabilitacionPage() {
       .filter((animal) => status === 'todos' || animal.status === status)
       .filter((animal) => zone === 'todas' || animal.zone === zone)
       .filter((animal) => normalize(animal.name).includes(query))
-      .sort((a, b) => a.totalRaised / a.totalNeeded - b.totalRaised / b.totalNeeded);
+      // Ordena por % apadrinado (menos apadrinados primero). Sin costo fijado
+      // (totalNeeded 0) cuenta como "cubierto" (ratio 1) y va al final; evita
+      // dividir entre 0.
+      .sort((a, b) => fundedRatio(a) - fundedRatio(b));
   }, [animals, search, species, size, status, zone]);
 
   const activeCount =
@@ -332,9 +341,11 @@ export function RehabilitacionPage() {
                 <p className="mt-1 text-xs text-neutral-400">
                   {animal.status} · {animal.zone}
                 </p>
-                <div className="mt-3">
-                  <ProgressBar raised={animal.totalRaised} needed={animal.totalNeeded} />
-                </div>
+                {animal.totalNeeded > 0 && (
+                  <div className="mt-3">
+                    <ProgressBar raised={animal.totalRaised} needed={animal.totalNeeded} />
+                  </div>
+                )}
               </div>
             </motion.button>
           ))}

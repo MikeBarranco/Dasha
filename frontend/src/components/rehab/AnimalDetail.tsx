@@ -197,9 +197,13 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
             </p>
           </div>
 
-          <div className="mt-5">
-            <ProgressBar raised={animal.totalRaised} needed={animal.totalNeeded} />
-          </div>
+          {/* La barra de apadrinamiento solo aparece si el aliado fijó un costo
+              (totalNeeded > 0). Sin costo no se muestra (no un $0 de $0). */}
+          {animal.totalNeeded > 0 && (
+            <div className="mt-5">
+              <ProgressBar raised={animal.totalRaised} needed={animal.totalNeeded} />
+            </div>
+          )}
 
           {animal.timeline && animal.timeline.length > 0 && (
             <div className="mt-6">
