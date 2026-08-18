@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Cookie } from 'lucide-react';
 import { getCookieConsent, setCookieConsent } from '../../lib/cookieConsent';
-import { initAnalytics } from '../../lib/analytics';
+import { grantAnalyticsConsent } from '../../lib/analytics';
 
 // Banner de consentimiento de cookies (primera visita). Las cookies esenciales
-// (sesión) siempre se usan porque sin ellas la app no funciona; la analítica
-// (Google Analytics) solo se carga si el usuario acepta "todas".
+// (sesión) siempre se usan porque sin ellas la app no funciona. La analítica mide
+// de forma anónima por defecto (Consent Mode, sin cookies); al aceptar "todas" se
+// activa completa (con cookies de Google Analytics).
 export function CookieBanner() {
   const [visible, setVisible] = useState(() => getCookieConsent() === null);
 
@@ -14,9 +15,9 @@ export function CookieBanner() {
 
   const choose = (all: boolean) => {
     setCookieConsent(all ? 'all' : 'essential');
-    // Al aceptar analítica, la arrancamos de una vez (initAnalytics es idempotente
-    // y solo corre en producción).
-    if (all) initAnalytics();
+    // Al aceptar "todas", concedemos el consentimiento de analítica (pasa de
+    // anónima a completa). En "solo esenciales" se queda anónima (denegada).
+    if (all) grantAnalyticsConsent();
     setVisible(false);
   };
 
@@ -25,8 +26,8 @@ export function CookieBanner() {
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-3 rounded-2xl border border-neutral-200 bg-white p-4 shadow-lg sm:flex-row sm:items-center">
         <Cookie className="hidden h-6 w-6 flex-shrink-0 text-cobalto sm:block" />
         <p className="flex-1 text-sm text-neutral-600">
-          Usamos cookies esenciales para que Dasha funcione (tu sesión) y cookies de analítica
-          para entender cómo se usa y mejorarla. Consulta nuestro{' '}
+          Usamos cookies esenciales para que Dasha funcione (tu sesión) y medimos el uso de forma
+          anónima para mejorarla. Si aceptas todas, activamos la analítica completa. Consulta nuestro{' '}
           <Link to="/aviso-privacidad" className="font-medium text-cobalto underline">
             Aviso de Privacidad
           </Link>
