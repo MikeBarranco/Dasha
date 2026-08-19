@@ -1226,9 +1226,7 @@ export class OrganizationController {
     try {
       const userId = (req as any).user?.id;
       
-      const myEmployee = await prisma.organizationEmployee.findFirst({
-        where: { userId }
-      });
+      const myEmployee = await OrganizationController.getPortalContext(req, userId);
 
       if (!myEmployee) {
         res.status(403).json({ error: 'No perteneces a ninguna organización' });
