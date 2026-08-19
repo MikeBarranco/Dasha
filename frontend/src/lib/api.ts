@@ -1221,8 +1221,10 @@ type RawAnimal = {
   id: string;
   name: string;
   species: string;
+  gender?: string | null;
   history?: string | null;
   story?: string | null;
+  description?: string | null;
   status: string;
   diagnosis: string | null;
   treatment: string | null;
@@ -1453,7 +1455,11 @@ function mapAnimal(raw: RawAnimal): Animal {
     size: 'Mediano',
     zone: raw.organization?.address ?? raw.organization?.name ?? 'Puebla',
     photos: photos.length > 0 ? photos : ['/placeholder-animal.svg'],
-    story: raw.history ?? raw.story ?? '',
+    // La descripción pública del aliado se guarda en `story`; dejamos `description`
+    // como respaldo por si viniera en ese campo.
+    story: raw.history ?? raw.story ?? raw.description ?? '',
+    // Sexo: el backend usa male/female/unknown; lo traducimos. unknown/ausente => sin dato.
+    gender: raw.gender === 'female' ? 'hembra' : raw.gender === 'male' ? 'macho' : undefined,
     diagnosis: raw.diagnosis ?? raw.treatment ?? 'En valoración',
     vet: raw.organization?.name ?? 'Aliado Dasha',
     totalNeeded: Number(raw.estimatedCost ?? raw.totalCostNeeded ?? 0),
@@ -1553,10 +1559,16 @@ export async function updateMyOrgAnimalStatus(
 // puede cualquiera). Mantenemos orgScope por si el admin necesita acotar.
 export async function updateMyOrgAnimalDetails(
   id: string,
-  // totalCostNeeded: costo estimado de recuperacion que captura el aliado; es la
-  // META de la barra de apadrinamiento (PATCH /portal/animals/:id lo acepta y
-  // persiste, junto con name/diagnosis).
-  details: { name?: string; diagnosis?: string; totalCostNeeded?: number },
+  // totalCostNeeded: costo estimado de recuperacion (META de la barra). story:
+  // descripcion PUBLICA. gender: sexo (male/female). El PATCH /portal/animals/:id
+  // acepta y persiste estos campos junto con name/diagnosis.
+  details: {
+    name?: string;
+    diagnosis?: string;
+    totalCostNeeded?: number;
+    story?: string;
+    gender?: 'male' | 'female';
+  },
   orgId?: string,
 ): Promise<void> {
   await authedRaw(`/portal/animals/${id}${orgScope(orgId)}`, {
@@ -1592,6 +1604,10 @@ export type DirectIntakeInput = {
   species: 'dog' | 'cat';
   size: 'small' | 'medium' | 'large';
   color: string;
+  // Sexo (opcional). male/female como en el enum del backend.
+  gender?: 'male' | 'female';
+  // Descripción PÚBLICA del animalito (lo que ve la gente en su ficha). Se manda
+  // como `story` porque ese es el campo que el perfil público muestra.
   description?: string;
   photosBase64: string[];
 };
@@ -1608,7 +1624,9 @@ export async function createDirectIntakeAnimal(
       size: input.size,
       // El backend guarda el color en la columna `color` (no `primaryColor`).
       color: input.color,
-      description: input.description?.trim() || undefined,
+      gender: input.gender,
+      // La descripción pública va a `story` (el campo que muestra la ficha pública).
+      story: input.description?.trim() || undefined,
       photosBase64: input.photosBase64,
     }),
   });

@@ -978,7 +978,9 @@ export class OrganizationController {
         ageEstimation,
         weightKg,
         color: color || '',
-        gender: gender || 'male',
+        // Solo guardamos sexo si es válido; si no lo capturaron, queda sin dato
+        // (no forzamos "male" para no mostrar "Macho" en animales sin sexo).
+        gender: gender === 'male' || gender === 'female' ? gender : null,
         story,
         status: 'in_treatment',
         isPublic: isPublic !== undefined ? isPublic : true
@@ -1061,7 +1063,7 @@ export class OrganizationController {
     try {
       const userId = (req as any).user?.id;
       const animalId = req.params.animalId as string;
-      const { name, diagnosis, totalCostNeeded } = req.body;
+      const { name, diagnosis, totalCostNeeded, story, gender } = req.body;
 
       const myEmployee = await OrganizationController.getPortalContext(req, userId);
 
@@ -1071,7 +1073,7 @@ export class OrganizationController {
       }
 
       const animal = await prisma.animalProfile.findUnique({ where: { id: animalId } });
-      
+
       if (!animal || animal.organizationId !== myEmployee.organizationId) {
         res.status(404).json({ error: 'Este animal no se encuentra en tu organización' });
         return;
@@ -1081,6 +1083,10 @@ export class OrganizationController {
       if (name !== undefined) updateData.name = name;
       if (diagnosis !== undefined) updateData.diagnosis = diagnosis;
       if (totalCostNeeded !== undefined) updateData.totalCostNeeded = totalCostNeeded;
+      // story: descripción pública del animalito (lo que ve la gente).
+      if (story !== undefined) updateData.story = story;
+      // gender: solo aceptamos los valores válidos del enum (male/female); otro => sin cambio.
+      if (gender === 'male' || gender === 'female') updateData.gender = gender;
 
       const updatedAnimal = await prisma.animalProfile.update({
         where: { id: animalId },

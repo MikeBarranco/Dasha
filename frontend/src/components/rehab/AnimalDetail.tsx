@@ -179,14 +179,21 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
         )}
 
         <div className="p-5">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <h2 className="font-display text-2xl font-bold text-cobalto">{animal.name}</h2>
-            <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-500">
-              {animal.species === 'perro' ? 'Perro' : 'Gato'}
-            </span>
+            <div className="flex flex-shrink-0 items-center gap-1.5">
+              {animal.gender && (
+                <span className="rounded-full bg-cobalto/10 px-3 py-1 text-xs font-medium text-cobalto">
+                  {animal.gender === 'macho' ? 'Macho' : 'Hembra'}
+                </span>
+              )}
+              <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-500">
+                {animal.species === 'perro' ? 'Perro' : 'Gato'}
+              </span>
+            </div>
           </div>
 
-          <p className="mt-3 text-sm text-neutral-600">{animal.story}</p>
+          {animal.story && <p className="mt-3 text-sm text-neutral-600">{animal.story}</p>}
 
           <div className="mt-4 space-y-2 text-sm text-neutral-600">
             <p className="flex items-center gap-2">

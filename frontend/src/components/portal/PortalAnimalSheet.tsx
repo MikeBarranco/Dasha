@@ -77,8 +77,14 @@ export function PortalAnimalSheet({
   const timeline = animal.timeline ?? [];
   const changed = status !== animal.status;
 
-  // Datos del caso editables: nombre provisional, padecimientos y costo estimado.
+  // Datos del caso editables: nombre, descripción pública, sexo, padecimientos y costo.
   const [name, setName] = useState(animal.name);
+  // Descripción PÚBLICA (lo que ve la gente), distinta del diagnóstico médico.
+  const [story, setStory] = useState(animal.story ?? '');
+  // Sexo en el formato del backend (male/female); '' = sin especificar.
+  const [gender, setGender] = useState<'male' | 'female' | ''>(
+    animal.gender === 'macho' ? 'male' : animal.gender === 'hembra' ? 'female' : '',
+  );
   const [diagnosis, setDiagnosis] = useState(animal.diagnosis);
   // Costo estimado de recuperacion (meta de la barra de apadrinamiento). Se guarda
   // como string para el input y se sanea a un entero >= 0 al usarlo (evita NaN y
@@ -88,8 +94,11 @@ export function PortalAnimalSheet({
   const [savingDetails, setSavingDetails] = useState(false);
   const [detailsSaved, setDetailsSaved] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
+  const currentGender = animal.gender === 'macho' ? 'male' : animal.gender === 'hembra' ? 'female' : '';
   const detailsChanged =
     name.trim() !== animal.name ||
+    story.trim() !== (animal.story ?? '').trim() ||
+    gender !== currentGender ||
     diagnosis.trim() !== animal.diagnosis ||
     costNum !== (animal.totalNeeded ?? 0);
 
@@ -110,16 +119,29 @@ export function PortalAnimalSheet({
       setDetailsError('El nombre no puede quedar vacío.');
       return;
     }
+    const cleanStory = story.trim();
     setSavingDetails(true);
     try {
       if (!preview) {
         await updateMyOrgAnimalDetails(
           animal.id,
-          { name: cleanName, diagnosis: cleanDiagnosis, totalCostNeeded: costNum },
+          {
+            name: cleanName,
+            diagnosis: cleanDiagnosis,
+            totalCostNeeded: costNum,
+            story: cleanStory,
+            gender: gender || undefined,
+          },
           orgId,
         );
       }
-      onUpdated(animal.id, { name: cleanName, diagnosis: cleanDiagnosis, totalNeeded: costNum });
+      onUpdated(animal.id, {
+        name: cleanName,
+        diagnosis: cleanDiagnosis,
+        totalNeeded: costNum,
+        story: cleanStory,
+        gender: gender === 'male' ? 'macho' : gender === 'female' ? 'hembra' : undefined,
+      });
       setDetailsSaved(true);
     } catch (err) {
       setDetailsError(err instanceof Error ? err.message : 'No se pudieron guardar los datos.');
@@ -333,9 +355,56 @@ export function PortalAnimalSheet({
                 placeholder="Ej. Solovino"
               />
             </label>
+            {/* Sexo (opcional) */}
+            <div>
+              <span className="mb-1 block text-xs font-medium text-neutral-600">Sexo</span>
+              <div className="flex gap-2">
+                {[
+                  { value: 'male' as const, label: 'Macho' },
+                  { value: 'female' as const, label: 'Hembra' },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => {
+                      setGender((current) => (current === option.value ? '' : option.value));
+                      setDetailsSaved(false);
+                    }}
+                    className={cn(
+                      'rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors',
+                      gender === option.value
+                        ? 'border-cobalto bg-cobalto/5 text-cobalto'
+                        : 'border-neutral-200 text-neutral-600 hover:border-cobalto/40',
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {/* Descripción PÚBLICA (lo que ve la gente), separada del diagnóstico médico. */}
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-neutral-600">
-                Padecimientos / diagnóstico
+                Descripción pública
+              </span>
+              <textarea
+                value={story}
+                onChange={(event) => {
+                  setStory(event.target.value);
+                  setDetailsSaved(false);
+                }}
+                maxLength={300}
+                rows={2}
+                className="w-full resize-none rounded-lg border border-neutral-200 px-3 py-2 text-sm text-neutral-700 outline-none focus:ring-2 focus:ring-cobalto/30"
+                placeholder="Su carácter, su historia, qué busca en un hogar…"
+              />
+              <span className="mt-1 block text-[11px] text-neutral-400">
+                Es lo que ve la gente en la ficha del animalito.
+              </span>
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-neutral-600">
+                Padecimientos / diagnóstico (médico)
               </span>
               <textarea
                 value={diagnosis}

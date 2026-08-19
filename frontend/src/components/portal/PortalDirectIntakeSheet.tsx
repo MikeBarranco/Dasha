@@ -45,6 +45,7 @@ export function PortalDirectIntakeSheet({ orgId, onClose, onCreated }: DirectInt
   const [photos, setPhotos] = useState<string[]>([]);
   const [name, setName] = useState('');
   const [species, setSpecies] = useState<'dog' | 'cat'>('dog');
+  const [gender, setGender] = useState<'male' | 'female' | ''>('');
   const [size, setSize] = useState<'small' | 'medium' | 'large'>('medium');
   const [color, setColor] = useState('');
   const [description, setDescription] = useState('');
@@ -83,6 +84,7 @@ export function PortalDirectIntakeSheet({ orgId, onClose, onCreated }: DirectInt
           species,
           size,
           color: color || 'No especificado',
+          gender: gender || undefined,
           description: description.trim() || undefined,
           photosBase64: photos,
         },
@@ -191,6 +193,21 @@ export function PortalDirectIntakeSheet({ orgId, onClose, onCreated }: DirectInt
           </div>
 
           <div>
+            <span className="mb-1.5 block text-sm font-medium text-neutral-700">Sexo (opcional)</span>
+            <div className="flex gap-2">
+              <Chip active={gender === 'male'} onClick={() => setGender(gender === 'male' ? '' : 'male')}>
+                Macho
+              </Chip>
+              <Chip
+                active={gender === 'female'}
+                onClick={() => setGender(gender === 'female' ? '' : 'female')}
+              >
+                Hembra
+              </Chip>
+            </div>
+          </div>
+
+          <div>
             <span className="mb-1.5 block text-sm font-medium text-neutral-700">Tamaño</span>
             <div className="flex gap-2">
               {sizeOptions.map((option) => (
@@ -217,15 +234,20 @@ export function PortalDirectIntakeSheet({ orgId, onClose, onCreated }: DirectInt
           </div>
 
           <label className="block">
-            <span className="mb-1.5 block text-sm font-medium text-neutral-700">Descripción</span>
+            <span className="mb-1.5 block text-sm font-medium text-neutral-700">
+              Descripción pública
+            </span>
             <textarea
               value={description}
               onChange={(event) => setDescription(event.target.value)}
               maxLength={300}
               rows={3}
               className={`${inputClass} resize-none`}
-              placeholder="Su carácter, si está esterilizado, qué necesita…"
+              placeholder="Su carácter, su historia, qué busca en un hogar…"
             />
+            <span className="mt-1 block text-xs text-neutral-400">
+              Es lo que verá la gente en la ficha del animalito.
+            </span>
           </label>
 
           {error && <p className="text-sm text-alerta">{error}</p>}
