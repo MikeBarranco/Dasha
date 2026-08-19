@@ -26,6 +26,8 @@ router.post('/portal/animals', requireAuth, OrganizationController.createPortalA
 router.post('/portal/animals/direct-intake', requireAuth, OrganizationController.directIntakeAnimal);
 router.patch('/portal/animals/:animalId', requireAuth, OrganizationController.updatePortalAnimal);
 router.post('/portal/animals/:animalId/photos', requireAuth, OrganizationController.addPortalAnimalPhoto);
+router.delete('/portal/animals/:animalId/photos', requireAuth, OrganizationController.deletePortalAnimalPhoto);
+router.patch('/portal/animals/:animalId/photos/reorder', requireAuth, OrganizationController.reorderPortalAnimalPhotos);
 router.post('/portal/animals/:animalId/records', requireAuth, OrganizationController.addPortalAnimalRecord);
 router.post('/portal/animals/:animalId/timeline', requireAuth, OrganizationController.addPortalTimelineEvent);
 

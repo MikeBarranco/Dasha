@@ -3023,3 +3023,18 @@ export async function getMyContributions(): Promise<Contribution[]> {
     return [];
   }
 }
+
+export async function deleteMyOrgAnimalPhoto(animalId: string, url: string, orgId?: string): Promise<void> {
+  await authedRaw(`/portal/animals/${animalId}/photos${orgScope(orgId)}`, {
+    method: 'DELETE',
+    body: JSON.stringify({ url }),
+  });
+}
+
+export async function reorderMyOrgAnimalPhotos(animalId: string, urls: string[], orgId?: string): Promise<void> {
+  await authedRaw(`/portal/animals/${animalId}/photos/reorder${orgScope(orgId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ urls }),
+  });
+}
+

@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { X, Stethoscope, Check, Plus, Trash2, ImagePlus, Loader2 } from 'lucide-react';
+import { X, Stethoscope, Check, Plus, Trash2, ImagePlus, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 import {
   updateMyOrgAnimalStatus,
   updateMyOrgAnimalDetails,
   addMyOrgAnimalPhoto,
+  deleteMyOrgAnimalPhoto,
+  reorderMyOrgAnimalPhotos,
   setMyOrgAnimalSterilized,
   addMyOrgMedicalEntry,
   removeMyOrgMedicalEntry,
@@ -171,6 +173,31 @@ export function PortalAnimalSheet({
     }
   };
 
+  const removePhoto = async (index: number) => {
+    const urlToRemove = photos[index];
+    const next = photos.filter((_, i) => i !== index);
+    setPhotos(next);
+    if (heroIndex >= next.length) setHeroIndex(Math.max(0, next.length - 1));
+    onUpdated(animal.id, { photos: next });
+    if (!preview) {
+      deleteMyOrgAnimalPhoto(animal.id, urlToRemove, orgId).catch(() => {});
+    }
+  };
+
+  const movePhoto = async (index: number, direction: -1 | 1) => {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= photos.length) return;
+    const next = [...photos];
+    [next[index], next[newIndex]] = [next[newIndex], next[index]];
+    setPhotos(next);
+    if (heroIndex === index) setHeroIndex(newIndex);
+    else if (heroIndex === newIndex) setHeroIndex(index);
+    onUpdated(animal.id, { photos: next });
+    if (!preview) {
+      reorderMyOrgAnimalPhotos(animal.id, next, orgId).catch(() => {});
+    }
+  };
+
   // Cartilla médica editable.
   const [sterilized, setSterilized] = useState(animal.medical?.sterilized ?? false);
   const [entries, setEntries] = useState<MedicalEntry[]>(animal.medical?.entries ?? []);
@@ -311,25 +338,57 @@ export function PortalAnimalSheet({
             ) : (
               <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
                 {photos.map((url, index) => (
-                  <button
-                    key={index}
-                    type="button"
-                    onClick={() => setHeroIndex(index)}
-                    className={cn(
-                      'h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg border-2 transition-colors',
-                      index === heroIndex ? 'border-cobalto' : 'border-transparent',
-                    )}
-                  >
-                    <img
-                      src={url}
-                      alt=""
-                      onError={(event) => {
-                        event.currentTarget.onerror = null;
-                        event.currentTarget.src = PLACEHOLDER;
-                      }}
-                      className="h-full w-full object-cover"
-                    />
-                  </button>
+                  <div key={index} className="group relative shrink-0 h-16 w-16">
+                    <button
+                      type="button"
+                      onClick={() => setHeroIndex(index)}
+                      className={cn(
+                        'h-full w-full overflow-hidden rounded-lg border-2 transition-colors',
+                        index === heroIndex ? 'border-cobalto' : 'border-transparent',
+                      )}
+                    >
+                      <img
+                        src={url}
+                        alt=""
+                        onError={(event) => {
+                          event.currentTarget.onerror = null;
+                          event.currentTarget.src = PLACEHOLDER;
+                        }}
+                        className="h-full w-full object-cover"
+                      />
+                    </button>
+                    
+                    {/* Controles Overlay */}
+                    <div className="absolute inset-0 hidden flex-col justify-between bg-black/40 p-1 group-hover:flex rounded-lg">
+                      <div className="flex justify-between">
+                        <button 
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); movePhoto(index, -1); }}
+                          disabled={index === 0}
+                          className="rounded-full bg-white/20 p-0.5 text-white hover:bg-white/40 disabled:opacity-30"
+                        >
+                          <ChevronLeft className="h-3 w-3" />
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); movePhoto(index, 1); }}
+                          disabled={index === photos.length - 1}
+                          className="rounded-full bg-white/20 p-0.5 text-white hover:bg-white/40 disabled:opacity-30"
+                        >
+                          <ChevronRight className="h-3 w-3" />
+                        </button>
+                      </div>
+                      <div className="flex justify-center">
+                        <button 
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); removePhoto(index); }}
+                          className="rounded-full bg-red-500/80 p-1 text-white hover:bg-red-500"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
             )}

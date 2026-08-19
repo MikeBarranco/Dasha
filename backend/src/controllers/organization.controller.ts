@@ -1151,6 +1151,88 @@ export class OrganizationController {
   }
 
   /**
+   * Elimina una foto de la galería del animal (y de Cloudinary)
+   */
+  static async deletePortalAnimalPhoto(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      const animalId = req.params.animalId as string;
+      const { url } = req.body;
+
+      const myEmployee = await OrganizationController.getPortalContext(req, userId);
+
+      if (!myEmployee || (myEmployee.roleInOrg !== 'admin' && myEmployee.roleInOrg !== 'veterinarian')) {
+        res.status(403).json({ error: 'Solo veterinarios o administradores pueden eliminar fotos' });
+        return;
+      }
+
+      const animal = await prisma.animalProfile.findUnique({ where: { id: animalId } });
+      
+      if (!animal || animal.organizationId !== myEmployee.organizationId) {
+        res.status(404).json({ error: 'Este animal no se encuentra en tu organización' });
+        return;
+      }
+
+      const photo = await prisma.animalPhoto.findFirst({ where: { animalId, url } });
+      if (!photo) {
+        res.status(404).json({ error: 'Foto no encontrada' });
+        return;
+      }
+
+      if (photo.publicId) {
+        await cloudinary.uploader.destroy(photo.publicId);
+      }
+
+      await prisma.animalPhoto.delete({ where: { id: photo.id } });
+
+      res.status(200).json({ message: 'Foto eliminada correctamente' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Reordena las fotos de la galería del animal
+   */
+  static async reorderPortalAnimalPhotos(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      const animalId = req.params.animalId as string;
+      const { urls } = req.body;
+
+      const myEmployee = await OrganizationController.getPortalContext(req, userId);
+
+      if (!myEmployee || (myEmployee.roleInOrg !== 'admin' && myEmployee.roleInOrg !== 'veterinarian')) {
+        res.status(403).json({ error: 'Solo veterinarios o administradores pueden ordenar fotos' });
+        return;
+      }
+
+      const animal = await prisma.animalProfile.findUnique({ where: { id: animalId } });
+      
+      if (!animal || animal.organizationId !== myEmployee.organizationId) {
+        res.status(404).json({ error: 'Este animal no se encuentra en tu organización' });
+        return;
+      }
+
+      if (!Array.isArray(urls)) {
+        res.status(400).json({ error: 'Se requiere un arreglo de URLs' });
+        return;
+      }
+
+      for (let i = 0; i < urls.length; i++) {
+        await prisma.animalPhoto.updateMany({
+          where: { animalId, url: urls[i] },
+          data: { orderIndex: i }
+        });
+      }
+
+      res.status(200).json({ message: 'Fotos reordenadas correctamente' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Añade un evento a la línea de tiempo del animal y notifica a los seguidores
    */
   static async addPortalTimelineEvent(req: Request, res: Response, next: NextFunction) {
