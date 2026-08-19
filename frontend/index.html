@@ -2,6 +2,29 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
+    <!-- Google tag (gtag.js) — carga SOLO en produccion (dashamx.me) para no
+         ensuciar los datos con staging/local. El seguimiento por pantalla y el
+         consentimiento (opt-out) se manejan en src/lib/analytics.ts. -->
+    <script>
+      (function () {
+        var host = location.hostname;
+        if (host !== 'dashamx.me' && host !== 'www.dashamx.me') return;
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://www.googletagmanager.com/gtag/js?id=G-RQ2VX2Z8DK';
+        document.head.appendChild(s);
+        window.dataLayer = window.dataLayer || [];
+        window.gtag = function () { window.dataLayer.push(arguments); };
+        gtag('consent', 'default', {
+          analytics_storage: 'granted',
+          ad_storage: 'denied',
+          ad_user_data: 'denied',
+          ad_personalization: 'denied'
+        });
+        gtag('js', new Date());
+        gtag('config', 'G-RQ2VX2Z8DK', { send_page_view: false });
+      })();
+    </script>
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
