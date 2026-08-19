@@ -2,12 +2,12 @@
 // producción para no ensuciar los números con pruebas de staging o local. El ID
 // de medición no es secreto (viaja en el cliente), por eso puede vivir en el código.
 //
-// Consent Mode: la etiqueta se carga en producción para TODOS, pero con la
-// analítica DENEGADA por defecto (sin cookies, solo pings anónimos que le dan a GA
-// datos básicos de tráfico). Si el usuario acepta "todas" en el banner de cookies,
-// concedemos el consentimiento y la analítica pasa a completa (con cookies). Así GA
-// recoge datos respetando la privacidad: nada de cookies de analítica sin permiso.
-const GA_MEASUREMENT_ID = 'G-J5NQ161QHP';
+// Consent Mode: la etiqueta se carga en producción para TODOS con la analítica
+// CONCEDIDA por defecto (así GA sí recoge datos de tráfico). El banner de cookies
+// funciona como OPT-OUT: si el usuario elige "Solo esenciales", se retira el
+// consentimiento (analytics_storage: denied) y deja de medirse. No usamos cookies
+// de publicidad (ad_* siempre denegado).
+const GA_MEASUREMENT_ID = 'G-RQ2VX2Z8DK';
 const PRODUCTION_HOSTS = ['dashamx.me', 'www.dashamx.me'];
 
 declare global {
@@ -39,10 +39,11 @@ export function initAnalytics(): void {
     window.dataLayer.push(args);
   };
 
-  // Consent Mode: por defecto TODO denegado. Debe ir ANTES del config. Con la
-  // analítica denegada, GA manda pings anónimos (sin cookies ni identificadores).
+  // Consent Mode: la analítica va CONCEDIDA por defecto (para poder ver el tráfico);
+  // el resto (publicidad) denegado. Debe ir ANTES del config. Si el usuario elige
+  // "Solo esenciales" en el banner, se retira con denyAnalyticsConsent().
   window.gtag('consent', 'default', {
-    analytics_storage: 'denied',
+    analytics_storage: 'granted',
     ad_storage: 'denied',
     ad_user_data: 'denied',
     ad_personalization: 'denied',
@@ -54,13 +55,19 @@ export function initAnalytics(): void {
   window.gtag('config', GA_MEASUREMENT_ID, { send_page_view: false });
 }
 
-// El usuario aceptó las cookies de analítica: subimos el consentimiento a
-// "granted" (analítica completa, con cookies). Si aún no se cargó la etiqueta, la
-// cargamos primero.
+// El usuario aceptó las cookies de analítica: aseguramos el consentimiento en
+// "granted". Si aún no se cargó la etiqueta, la cargamos primero.
 export function grantAnalyticsConsent(): void {
   if (!initialized) initAnalytics();
   if (typeof window.gtag !== 'function') return;
   window.gtag('consent', 'update', { analytics_storage: 'granted' });
+}
+
+// El usuario eligió "Solo esenciales": retiramos el consentimiento de analítica.
+export function denyAnalyticsConsent(): void {
+  if (!initialized) initAnalytics();
+  if (typeof window.gtag !== 'function') return;
+  window.gtag('consent', 'update', { analytics_storage: 'denied' });
 }
 
 export function trackPageView(path: string): void {

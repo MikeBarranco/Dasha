@@ -39,6 +39,8 @@ export type Animal = {
   id: string;
   name: string;
   species: 'perro' | 'gato';
+  // Sexo del animalito (si el aliado lo capturó). undefined = sin dato.
+  gender?: 'macho' | 'hembra';
   size: AnimalSize;
   zone: string;
   photos: string[];
