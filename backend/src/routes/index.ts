@@ -62,7 +62,7 @@ import { NeedController } from '../controllers/need.controller';
 import { EventController } from '../controllers/event.controller';
 
 // IMPORTANT: /portal/needs MUST be defined before /:id/needs to prevent "portal" from being parsed as a UUID
-router.get('/organizations/portal/needs', requireAuth, NeedController.getMyPortalNeeds);
+router.get('/organizations/portal/needs', requireAuth, OrganizationController.getPortalNeeds);
 router.patch('/organizations/portal/needs/:needId/reopen', requireAuth, OrganizationController.reopenPortalNeed);
 
 router.get('/organizations/:id/needs', NeedController.getOrganizationNeeds);
