@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { v2 as cloudinary } from 'cloudinary';
+import { deleteCloudinaryFile, deleteMultipleCloudinaryFiles } from '../utils/cloudinary';
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -292,6 +293,23 @@ export class AdminController {
   static async deleteReport(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
+
+      // Cloudinary Cleanup
+      const reportPhotos = await prisma.reportPhoto.findMany({ where: { reportId: id } });
+      await deleteMultipleCloudinaryFiles(reportPhotos.map(p => p.publicId));
+
+      const animalProfiles = await prisma.animalProfile.findMany({ where: { reportId: id }, select: { id: true } });
+      for (const ap of animalProfiles) {
+        const animalPhotos = await prisma.animalPhoto.findMany({ where: { animalId: ap.id } });
+        await deleteMultipleCloudinaryFiles(animalPhotos.map(p => p.publicId));
+        
+        const medicalRecords = await prisma.medicalRecord.findMany({ where: { animalId: ap.id } });
+        for (const rec of medicalRecords) {
+          if (rec.photoUrls && Array.isArray(rec.photoUrls)) {
+            await deleteMultipleCloudinaryFiles(rec.photoUrls as string[]);
+          }
+        }
+      }
       
       await prisma.$transaction(async (tx) => {
         // Desvincular duplicados
@@ -475,6 +493,12 @@ export class AdminController {
   static async deleteOrganization(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
+      const org = await prisma.organization.findUnique({ where: { id } });
+      if (org) {
+        await deleteCloudinaryFile(org.logoUrl);
+        await deleteCloudinaryFile(org.coverUrl);
+      }
+      // Delete applicant INEs (from org.application... wait, Org doesn't have application docs, Users do)
       await prisma.$transaction(async (tx) => {
         await tx.report.updateMany({ where: { destinationOrgId: id }, data: { destinationOrgId: null } });
         await tx.animalProfile.updateMany({ where: { organizationId: id }, data: { organizationId: null } });
@@ -755,6 +779,16 @@ export class AdminController {
   static async deleteAnimal(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
+      const photos = await prisma.animalPhoto.findMany({ where: { animalId: id } });
+      await deleteMultipleCloudinaryFiles(photos.map(p => p.publicId));
+      
+      const medicalRecords = await prisma.medicalRecord.findMany({ where: { animalId: id } });
+      for (const rec of medicalRecords) {
+        if (rec.photoUrls && Array.isArray(rec.photoUrls)) {
+           await deleteMultipleCloudinaryFiles(rec.photoUrls as string[]);
+        }
+      }
+
       await prisma.animalProfile.delete({
         where: { id }
       });
@@ -1155,17 +1189,8 @@ export class AdminController {
       // Si aprueban o rechazan, por privacidad destruimos el INE y selfie (tal como pidió Isabel)
       // Nota: Si queremos destruir en Cloudinary necesitamos extraer el public_id de la URL.
       // Como guardamos las URLs directas (y no el publicId para los usuarios), 
-      // extraer el public_id de una URL de Cloudinary estándar:
-      const extractPublicId = (url: string) => {
-        const parts = url.split('/');
-        const fileWithExt = parts[parts.length - 1];
-        const folder = parts[parts.length - 2];
-        const id = fileWithExt.split('.')[0];
-        return `${folder}/${id}`; // dasha/volunteers/xxx
-      };
-
-      if (user.ineFrontUrl) await cloudinary.uploader.destroy(extractPublicId(user.ineFrontUrl)).catch(() => {});
-      if (user.selfieUrl) await cloudinary.uploader.destroy(extractPublicId(user.selfieUrl)).catch(() => {});
+      if (user.ineFrontUrl) await deleteCloudinaryFile(user.ineFrontUrl);
+      if (user.selfieUrl) await deleteCloudinaryFile(user.selfieUrl);
 
       // Limpiamos las URLs de la BD para ahorrar espacio visual y por seguridad
       dataToUpdate.ineFrontUrl = null;
@@ -1577,3 +1602,8 @@ export class AdminController {
     }
   }
 }
+
+
+
+
+
