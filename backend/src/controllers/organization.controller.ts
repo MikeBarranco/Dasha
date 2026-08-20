@@ -1140,18 +1140,18 @@ export class OrganizationController {
     }
   }
 
-  /**
-   * Elimina una foto de la galería del animal (y de Cloudinary)
-   */
-  static async deletePortalAnimalPhoto(req: Request, res: Response, next: NextFunction) {
+    static async deletePortalAnimalPhoto(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = (req as any).user?.id;
       const animalId = req.params.animalId as string;
       const url = req.body.url || req.query.url;
 
+      console.log('DELETE PHOTO REQ:', { animalId, urlBody: req.body.url, urlQuery: req.query.url });
+
       const myEmployee = await OrganizationController.getPortalContext(req, userId);
 
       if (!myEmployee || (myEmployee.roleInOrg !== 'admin' && myEmployee.roleInOrg !== 'veterinarian')) {
+        console.log('DELETE PHOTO 403: No permissions');
         res.status(403).json({ error: 'Solo veterinarios o administradores pueden eliminar fotos' });
         return;
       }
@@ -1159,12 +1159,14 @@ export class OrganizationController {
       const animal = await prisma.animalProfile.findUnique({ where: { id: animalId } });
       
       if (!animal || animal.organizationId !== myEmployee.organizationId) {
+        console.log('DELETE PHOTO 404: Animal not found or mismatch');
         res.status(404).json({ error: 'Este animal no se encuentra en tu organización' });
         return;
       }
 
-      const photo = await prisma.animalPhoto.findFirst({ where: { animalId, url } });
+      const photo = await prisma.animalPhoto.findFirst({ where: { animalId, url: url as string } });
       if (!photo) {
+        console.log('DELETE PHOTO 404: Photo not found for URL:', url);
         res.status(404).json({ error: 'Foto no encontrada' });
         return;
       }
@@ -1174,15 +1176,16 @@ export class OrganizationController {
       }
 
       await prisma.animalPhoto.delete({ where: { id: photo.id } });
-
-      res.status(200).json({ message: 'Foto eliminada correctamente' });
+      console.log('DELETE PHOTO SUCCESS');
+      res.json({ status: 'success' });
     } catch (error) {
+      console.error('DELETE PHOTO ERROR:', error);
       next(error);
     }
   }
 
   /**
-   * Reordena las fotos de la galería del animal
+   * Reordena las fotos del animal (recibe un arreglo con las URLs en el nuevo orden)
    */
   static async reorderPortalAnimalPhotos(req: Request, res: Response, next: NextFunction) {
     try {
@@ -1190,9 +1193,12 @@ export class OrganizationController {
       const animalId = req.params.animalId as string;
       const { urls } = req.body;
 
+      console.log('REORDER PHOTOS REQ:', { animalId, urls });
+
       const myEmployee = await OrganizationController.getPortalContext(req, userId);
 
       if (!myEmployee || (myEmployee.roleInOrg !== 'admin' && myEmployee.roleInOrg !== 'veterinarian')) {
+        console.log('REORDER PHOTOS 403: No permissions');
         res.status(403).json({ error: 'Solo veterinarios o administradores pueden ordenar fotos' });
         return;
       }
@@ -1200,11 +1206,13 @@ export class OrganizationController {
       const animal = await prisma.animalProfile.findUnique({ where: { id: animalId } });
       
       if (!animal || animal.organizationId !== myEmployee.organizationId) {
+        console.log('REORDER PHOTOS 404: Animal mismatch');
         res.status(404).json({ error: 'Este animal no se encuentra en tu organización' });
         return;
       }
 
       if (!Array.isArray(urls)) {
+        console.log('REORDER PHOTOS 400: Not an array');
         res.status(400).json({ error: 'Se requiere un arreglo de URLs' });
         return;
       }
@@ -1215,9 +1223,10 @@ export class OrganizationController {
           data: { orderIndex: i }
         });
       }
-
-      res.status(200).json({ message: 'Fotos reordenadas correctamente' });
+      console.log('REORDER PHOTOS SUCCESS');
+      res.json({ status: 'success' });
     } catch (error) {
+      console.error('REORDER PHOTOS ERROR:', error);
       next(error);
     }
   }
@@ -1954,5 +1963,6 @@ export class OrganizationController {
     }
   }
 }
+
 
 
