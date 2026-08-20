@@ -1127,7 +1127,6 @@ export class OrganizationController {
             animalId,
             url: uploadResult.secure_url,
             publicId: uploadResult.public_id,
-            isPrimary: false,
             orderIndex: 0
           }
         });
