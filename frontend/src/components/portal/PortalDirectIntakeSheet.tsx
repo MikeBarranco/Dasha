@@ -137,15 +137,14 @@ export function PortalDirectIntakeSheet({ orgId, onClose, onCreated }: DirectInt
             <span className="mb-1.5 block text-sm font-medium text-neutral-700">Fotos</span>
             <div className="flex flex-wrap gap-2">
               {photos.map((url, index) => (
-                <div key={index} className="relative h-16 w-16 overflow-hidden rounded-xl">
+                <div key={index} className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-lg">
                   <img src={url} alt="" className="h-full w-full object-cover" />
                   <button
                     type="button"
-                    onClick={() => setPhotos((current) => current.filter((_, i) => i !== index))}
-                    aria-label="Quitar foto"
-                    className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white"
+                    onClick={() => setPhotos((prev) => prev.filter((_, i) => i !== index))}
+                    className="absolute right-1 top-1 rounded-full bg-red-500 p-1 text-white shadow-md transition-colors hover:bg-red-600"
                   >
-                    <X className="h-3 w-3" />
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               ))}
