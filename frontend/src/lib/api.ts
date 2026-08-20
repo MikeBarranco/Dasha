@@ -3030,10 +3030,6 @@ export async function deleteMyOrgAnimalPhoto(animalId: string, url: string, orgI
     method: 'DELETE',
     body: JSON.stringify({ url }),
   });
-}/photos${orgScope(orgId)}`, {
-    method: 'DELETE',
-    body: JSON.stringify({ url }),
-  });
 }
 
 export async function reorderMyOrgAnimalPhotos(animalId: string, urls: string[], orgId?: string): Promise<void> {

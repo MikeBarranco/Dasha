@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { X, ImagePlus, Loader2 } from 'lucide-react';
+import { X, ImagePlus, Loader2, Trash2 } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 import { createDirectIntakeAnimal } from '../../lib/api';
