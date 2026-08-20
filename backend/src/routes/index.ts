@@ -56,6 +56,8 @@ import { OrganizationController } from '../controllers/organization.controller';
 router.get('/organizations/portal/incoming-rescues', requireAuth, OrganizationController.getIncomingRescues);
 router.patch('/portal/animals/:animalId', requireAuth, OrganizationController.updatePortalAnimal);
 router.post('/portal/animals/:animalId/photos', requireAuth, OrganizationController.addPortalAnimalPhoto);
+router.delete('/portal/animals/:animalId/photos', requireAuth, OrganizationController.deletePortalAnimalPhoto);
+router.patch('/portal/animals/:animalId/photos/reorder', requireAuth, OrganizationController.reorderPortalAnimalPhotos);
 router.post('/portal/animals/direct-intake', requireAuth, OrganizationController.directIntakeAnimal);
 
 import { NeedController } from '../controllers/need.controller';
