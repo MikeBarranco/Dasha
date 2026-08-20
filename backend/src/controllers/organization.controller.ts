@@ -678,9 +678,7 @@ export class OrganizationController {
       const reportId = req.params.reportId as string;
       const { volunteerId, etaMinutes } = req.body;
 
-      const myEmployee = await prisma.organizationEmployee.findFirst({
-        where: { userId }
-      });
+      const myEmployee = await OrganizationController.getPortalContext(req, userId);
 
       if (!myEmployee || myEmployee.roleInOrg !== 'admin') {
         res.status(403).json({ error: 'No tienes permisos de administrador en esta organización' });
@@ -827,9 +825,7 @@ export class OrganizationController {
   static async getPortalAnimals(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = (req as any).user?.id;
-      const myEmployee = await prisma.organizationEmployee.findFirst({
-        where: { userId }
-      });
+      const myEmployee = await OrganizationController.getPortalContext(req, userId);
 
       if (!myEmployee) {
         res.status(403).json({ error: 'No autorizado' });
@@ -879,9 +875,7 @@ export class OrganizationController {
       const userId = (req as any).user?.id;
       const { photosBase64, ...data } = req.body;
       
-      const myEmployee = await prisma.organizationEmployee.findFirst({
-        where: { userId }
-      });
+      const myEmployee = await OrganizationController.getPortalContext(req, userId);
 
       if (!myEmployee || (myEmployee.roleInOrg !== 'admin' && myEmployee.roleInOrg !== 'veterinarian')) {
         res.status(403).json({ error: 'Solo veterinarios o administradores pueden ingresar animales' });
@@ -925,9 +919,7 @@ export class OrganizationController {
         features, story, photosBase64, isPublic, size, condition, description 
       } = req.body;
       
-      const myEmployee = await prisma.organizationEmployee.findFirst({
-        where: { userId }
-      });
+      const myEmployee = await OrganizationController.getPortalContext(req, userId);
 
       if (!myEmployee || (myEmployee.roleInOrg !== 'admin' && myEmployee.roleInOrg !== 'veterinarian')) {
         res.status(403).json({ error: 'Solo veterinarios o administradores pueden ingresar animales' });
@@ -1007,9 +999,7 @@ export class OrganizationController {
       const animalId = req.params.animalId as string;
       const { photosBase64, ...data } = req.body;
 
-      const myEmployee = await prisma.organizationEmployee.findFirst({
-        where: { userId }
-      });
+      const myEmployee = await OrganizationController.getPortalContext(req, userId);
 
       if (!myEmployee || (myEmployee.roleInOrg !== 'admin' && myEmployee.roleInOrg !== 'veterinarian')) {
         res.status(403).json({ error: 'Solo veterinarios o administradores pueden agregar expedientes médicos' });
@@ -1157,7 +1147,7 @@ export class OrganizationController {
     try {
       const userId = (req as any).user?.id;
       const animalId = req.params.animalId as string;
-      const { url } = req.body;
+      const url = req.body.url || req.query.url;
 
       const myEmployee = await OrganizationController.getPortalContext(req, userId);
 
@@ -1246,9 +1236,7 @@ export class OrganizationController {
         return;
       }
 
-      const myEmployee = await prisma.organizationEmployee.findFirst({
-        where: { userId }
-      });
+      const myEmployee = await OrganizationController.getPortalContext(req, userId);
 
       if (!myEmployee || (myEmployee.roleInOrg !== 'admin' && myEmployee.roleInOrg !== 'veterinarian')) {
         res.status(403).json({ error: 'Solo veterinarios o administradores pueden publicar avances' });
@@ -1370,9 +1358,7 @@ export class OrganizationController {
       const userId = (req as any).user?.id;
       const applicationId = req.params.applicationId as string;
 
-      const myEmployee = await prisma.organizationEmployee.findFirst({
-        where: { userId }
-      });
+      const myEmployee = await OrganizationController.getPortalContext(req, userId);
 
       if (!myEmployee || (myEmployee.roleInOrg !== 'admin' && myEmployee.roleInOrg !== 'veterinarian')) {
         res.status(403).json({ error: 'No tienes permisos para aprobar adopciones' });
@@ -1453,9 +1439,7 @@ export class OrganizationController {
       const userId = (req as any).user?.id;
       const applicationId = req.params.applicationId as string;
 
-      const myEmployee = await prisma.organizationEmployee.findFirst({
-        where: { userId }
-      });
+      const myEmployee = await OrganizationController.getPortalContext(req, userId);
 
       if (!myEmployee || (myEmployee.roleInOrg !== 'admin' && myEmployee.roleInOrg !== 'veterinarian')) {
         res.status(403).json({ error: 'No tienes permisos para rechazar adopciones' });
@@ -1618,9 +1602,7 @@ export class OrganizationController {
       const userId = (req as any).user?.id;
       const donationId = req.params.donationId as string;
 
-      const myEmployee = await prisma.organizationEmployee.findFirst({
-        where: { userId }
-      });
+      const myEmployee = await OrganizationController.getPortalContext(req, userId);
 
       // Se usa un simple chequeo. En el futuro se puede añadir rol 'accountant'
       if (!myEmployee || myEmployee.roleInOrg !== 'admin') {
@@ -1673,9 +1655,7 @@ export class OrganizationController {
         return;
       }
 
-      const myEmployee = await prisma.organizationEmployee.findFirst({
-        where: { userId }
-      });
+      const myEmployee = await OrganizationController.getPortalContext(req, userId);
 
       if (!myEmployee || myEmployee.roleInOrg !== 'admin') {
         res.status(403).json({ error: 'No tienes permisos para rechazar donaciones' });
@@ -1796,9 +1776,7 @@ export class OrganizationController {
       const animalId = req.params.id as string;
       const { sterilized, status } = req.body;
 
-      const myEmployee = await prisma.organizationEmployee.findFirst({
-        where: { userId }
-      });
+      const myEmployee = await OrganizationController.getPortalContext(req, userId);
 
       if (!myEmployee) {
         res.status(403).json({ error: 'No tienes permisos' });
@@ -1869,9 +1847,7 @@ export class OrganizationController {
       const animalId = req.params.id as string;
       const { type, title, date, notes, photoUrl, photoUrls } = req.body;
 
-      const myEmployee = await prisma.organizationEmployee.findFirst({
-        where: { userId }
-      });
+      const myEmployee = await OrganizationController.getPortalContext(req, userId);
 
       if (!myEmployee) {
         res.status(403).json({ error: 'No tienes permisos' });
@@ -1978,3 +1954,5 @@ export class OrganizationController {
     }
   }
 }
+
+

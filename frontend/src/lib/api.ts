@@ -3025,7 +3025,8 @@ export async function getMyContributions(): Promise<Contribution[]> {
 }
 
 export async function deleteMyOrgAnimalPhoto(animalId: string, url: string, orgId?: string): Promise<void> {
-  await authedRaw(`/portal/animals/${animalId}/photos${orgScope(orgId)}`, {
+  const queryParam = orgId ? '&' : '?';
+  await authedRaw(`/portal/animals/${animalId}/photos${orgScope(orgId)}${queryParam}url=${encodeURIComponent(url)}`, {
     method: 'DELETE',
     body: JSON.stringify({ url }),
   });
@@ -3037,4 +3038,6 @@ export async function reorderMyOrgAnimalPhotos(animalId: string, urls: string[],
     body: JSON.stringify({ urls }),
   });
 }
+
+
 

@@ -336,15 +336,15 @@ export function PortalAnimalSheet({
                 Aún no hay fotos. Agrega la primera para ir contando su historia.
               </p>
             ) : (
-              <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+              <div className="mt-4 flex gap-4 overflow-x-auto pb-4">
                 {photos.map((url, index) => (
-                  <div key={index} className="group relative shrink-0 h-16 w-16">
+                  <div key={index} className="group relative h-20 w-20 shrink-0">
                     <button
                       type="button"
                       onClick={() => setHeroIndex(index)}
                       className={cn(
-                        'h-full w-full overflow-hidden rounded-lg border-2 transition-colors',
-                        index === heroIndex ? 'border-cobalto' : 'border-transparent',
+                        'h-full w-full overflow-hidden rounded-lg border-2 transition-all',
+                        index === heroIndex ? 'border-coral shadow-md' : 'border-transparent'
                       )}
                     >
                       <img
@@ -358,35 +358,31 @@ export function PortalAnimalSheet({
                       />
                     </button>
                     
-                    {/* Controles Overlay */}
-                    <div className="absolute inset-0 hidden flex-col justify-between bg-black/40 p-1 group-hover:flex rounded-lg">
-                      <div className="flex justify-between">
-                        <button 
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); movePhoto(index, -1); }}
-                          disabled={index === 0}
-                          className="rounded-full bg-white/20 p-0.5 text-white hover:bg-white/40 disabled:opacity-30"
-                        >
-                          <ChevronLeft className="h-3 w-3" />
-                        </button>
-                        <button 
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); movePhoto(index, 1); }}
-                          disabled={index === photos.length - 1}
-                          className="rounded-full bg-white/20 p-0.5 text-white hover:bg-white/40 disabled:opacity-30"
-                        >
-                          <ChevronRight className="h-3 w-3" />
-                        </button>
-                      </div>
-                      <div className="flex justify-center">
-                        <button 
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); removePhoto(index); }}
-                          className="rounded-full bg-red-500/80 p-1 text-white hover:bg-red-500"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      </div>
+                    {/* Controles siempre visibles (mejor para móviles) */}
+                    <div className="absolute -bottom-2 -left-2 -right-2 flex justify-between px-1">
+                      <button 
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); movePhoto(index, -1); }}
+                        disabled={index === 0}
+                        className="rounded-full bg-white shadow-md border border-neutral-200 p-1 text-neutral-600 hover:text-coral disabled:opacity-0 transition-opacity"
+                      >
+                        <ChevronLeft className="h-3 w-3" />
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); removePhoto(index); }}
+                        className="rounded-full bg-red-500 shadow-md p-1 text-white hover:bg-red-600 transition-colors"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); movePhoto(index, 1); }}
+                        disabled={index === photos.length - 1}
+                        className="rounded-full bg-white shadow-md border border-neutral-200 p-1 text-neutral-600 hover:text-coral disabled:opacity-0 transition-opacity"
+                      >
+                        <ChevronRight className="h-3 w-3" />
+                      </button>
                     </div>
                   </div>
                 ))}
