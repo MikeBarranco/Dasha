@@ -1147,7 +1147,7 @@ export class OrganizationController {
     try {
       const userId = (req as any).user?.id;
       const animalId = req.params.animalId as string;
-      const { url } = req.body;
+      const url = req.body.url || req.query.url;
 
       const myEmployee = await OrganizationController.getPortalContext(req, userId);
 
@@ -1954,4 +1954,5 @@ export class OrganizationController {
     }
   }
 }
+
 
