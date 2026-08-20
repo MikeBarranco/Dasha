@@ -34,6 +34,11 @@ type LocationPickerProps = {
   // Avisa a la pantalla si ya tenemos una ubicación válida (para no dejar
   // publicar sin ella).
   onStatusChange?: (ready: boolean) => void;
+  // Modo LIBRE (mascotas perdidas): el pin se puede poner DONDE SEA —tocando el
+  // mapa o arrastrándolo sin límite— y NO se exige el GPS (un dueño/aliado puede
+  // reportar sin estar en el lugar). Por defecto (false = reporte de CALLE) se
+  // fuerza la ubicación real y el pin solo se ajusta 50 m.
+  freePlacement?: boolean;
 };
 
 function metersPerDegLng(lat: number): number {
@@ -65,7 +70,11 @@ function circlePolygon(lng: number, lat: number, radiusMeters: number, points = 
   };
 }
 
-export function LocationPicker({ onChange, onStatusChange }: LocationPickerProps) {
+export function LocationPicker({
+  onChange,
+  onStatusChange,
+  freePlacement = false,
+}: LocationPickerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
@@ -80,28 +89,31 @@ export function LocationPicker({ onChange, onStatusChange }: LocationPickerProps
     onStatusRef.current = onStatusChange;
   }, [onChange, onStatusChange]);
 
-  // Coloca la zona permitida y el pin arrastrable en la ubicación real.
+  // Coloca el pin arrastrable. En CALLE dibuja además la "zona permitida" (el pin
+  // solo se ajusta 50 m alrededor del GPS). En modo LIBRE no hay zona ni tope.
   const placeAt = (map: maplibregl.Map, lng: number, lat: number) => {
     originRef.current = [lng, lat];
-    const area = circlePolygon(lng, lat, MAX_ADJUST_METERS);
 
-    const source = map.getSource('allowed-area') as maplibregl.GeoJSONSource | undefined;
-    if (source) {
-      source.setData(area);
-    } else {
-      map.addSource('allowed-area', { type: 'geojson', data: area });
-      map.addLayer({
-        id: 'allowed-area-fill',
-        type: 'fill',
-        source: 'allowed-area',
-        paint: { 'fill-color': '#1C4E80', 'fill-opacity': 0.12 },
-      });
-      map.addLayer({
-        id: 'allowed-area-line',
-        type: 'line',
-        source: 'allowed-area',
-        paint: { 'line-color': '#1C4E80', 'line-width': 1.5, 'line-opacity': 0.5 },
-      });
+    if (!freePlacement) {
+      const area = circlePolygon(lng, lat, MAX_ADJUST_METERS);
+      const source = map.getSource('allowed-area') as maplibregl.GeoJSONSource | undefined;
+      if (source) {
+        source.setData(area);
+      } else {
+        map.addSource('allowed-area', { type: 'geojson', data: area });
+        map.addLayer({
+          id: 'allowed-area-fill',
+          type: 'fill',
+          source: 'allowed-area',
+          paint: { 'fill-color': '#1C4E80', 'fill-opacity': 0.12 },
+        });
+        map.addLayer({
+          id: 'allowed-area-line',
+          type: 'line',
+          source: 'allowed-area',
+          paint: { 'line-color': '#1C4E80', 'line-width': 1.5, 'line-opacity': 0.5 },
+        });
+      }
     }
 
     if (!markerRef.current) {
@@ -109,9 +121,15 @@ export function LocationPicker({ onChange, onStatusChange }: LocationPickerProps
         .setLngLat([lng, lat])
         .addTo(map);
       marker.on('drag', () => {
+        const ll = marker.getLngLat();
+        // Modo libre: sin límite, el pin va a donde lo suelten.
+        if (freePlacement) {
+          onChangeRef.current?.(ll.lat, ll.lng);
+          return;
+        }
+        // Calle: acotamos el pin a 50 m de la ubicación real (ajuste fino).
         const origin = originRef.current;
         if (!origin) return;
-        const ll = marker.getLngLat();
         const dist = distanceMeters(origin[0], origin[1], ll.lng, ll.lat);
         if (dist > MAX_ADJUST_METERS) {
           const factor = MAX_ADJUST_METERS / dist;
@@ -128,7 +146,7 @@ export function LocationPicker({ onChange, onStatusChange }: LocationPickerProps
       markerRef.current.setLngLat([lng, lat]);
     }
 
-    map.flyTo({ center: [lng, lat], zoom: 18 });
+    map.flyTo({ center: [lng, lat], zoom: freePlacement ? 15 : 18 });
     onChangeRef.current?.(lat, lng);
   };
 
@@ -136,6 +154,11 @@ export function LocationPicker({ onChange, onStatusChange }: LocationPickerProps
     const map = mapRef.current;
     if (!map) return;
     if (!navigator.geolocation) {
+      // En modo libre el GPS es opcional: dejamos el pin manual y el mapa listo.
+      if (freePlacement) {
+        setStatus('ready');
+        return;
+      }
       setStatus('denied');
       onStatusRef.current?.(false);
       return;
@@ -148,6 +171,11 @@ export function LocationPicker({ onChange, onStatusChange }: LocationPickerProps
         onStatusRef.current?.(true);
       },
       () => {
+        // Modo libre: si no da permiso, no bloqueamos; conserva el pin manual.
+        if (freePlacement) {
+          setStatus('ready');
+          return;
+        }
         setStatus('denied');
         onStatusRef.current?.(false);
       },
@@ -169,7 +197,26 @@ export function LocationPicker({ onChange, onStatusChange }: LocationPickerProps
     mapRef.current = map;
     map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
 
-    map.on('load', () => locate());
+    map.on('load', () => {
+      if (freePlacement) {
+        // Modo libre: pin en el centro de Puebla y mapa listo para tocar/arrastrar.
+        // El GPS queda como atajo opcional (botón "Mi ubicación"), no como requisito.
+        placeAt(map, PUEBLA_CENTER[0], PUEBLA_CENTER[1]);
+        setStatus('ready');
+        onStatusRef.current?.(true);
+      } else {
+        locate();
+      }
+    });
+
+    // Modo libre: tocar cualquier punto del mapa mueve el pin a ese lugar.
+    if (freePlacement) {
+      map.on('click', (event) => {
+        if (!markerRef.current) return;
+        markerRef.current.setLngLat(event.lngLat);
+        onChangeRef.current?.(event.lngLat.lat, event.lngLat.lng);
+      });
+    }
 
     return () => {
       map.remove();
@@ -194,7 +241,9 @@ export function LocationPicker({ onChange, onStatusChange }: LocationPickerProps
       {status === 'loading' && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/80 text-neutral-500">
           <Loader2 className="h-6 w-6 animate-spin text-cobalto" />
-          <p className="text-sm font-medium">Obteniendo tu ubicación…</p>
+          <p className="text-sm font-medium">
+            {freePlacement ? 'Cargando el mapa…' : 'Obteniendo tu ubicación…'}
+          </p>
         </div>
       )}
 
@@ -220,15 +269,17 @@ export function LocationPicker({ onChange, onStatusChange }: LocationPickerProps
         <>
           <div className="pointer-events-none absolute inset-x-3 top-3 flex justify-center">
             <p className="rounded-full bg-white/90 px-3 py-1.5 text-center text-xs font-medium text-neutral-600 shadow">
-              Arrastra el pin para afinar el lugar exacto
+              {freePlacement
+                ? 'Toca el mapa o arrastra el pin para marcar el lugar'
+                : 'Arrastra el pin para afinar el lugar exacto'}
             </p>
           </div>
           <button
             type="button"
-            onClick={recenter}
+            onClick={freePlacement ? locate : recenter}
             className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full bg-white px-3 py-2 text-sm font-medium text-cobalto shadow"
           >
-            <LocateFixed className="h-4 w-4" /> Centrar
+            <LocateFixed className="h-4 w-4" /> {freePlacement ? 'Mi ubicación' : 'Centrar'}
           </button>
         </>
       )}

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ScrollToTop } from './components/layout/ScrollToTop';
+import { PageTitle } from './components/layout/PageTitle';
 import { AnalyticsTracker } from './components/layout/AnalyticsTracker';
 import { CookieBanner } from './components/layout/CookieBanner';
 import { TerminosPage } from './pages/TerminosPage';
@@ -69,6 +70,7 @@ function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
+      <PageTitle />
       <AnalyticsTracker />
       <CookieBanner />
       <ErrorBoundary>

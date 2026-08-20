@@ -127,7 +127,15 @@ export function PortalLayout() {
     <div className="flex min-h-screen flex-col overflow-x-hidden bg-lino">
       <header className="sticky top-0 z-40 border-b border-neutral-200 bg-white/90 backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-4 py-3 md:px-6">
-          <div className="flex min-w-0 items-center gap-2.5">
+          {/* El logo + titulo lleva al Inicio del portal (el "panel"). Patron estandar
+              de "toca el logo para volver al inicio": es el regreso al panel siempre
+              visible y de un solo toque, sobre todo en celular donde la navegacion
+              entre secciones vive en el menu desplegable. */}
+          <Link
+            to={{ pathname: '/portal', search: linkSearch }}
+            aria-label="Ir al inicio del portal"
+            className="flex min-w-0 items-center gap-2.5 rounded-xl transition-opacity hover:opacity-80"
+          >
             <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-cobalto text-white">
               <Store className="h-5 w-5" />
             </span>
@@ -137,14 +145,14 @@ export function PortalLayout() {
               </p>
               <p className="truncate text-xs text-neutral-400">{context.organizationName}</p>
             </div>
-          </div>
+          </Link>
           <Link
             to={context.adminOrgId ? '/admin/aliados' : '/mapa'}
             className="flex flex-shrink-0 items-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50"
           >
             <ArrowLeft className="h-4 w-4" />
             <span className="hidden sm:inline">
-              {context.adminOrgId ? 'Volver a aliados' : 'Volver a la app'}
+              {context.adminOrgId ? 'Volver a aliados' : 'Salir del portal'}
             </span>
           </Link>
         </div>
@@ -160,24 +168,45 @@ export function PortalLayout() {
       )}
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-6 md:px-6 md:py-8">
-        {/* Móvil: menú desplegable (como el panel de admin) */}
+        {/* Móvil: botón fijo de "Inicio" (regreso al panel siempre visible y
+            etiquetado, para que nadie se pierda) + menú desplegable con el resto
+            de secciones. En escritorio esto no hace falta: abajo hay una pastilla
+            "Inicio" siempre visible. */}
         <div className="relative z-30 mb-5 sm:hidden">
-          <button
-            type="button"
-            onClick={() => setMenuOpen((value) => !value)}
-            className="flex w-full items-center justify-between rounded-2xl border border-neutral-200 bg-white px-4 py-3"
-          >
-            <span className="flex items-center gap-2.5 font-medium text-neutral-800">
-              <current.icon className="h-4 w-4 text-cobalto" />
-              {current.label}
-            </span>
-            <ChevronDown
-              className={cn(
-                'h-4 w-4 text-neutral-400 transition-transform',
-                menuOpen && 'rotate-180',
-              )}
-            />
-          </button>
+          <div className="flex items-center gap-2">
+            <NavLink
+              to={{ pathname: '/portal', search: linkSearch }}
+              end
+              onClick={() => setMenuOpen(false)}
+              className={({ isActive }) =>
+                cn(
+                  'flex flex-shrink-0 items-center gap-1.5 rounded-2xl border px-3.5 py-3 text-sm font-medium transition-colors',
+                  isActive
+                    ? 'border-cobalto bg-cobalto text-white'
+                    : 'border-neutral-200 bg-white text-neutral-700',
+                )
+              }
+            >
+              <LayoutDashboard className="h-4 w-4" />
+              Inicio
+            </NavLink>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((value) => !value)}
+              className="flex flex-1 items-center justify-between rounded-2xl border border-neutral-200 bg-white px-4 py-3"
+            >
+              <span className="flex min-w-0 items-center gap-2.5 font-medium text-neutral-800">
+                <current.icon className="h-4 w-4 flex-shrink-0 text-cobalto" />
+                <span className="truncate">{current.label}</span>
+              </span>
+              <ChevronDown
+                className={cn(
+                  'h-4 w-4 flex-shrink-0 text-neutral-400 transition-transform',
+                  menuOpen && 'rotate-180',
+                )}
+              />
+            </button>
+          </div>
 
           <AnimatePresence>
             {menuOpen && (
