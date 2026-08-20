@@ -405,12 +405,14 @@ export function ReportarPerdidaPage() {
       {step === 3 && (
         <div>
           <p className="mb-3 text-sm text-neutral-600">
-            Marca dónde lo viste por última vez. Mueve el mapa para ajustar el pin.
+            Marca en el mapa dónde se perdió. Toca el lugar o arrastra el pin; no necesitas estar
+            ahí para reportarlo.
           </p>
           <Suspense
             fallback={<div className="h-72 w-full animate-pulse rounded-2xl bg-neutral-100" />}
           >
             <LocationPicker
+              freePlacement
               onChange={(newLat, newLng) => {
                 setLat(newLat);
                 setLng(newLng);
