@@ -32,6 +32,8 @@ export function PortalPerfilPage() {
   const [phone, setPhone] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [website, setWebsite] = useState('');
+  const [facebookUrl, setFacebookUrl] = useState('');
+  const [instagramUrl, setInstagramUrl] = useState('');
   const [logo, setLogo] = useState<string | null>(null);
   const [cover, setCover] = useState<string | null>(null);
 
@@ -66,6 +68,8 @@ export function PortalPerfilPage() {
           setPhone(found.phone ?? '');
           setWhatsapp(found.whatsapp ?? '');
           setWebsite(found.website ?? '');
+          setFacebookUrl(found.facebookUrl ?? '');
+          setInstagramUrl(found.instagramUrl ?? '');
         }
       })
       .catch(() => {
@@ -112,6 +116,9 @@ export function PortalPerfilPage() {
       phone: phone.trim() || undefined,
       whatsapp: whatsapp.trim() || undefined,
       website: website.trim() || undefined,
+      // Se mandan siempre (aunque vacías) para permitir borrar el enlace.
+      facebookUrl: facebookUrl.trim(),
+      instagramUrl: instagramUrl.trim(),
       ...(logo ? { logoBase64: logo } : {}),
       ...(cover ? { coverBase64: cover } : {}),
     };
@@ -132,6 +139,8 @@ export function PortalPerfilPage() {
               phone: input.phone ?? null,
               whatsapp: input.whatsapp ?? null,
               website: input.website ?? null,
+              facebookUrl: input.facebookUrl || null,
+              instagramUrl: input.instagramUrl || null,
               logoUrl: logo ?? current.logoUrl,
               coverUrl: cover ?? current.coverUrl,
             }
@@ -331,6 +340,27 @@ export function PortalPerfilPage() {
             placeholder="https://"
           />
         </Field>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Field label="Facebook">
+            <input
+              value={facebookUrl}
+              onChange={(event) => setFacebookUrl(event.target.value)}
+              maxLength={255}
+              className={inputClass}
+              placeholder="https://facebook.com/tu-pagina"
+            />
+          </Field>
+          <Field label="Instagram">
+            <input
+              value={instagramUrl}
+              onChange={(event) => setInstagramUrl(event.target.value)}
+              maxLength={255}
+              className={inputClass}
+              placeholder="https://instagram.com/tu-cuenta"
+            />
+          </Field>
+        </div>
 
         {error && <p className="text-sm text-alerta">{error}</p>}
         {saved && (

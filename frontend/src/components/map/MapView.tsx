@@ -52,7 +52,17 @@ const baseStyle: StyleSpecification = {
       attribution: '© OpenStreetMap contributors',
     },
   },
-  layers: [{ id: 'carto', type: 'raster', source: 'carto' }],
+  layers: [
+    {
+      id: 'carto',
+      type: 'raster',
+      source: 'carto',
+      // Bajamos la saturacion del mapa base: las calles a color de OpenStreetMap
+      // se ven mas suaves (siguen con color) y asi el "mapa de calor" por colonia
+      // y los pines resaltan. Solo el mapa principal lo necesita (es el del heatmap).
+      paint: { 'raster-saturation': -0.5 },
+    },
+  ],
 };
 
 function severityColor(severity: Severity): string {

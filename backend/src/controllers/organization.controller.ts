@@ -88,6 +88,8 @@ export class OrganizationController {
           phone: true,
           whatsapp: true,
           website: true,
+          facebookUrl: true,
+          instagramUrl: true,
           schedule: true,
           promo: true,
           orgType: true,
@@ -225,6 +227,8 @@ export class OrganizationController {
         phone: true,
         whatsapp: true,
         website: true,
+        facebookUrl: true,
+        instagramUrl: true,
         schedule: true,
         promo: true,
         orgType: true,
@@ -345,6 +349,15 @@ export class OrganizationController {
       if (updateData.acronym !== undefined) {
         const clean = String(updateData.acronym ?? '').trim().slice(0, 20);
         updateData.acronym = clean || null;
+      }
+
+      // Redes sociales del aliado: recortamos a 255 y vacio => null (la columna es
+      // VarChar(255), asi no truena ni por API con un valor enorme o vacio raro).
+      for (const social of ['facebookUrl', 'instagramUrl'] as const) {
+        if (updateData[social] !== undefined) {
+          const clean = String(updateData[social] ?? '').trim().slice(0, 255);
+          updateData[social] = clean || null;
+        }
       }
 
       // Subir logo a Cloudinary si se proporciona
@@ -1471,6 +1484,21 @@ export class OrganizationController {
           reviewedBy: userId
         }
       });
+
+      // Avisar al ciudadano que su solicitud fue rechazada (antes no llegaba nada).
+      // Va en su propio try para que un fallo de notificacion no tumbe la respuesta.
+      try {
+        const { NotificationService } = await import('../services/notification.service.js');
+        await NotificationService.sendNotification({
+          userId: application.applicantId,
+          title: 'Actualización de tu solicitud de adopción',
+          body: `Tu solicitud para adoptar a ${application.animal.name} no fue aprobada esta vez. Gracias por tu interés; puedes seguir explorando otros animalitos en adopción.`,
+          link: '/perfil',
+          type: 'system' as any
+        });
+      } catch (err) {
+        console.error('Error notificando adopcion rechazada', err);
+      }
 
       res.status(200).json({ message: 'Solicitud rechazada', application: updatedApplication });
     } catch (error) {

@@ -45,6 +45,9 @@ export type Ally = {
   phone: string | null;
   whatsapp: string | null;
   website: string | null;
+  // Redes sociales del aliado (URL), null si no tiene. Solo en la ficha detallada.
+  facebookUrl?: string | null;
+  instagramUrl?: string | null;
   orgType: AllyType;
   isVerified: boolean;
   lat: number;

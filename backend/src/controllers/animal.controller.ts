@@ -224,22 +224,47 @@ export class AnimalController {
         }
       });
 
-      // Send notification to organization admins if applicable
-      if (animal.organizationId) {
+      // Notificar la solicitud de adopcion. Debe llegar a los administradores del
+      // aliado dueño del animal Y tambien a los administradores de Dasha (equipo
+      // central, rol 'admin'), para que ambos se enteren. Se juntan los ids en un
+      // Set para no avisar dos veces al mismo usuario, y va en su propio try para
+      // que un fallo de notificacion no tumbe la solicitud (se responde igual).
+      try {
         const { NotificationService } = await import('../services/notification.service.js');
-        const admins = await prisma.organizationEmployee.findMany({
-          where: { organizationId: animal.organizationId, roleInOrg: 'admin', isVerified: true }
-        });
+        const recipientIds = new Set<string>();
 
-        for (const admin of admins) {
-          await NotificationService.sendNotification({
-            userId: admin.userId,
-            title: '¡Nueva solicitud de adopción!',
-            body: `${applicantName || 'Alguien'} ha solicitado adoptar a ${animal.name}.`,
-            link: '/portal/adopciones',
-            type: 'system' as any
+        // Administradores del aliado dueño del animal (si el animal es de una org).
+        if (animal.organizationId) {
+          const orgAdmins = await prisma.organizationEmployee.findMany({
+            where: { organizationId: animal.organizationId, roleInOrg: 'admin', isVerified: true },
+            select: { userId: true }
           });
+          orgAdmins.forEach((a) => recipientIds.add(a.userId));
         }
+
+        // Administradores de Dasha (equipo central).
+        const dashaAdmins = await prisma.user.findMany({
+          where: { role: 'admin' },
+          select: { id: true }
+        });
+        dashaAdmins.forEach((u) => recipientIds.add(u.id));
+
+        // No notificar al propio solicitante (por si un admin se postula).
+        recipientIds.delete(userId);
+
+        await Promise.allSettled(
+          [...recipientIds].map((recipientId) =>
+            NotificationService.sendNotification({
+              userId: recipientId,
+              title: '¡Nueva solicitud de adopción!',
+              body: `${applicantName || 'Alguien'} ha solicitado adoptar a ${animal.name}.`,
+              link: '/portal/adopciones',
+              type: 'system' as any
+            })
+          )
+        );
+      } catch (err) {
+        console.error('Error notificando solicitud de adopcion', err);
       }
 
       res.status(201).json({
