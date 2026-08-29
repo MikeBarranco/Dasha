@@ -26,8 +26,6 @@ const typeIcon: Record<NeedType, typeof Bone> = {
   other: HeartHandshake,
 };
 
-const formatMoney = (value: number) => `$${value.toLocaleString('es-MX')}`;
-
 export function NecesidadesPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -160,7 +158,7 @@ export function NecesidadesPage() {
                   <div className="mt-3">
                     <div className="flex items-center justify-between text-xs font-medium text-neutral-600">
                       <span>
-                        {formatMoney(need.coveredAmount)} de {formatMoney(need.targetAmount)}
+                        {need.coveredAmount} de {need.targetAmount} {need.unit ?? ''}
                       </span>
                       <span>
                         {Math.min(100, Math.round((need.coveredAmount / need.targetAmount) * 100))}%
@@ -187,9 +185,6 @@ export function NecesidadesPage() {
                     amountFor === need.id ? (
                       <div className="flex gap-2">
                         <div className="relative flex-1">
-                          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-neutral-400">
-                            $
-                          </span>
                           <input
                             value={amountValue}
                             onChange={(event) =>
@@ -197,9 +192,12 @@ export function NecesidadesPage() {
                             }
                             inputMode="numeric"
                             autoFocus
-                            placeholder="Monto"
-                            className="w-full rounded-xl border border-neutral-200 py-2.5 pl-7 pr-3 text-sm outline-none focus:ring-2 focus:ring-cobalto/30"
+                            placeholder="Cantidad"
+                            className="w-full rounded-xl border border-neutral-200 py-2.5 pl-3 pr-16 text-sm outline-none focus:ring-2 focus:ring-cobalto/30"
                           />
+                          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-neutral-400">
+                            {need.unit ?? ''}
+                          </span>
                         </div>
                         <button
                           type="button"

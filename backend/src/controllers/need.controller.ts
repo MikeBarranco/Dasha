@@ -2,6 +2,26 @@ import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 
 export class NeedController {
+  // Lista CERRADA de unidades para las necesidades (no texto libre). El frontend
+  // ofrece estas mismas y el backend valida contra ellas. "pesos" cubre el caso de
+  // una necesidad monetaria dentro del mismo modelo de cantidad + unidad.
+  static NEED_UNITS = [
+    'kg',
+    'bolsas',
+    'latas',
+    'piezas',
+    'litros',
+    'cobijas',
+    'traslados',
+    'noches',
+    'pesos',
+  ];
+
+  static sanitizeUnit(value: unknown): string | null {
+    const clean = String(value ?? '').trim().toLowerCase();
+    return NeedController.NEED_UNITS.includes(clean) ? clean : null;
+  }
+
   // GET /api/v1/needs - Listar todas las necesidades activas (público)
   static async getNeeds(req: Request, res: Response, next: NextFunction) {
     try {
@@ -87,22 +107,27 @@ export class NeedController {
   static async createNeed(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
-      const { title, description, category, urgency, targetAmount } = req.body;
+      const { title, description, category, urgency, targetAmount, unit } = req.body;
       const userId = (req as any).user?.id;
 
-      if (!title || !description || !category) {
+      // La cantidad ahora es estructurada (número + unidad de lista cerrada); la
+      // descripción es opcional. Solo título y categoría son obligatorios.
+      if (!title || !category) {
         res.status(400).json({ error: 'Faltan campos obligatorios' });
         return;
       }
-      
+
+      const qty = Number(targetAmount);
+
       const newNeed = await prisma.need.create({
         data: {
           organizationId: id,
           title,
-          description,
+          description: description || '',
           category,
           urgency: urgency || 'medium',
-          targetAmount: targetAmount || 1
+          targetAmount: Number.isFinite(qty) && qty > 0 ? qty : 1,
+          unit: NeedController.sanitizeUnit(unit)
         }
       });
 

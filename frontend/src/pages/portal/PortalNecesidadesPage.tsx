@@ -17,7 +17,7 @@ import {
   type CreateNeedInput,
   type NeedCategory,
 } from '../../lib/api';
-import { needTypeLabels, type Need } from '../../data/needs';
+import { needTypeLabels, needUnitOptions, type Need } from '../../data/needs';
 import { useAllyPortal } from '../../lib/useAllyPortal';
 
 // El backend solo acepta estas categorías para necesidades (food | transport |
@@ -50,6 +50,7 @@ function previewNeeds(): Need[] {
       title: 'Croquetas para cachorros',
       description: 'Se nos está acabando el alimento de los rescatados.',
       quantity: '20 kg',
+      unit: 'kg',
       organizationName: '',
       organizationId: '',
       animalName: null,
@@ -66,6 +67,7 @@ function previewNeeds(): Need[] {
       title: 'Traslado a la veterinaria',
       description: 'Cita de rayos X el viernes.',
       quantity: '1 traslado',
+      unit: 'traslados',
       organizationName: '',
       organizationId: '',
       animalName: 'Canela',
@@ -86,7 +88,9 @@ export function PortalNecesidadesPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [type, setType] = useState<NeedCategory>('food');
   const [title, setTitle] = useState('');
-  const [quantity, setQuantity] = useState('');
+  // Cantidad estructurada: número (como string para el input) + unidad de lista cerrada.
+  const [quantityValue, setQuantityValue] = useState('');
+  const [unit, setUnit] = useState<string>(needUnitOptions[0]);
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -114,7 +118,8 @@ export function PortalNecesidadesPage() {
   const resetForm = () => {
     setType('food');
     setTitle('');
-    setQuantity('');
+    setQuantityValue('');
+    setUnit(needUnitOptions[0]);
     setDescription('');
     setFormError(null);
   };
@@ -126,11 +131,14 @@ export function PortalNecesidadesPage() {
       setFormError('Escribe un título claro (mínimo 3 caracteres).');
       return;
     }
+    const qtyNum = Number(quantityValue);
+    const hasQty = Number.isFinite(qtyNum) && qtyNum > 0;
     const input: CreateNeedInput = {
       category: type,
       title: cleanTitle,
       description: description.trim() || undefined,
-      quantity: quantity.trim() || undefined,
+      quantityValue: hasQty ? qtyNum : undefined,
+      unit: hasQty ? unit : undefined,
     };
 
     if (ctx.preview) {
@@ -139,14 +147,15 @@ export function PortalNecesidadesPage() {
         type,
         title: cleanTitle,
         description: description.trim(),
-        quantity: quantity.trim(),
+        quantity: hasQty ? `${qtyNum} ${unit}` : '',
+        unit: hasQty ? unit : null,
         organizationName: '',
         organizationId: '',
         animalName: null,
         status: 'open',
         coveredByName: null,
         coveredByPhone: null,
-        targetAmount: null,
+        targetAmount: hasQty ? qtyNum : null,
         coveredAmount: 0,
         createdAgo: 'ahora',
       };
@@ -265,18 +274,33 @@ export function PortalNecesidadesPage() {
               className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-base text-neutral-700 outline-none focus:ring-2 focus:ring-cobalto/30"
             />
           </label>
-          <label className="block">
+          <div>
             <span className="mb-1.5 block text-sm font-medium text-neutral-700">
               Cantidad <span className="font-normal text-neutral-400">(opcional)</span>
             </span>
-            <input
-              value={quantity}
-              onChange={(event) => setQuantity(event.target.value)}
-              maxLength={40}
-              placeholder="Ej. 20 kg, 1 traslado"
-              className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-base text-neutral-700 outline-none focus:ring-2 focus:ring-cobalto/30"
-            />
-          </label>
+            <div className="flex gap-2">
+              <input
+                value={quantityValue}
+                onChange={(event) =>
+                  setQuantityValue(event.target.value.replace(/[^0-9]/g, '').slice(0, 7))
+                }
+                inputMode="numeric"
+                placeholder="Ej. 20"
+                className="w-24 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-base text-neutral-700 outline-none focus:ring-2 focus:ring-cobalto/30"
+              />
+              <select
+                value={unit}
+                onChange={(event) => setUnit(event.target.value)}
+                className="flex-1 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-base text-neutral-700 outline-none focus:ring-2 focus:ring-cobalto/30"
+              >
+                {needUnitOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
           <label className="block">
             <span className="mb-1.5 block text-sm font-medium text-neutral-700">
               Descripción <span className="font-normal text-neutral-400">(opcional)</span>

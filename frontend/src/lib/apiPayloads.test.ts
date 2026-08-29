@@ -48,32 +48,41 @@ afterEach(() => {
 });
 
 describe('createNeed (Necesidades)', () => {
-  it('manda category (no type) y mete la cantidad al inicio de la descripción', async () => {
+  it('manda category (no type) y la cantidad estructurada como targetAmount + unit', async () => {
     const fetchMock = mockFetchOk();
     await createNeed('org1', {
       category: 'food',
       title: 'Croquetas',
       description: 'Se nos acaba el alimento',
-      quantity: '20 kg',
+      quantityValue: 20,
+      unit: 'kg',
     });
     const body = sentBody(fetchMock);
     expect(sentUrl(fetchMock)).toContain('/organizations/org1/needs');
     expect(body.category).toBe('food');
-    expect(body.description).toBe('20 kg - Se nos acaba el alimento');
+    expect(body.description).toBe('Se nos acaba el alimento');
+    expect(body.targetAmount).toBe(20);
+    expect(body.unit).toBe('kg');
     expect(body).not.toHaveProperty('type');
     expect(body).not.toHaveProperty('quantity');
   });
 
-  it('sin cantidad manda solo la descripción', async () => {
+  it('sin cantidad no manda targetAmount ni unit', async () => {
     const fetchMock = mockFetchOk();
     await createNeed('org1', { category: 'transport', title: 'Traslado', description: 'A la vet' });
-    expect(sentBody(fetchMock).description).toBe('A la vet');
+    const body = sentBody(fetchMock);
+    expect(body.description).toBe('A la vet');
+    expect(body).not.toHaveProperty('targetAmount');
+    expect(body).not.toHaveProperty('unit');
   });
 
-  it('con cantidad y sin descripción manda solo la cantidad', async () => {
+  it('con cantidad y sin descripción manda targetAmount + unit', async () => {
     const fetchMock = mockFetchOk();
-    await createNeed('org1', { category: 'foster', title: 'Hogar', quantity: '2 lugares' });
-    expect(sentBody(fetchMock).description).toBe('2 lugares');
+    await createNeed('org1', { category: 'foster', title: 'Hogar', quantityValue: 2, unit: 'noches' });
+    const body = sentBody(fetchMock);
+    expect(body.targetAmount).toBe(2);
+    expect(body.unit).toBe('noches');
+    expect(body).not.toHaveProperty('description');
   });
 });
 

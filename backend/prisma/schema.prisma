@@ -1137,6 +1137,7 @@ model Need {
   status         NeedStatus   @default(active)
   targetAmount   Decimal      @default(1) @map("target_amount") @db.Decimal(10, 2)
   coveredAmount  Decimal      @default(0) @map("covered_amount") @db.Decimal(10, 2)
+  unit           String?      @db.VarChar(20)
   createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz
   updatedAt      DateTime     @default(now()) @map("updated_at") @db.Timestamptz
 
