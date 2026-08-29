@@ -14,6 +14,8 @@ import {
   reopenNeed,
   createNeed,
   updateNeedStatus,
+  confirmNeedContribution,
+  rejectNeedContribution,
   type CreateNeedInput,
   type NeedCategory,
 } from '../../lib/api';
@@ -229,6 +231,42 @@ export function PortalNecesidadesPage() {
     }
   };
 
+  // El aliado confirma o rechaza un aporte pendiente.
+  const respondOffer = async (need: Need, action: 'confirm' | 'reject') => {
+    const offer = need.pendingOffer;
+    if (!offer) return;
+    if (ctx.preview) {
+      setNeeds(
+        (list) =>
+          list?.map((item) =>
+            item.id === need.id
+              ? action === 'confirm'
+                ? {
+                    ...item,
+                    status: 'covered',
+                    coveredByName: offer.name,
+                    coveredByPhone: offer.phone,
+                    pendingOffer: null,
+                  }
+                : { ...item, pendingOffer: null }
+              : item,
+          ) ?? list,
+      );
+      return;
+    }
+    setActingId(need.id);
+    try {
+      if (action === 'confirm') await confirmNeedContribution(offer.contributionId);
+      else await rejectNeedContribution(offer.contributionId);
+      const data = await getPortalNeeds(ctx.adminOrgId);
+      setNeeds(data);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'No se pudo procesar el aporte.');
+    } finally {
+      setActingId(null);
+    }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between gap-3">
@@ -414,6 +452,39 @@ export function PortalNecesidadesPage() {
                         </a>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {need.pendingOffer && (
+                  <div className="mt-2 rounded-xl border border-naranja/30 bg-naranja/5 p-3">
+                    <p className="text-sm font-medium text-naranja">
+                      {need.pendingOffer.name || 'Alguien'} quiere aportar
+                      {need.pendingOffer.amount > 0
+                        ? ` ${need.pendingOffer.amount}${need.unit ? ' ' + need.unit : ''}`
+                        : ''}
+                      . Confirma para registrarlo.
+                    </p>
+                    {need.pendingOffer.phone && (
+                      <p className="mt-1 text-xs text-neutral-500">{need.pendingOffer.phone}</p>
+                    )}
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => respondOffer(need, 'confirm')}
+                        disabled={actingId === need.id}
+                        className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-exito px-3 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5" /> Confirmar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => respondOffer(need, 'reject')}
+                        disabled={actingId === need.id}
+                        className="flex items-center justify-center gap-1.5 rounded-lg border border-neutral-200 px-3 py-2 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-50 disabled:opacity-60"
+                      >
+                        <X className="h-3.5 w-3.5" /> Rechazar
+                      </button>
+                    </div>
                   </div>
                 )}
 

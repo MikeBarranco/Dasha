@@ -213,23 +213,16 @@ export class NeedController {
         return;
       }
 
+      // El aporte se crea como PENDIENTE: NO suma a lo reunido ni marca la necesidad
+      // como cubierta hasta que el aliado lo confirme (confirmContribution). Así ya
+      // no se "cubre al instante"; el aliado decide si lo acepta o lo rechaza.
       const contribution = await prisma.needContribution.create({
         data: {
           needId: id,
           userId,
           amount: contributionAmount,
+          status: 'pending',
           notes: message || notes
-        }
-      });
-
-      const newCoveredAmount = Number(need.coveredAmount) + contributionAmount;
-      const targetAmount = Number(need.targetAmount);
-      
-      await prisma.need.update({
-        where: { id },
-        data: { 
-          coveredAmount: newCoveredAmount,
-          status: newCoveredAmount >= targetAmount ? 'fulfilled' : 'active' 
         }
       });
 
@@ -260,9 +253,133 @@ export class NeedController {
       }
 
       res.status(201).json({
-        message: 'Gracias por ofrecer tu ayuda. La organización ha sido notificada.',
+        message: 'Gracias por ofrecer tu ayuda. El aliado la confirmará y te avisaremos.',
         data: contribution
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // POST /api/v1/needs/contributions/:contributionId/confirm
+  // El aliado CONFIRMA un aporte pendiente: recién ahí suma a lo reunido y, si se
+  // alcanza la meta, marca la necesidad como cubierta. Avisa al usuario que aportó.
+  static async confirmContribution(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      const contributionId = req.params.contributionId as string;
+      if (!userId) {
+        res.status(401).json({ error: 'No autorizado' });
+        return;
+      }
+
+      const contribution = await prisma.needContribution.findUnique({
+        where: { id: contributionId },
+        include: { need: true }
+      });
+      if (!contribution) {
+        res.status(404).json({ error: 'Aporte no encontrado' });
+        return;
+      }
+
+      // Solo un admin/veterinario de la organización dueña de la necesidad puede confirmar.
+      const employee = await prisma.organizationEmployee.findFirst({
+        where: {
+          userId,
+          organizationId: contribution.need.organizationId,
+          roleInOrg: { in: ['admin', 'veterinarian'] }
+        }
+      });
+      const actingUser = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+      if (!employee && actingUser?.role !== 'admin') {
+        res.status(403).json({ error: 'No tienes permisos para confirmar este aporte' });
+        return;
+      }
+
+      if (contribution.status !== 'pending') {
+        res.status(400).json({ error: 'Este aporte ya fue procesado' });
+        return;
+      }
+
+      await prisma.needContribution.update({
+        where: { id: contributionId },
+        data: { status: 'confirmed' }
+      });
+
+      const newCoveredAmount = Number(contribution.need.coveredAmount) + Number(contribution.amount);
+      const targetAmount = Number(contribution.need.targetAmount);
+      await prisma.need.update({
+        where: { id: contribution.needId },
+        data: {
+          coveredAmount: newCoveredAmount,
+          status: newCoveredAmount >= targetAmount ? 'fulfilled' : 'active'
+        }
+      });
+
+      // Avisar al usuario que su ayuda fue confirmada.
+      try {
+        const { NotificationService } = await import('../services/notification.service.js');
+        await NotificationService.sendNotification({
+          userId: contribution.userId,
+          title: '¡Tu ayuda fue confirmada!',
+          body: `El aliado confirmó tu aporte para "${contribution.need.title}". ¡Gracias por apoyar!`,
+          type: 'system',
+          link: '/perfil'
+        });
+      } catch (err) {
+        console.error('Error notificando confirmacion de aporte', err);
+      }
+
+      res.status(200).json({ message: 'Aporte confirmado' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // POST /api/v1/needs/contributions/:contributionId/reject
+  // El aliado RECHAZA un aporte pendiente: no suma nada; la necesidad sigue abierta.
+  static async rejectContribution(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user?.id;
+      const contributionId = req.params.contributionId as string;
+      if (!userId) {
+        res.status(401).json({ error: 'No autorizado' });
+        return;
+      }
+
+      const contribution = await prisma.needContribution.findUnique({
+        where: { id: contributionId },
+        include: { need: true }
+      });
+      if (!contribution) {
+        res.status(404).json({ error: 'Aporte no encontrado' });
+        return;
+      }
+
+      const employee = await prisma.organizationEmployee.findFirst({
+        where: {
+          userId,
+          organizationId: contribution.need.organizationId,
+          roleInOrg: { in: ['admin', 'veterinarian'] }
+        }
+      });
+      const actingUser = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+      if (!employee && actingUser?.role !== 'admin') {
+        res.status(403).json({ error: 'No tienes permisos para rechazar este aporte' });
+        return;
+      }
+
+      if (contribution.status !== 'pending') {
+        res.status(400).json({ error: 'Este aporte ya fue procesado' });
+        return;
+      }
+
+      await prisma.needContribution.update({
+        where: { id: contributionId },
+        data: { status: 'rejected' }
+      });
+
+      res.status(200).json({ message: 'Aporte rechazado' });
     } catch (error) {
       next(error);
     }

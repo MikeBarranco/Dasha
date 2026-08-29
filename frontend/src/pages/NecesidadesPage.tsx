@@ -35,6 +35,9 @@ export function NecesidadesPage() {
   // monto y su valor actual.
   const [amountFor, setAmountFor] = useState<string | null>(null);
   const [amountValue, setAmountValue] = useState('');
+  // Necesidades a las que este usuario ya ofreció ayuda en esta sesión (quedan
+  // pendientes de que el aliado confirme); mostramos un acuse en vez del botón.
+  const [offeredIds, setOfferedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let active = true;
@@ -52,29 +55,16 @@ export function NecesidadesPage() {
       navigate('/login');
       return;
     }
-    const myName = user.name ? user.name.split(' ')[0] : 'Ti';
     setCoveringId(need.id);
     try {
       await coverNeed(need.id, amount);
-      setNeeds(
-        (list) =>
-          list?.map((item) => {
-            if (item.id !== need.id) return item;
-            // Aporte parcial (hay meta): sube lo reunido; si llega a la meta,
-            // queda cubierta. Sin monto: se cubre completa de una vez.
-            if (amount && item.targetAmount) {
-              const nowCovered = item.coveredAmount + amount;
-              const done = nowCovered >= item.targetAmount;
-              return {
-                ...item,
-                coveredAmount: nowCovered,
-                status: done ? 'covered' : item.status,
-                coveredByName: done ? myName : item.coveredByName,
-              };
-            }
-            return { ...item, status: 'covered', coveredByName: myName };
-          }) ?? list,
-      );
+      // El aporte queda PENDIENTE de que el aliado lo confirme; NO marcamos la
+      // necesidad como cubierta. Mostramos un acuse local de "pendiente".
+      setOfferedIds((current) => {
+        const next = new Set(current);
+        next.add(need.id);
+        return next;
+      });
       setAmountFor(null);
       setAmountValue('');
     } catch (err) {
@@ -176,7 +166,12 @@ export function NecesidadesPage() {
                 )}
 
                 <div className="mt-4">
-                  {covered ? (
+                  {offeredIds.has(need.id) ? (
+                    <p className="flex items-center gap-1.5 text-sm font-medium text-naranja">
+                      <CheckCircle2 className="h-4 w-4" />
+                      ¡Gracias! Tu ayuda está pendiente de que el aliado la confirme.
+                    </p>
+                  ) : covered ? (
                     <p className="flex items-center gap-1.5 text-sm font-medium text-exito">
                       <CheckCircle2 className="h-4 w-4" />
                       Cubierto por {need.coveredByName ?? 'un patrocinador'}

@@ -1529,18 +1529,28 @@ export class OrganizationController {
         orderBy: { createdAt: 'desc' },
         include: {
           contributions: {
+            where: { status: { in: ['pending', 'confirmed'] } },
             orderBy: { createdAt: 'desc' },
             include: { user: { select: { id: true, name: true, email: true, avatarUrl: true, phone: true } } },
-            take: 1
+            take: 5
           }
         }
       });
-      
-      const mappedNeeds = needs.map(need => ({
-        ...need,
-        coveredBy: need.contributions[0]?.user || null
-      }));
-      
+
+      const mappedNeeds = needs.map(need => {
+        const pending = need.contributions.find(c => c.status === 'pending') || null;
+        const confirmed = need.contributions.find(c => c.status === 'confirmed') || null;
+        return {
+          ...need,
+          // Aporte confirmado más reciente (para "La cubre X" + WhatsApp).
+          coveredBy: confirmed?.user || null,
+          // Aporte PENDIENTE de confirmar (para los botones Confirmar/Rechazar del aliado).
+          pendingOffer: pending
+            ? { id: pending.id, amount: pending.amount, user: pending.user }
+            : null
+        };
+      });
+
       res.status(200).json(mappedNeeds);
     } catch (error) {
       next(error);

@@ -54,6 +54,14 @@ export type Need = {
   // necesidad se cubre completa de una vez.
   targetAmount: number | null;
   coveredAmount: number;
+  // Aporte PENDIENTE de confirmar (solo en la vista del portal del aliado): quien se
+  // ofreció y espera que el aliado lo confirme o rechace. null si no hay.
+  pendingOffer?: {
+    contributionId: string;
+    name: string;
+    phone: string | null;
+    amount: number;
+  } | null;
   createdAgo: string;
 };
 

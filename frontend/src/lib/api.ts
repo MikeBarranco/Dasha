@@ -2873,6 +2873,23 @@ function mapNeed(raw: Record<string, unknown>): Need {
   // Texto de cantidad: "20 kg" (targetAmount + unit) o el viejo campo quantity
   // (datos antiguos que guardaban la cantidad dentro de la descripción).
   const quantityText = targetNum > 0 && unit ? `${targetNum} ${unit}` : allyStr(raw.quantity);
+  // Aporte pendiente de confirmar (Isabel: pendingOffer = { id, amount, user }).
+  const pendingRaw =
+    raw.pendingOffer && typeof raw.pendingOffer === 'object'
+      ? (raw.pendingOffer as Record<string, unknown>)
+      : null;
+  const pendingUser =
+    pendingRaw && pendingRaw.user && typeof pendingRaw.user === 'object'
+      ? (pendingRaw.user as Record<string, unknown>)
+      : null;
+  const pendingOffer = pendingRaw
+    ? {
+        contributionId: allyStr(pendingRaw.id),
+        name: pendingUser ? allyStr(pendingUser.name) : '',
+        phone: (pendingUser ? allyStr(pendingUser.phone) : '') || null,
+        amount: Number(pendingRaw.amount) || 0,
+      }
+    : null;
   return {
     id: allyStr(raw.id ?? raw._id),
     type: needTypeValues.includes(typeRaw as NeedType) ? (typeRaw as NeedType) : 'other',
@@ -2888,6 +2905,7 @@ function mapNeed(raw: Record<string, unknown>): Need {
     coveredByPhone,
     targetAmount: Number.isFinite(targetNum) && targetNum > 0 ? targetNum : null,
     coveredAmount: Number.isFinite(coveredNum) && coveredNum > 0 ? coveredNum : 0,
+    pendingOffer,
     createdAgo: created ? timeAgo(created) : '',
   };
 }
@@ -2923,6 +2941,17 @@ export async function coverNeed(id: string, amount?: number, message?: string): 
     method: 'POST',
     body: JSON.stringify(body),
   });
+}
+
+// El aliado confirma un aporte pendiente (recién ahí suma a lo reunido y, si llega a
+// la meta, la necesidad queda cubierta). POST /needs/contributions/:id/confirm.
+export async function confirmNeedContribution(contributionId: string): Promise<void> {
+  await authedRaw(`/needs/contributions/${contributionId}/confirm`, { method: 'POST' });
+}
+
+// El aliado rechaza un aporte pendiente (no suma nada; la necesidad sigue abierta).
+export async function rejectNeedContribution(contributionId: string): Promise<void> {
+  await authedRaw(`/needs/contributions/${contributionId}/reject`, { method: 'POST' });
 }
 
 // Necesidades del portal CON el teléfono de quien se comprometió (Isabel:
