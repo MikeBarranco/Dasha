@@ -44,6 +44,10 @@ export type Animal = {
   size: AnimalSize;
   zone: string;
   photos: string[];
+  // Álbum del recorrido (mismo orden que photos): cada foto con su "momento"
+  // ("En la calle", "Avistamiento", "En rehabilitación", "Con su familia"). Opcional;
+  // si no viene, la ficha usa solo photos.
+  album?: { url: string; moment: string }[];
   story: string;
   diagnosis: string;
   vet: string;

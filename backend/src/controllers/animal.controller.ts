@@ -373,7 +373,14 @@ export class AnimalController {
         where: { status: 'adopted' },
         include: {
           photos: {
-            orderBy: { createdAt: 'desc' }
+            orderBy: { orderIndex: 'asc' }
+          },
+          // Reporte original (fotos de calle + avistamientos) para el álbum completo.
+          report: {
+            include: {
+              photos: { orderBy: { orderIndex: 'asc' } },
+              caseActions: { orderBy: { createdAt: 'asc' } }
+            }
           },
           organization: {
             select: { id: true, name: true, logoUrl: true }
