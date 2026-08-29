@@ -1236,7 +1236,13 @@ type RawAnimal = {
   totalRaised: string | null;
   // Cada foto puede traer un caption tipo "Día 1: ...", "Semana 2: ..." con el
   // que se arma la línea de tiempo de rehabilitación (dato real de Isabel).
-  photos: { url: string; orderIndex: number; caption?: string | null }[] | null;
+  photos: { url: string; orderIndex: number; caption?: string | null; createdAt?: string }[] | null;
+  // Reporte original (Isabel lo incluye para el álbum completo): sus fotos de calle
+  // (ciudadano + voluntario) y los avistamientos (case_actions con foto en metadata).
+  report?: {
+    photos?: { url: string; orderIndex?: number; createdAt?: string }[] | null;
+    caseActions?: { metadata?: unknown; createdAt?: string }[] | null;
+  } | null;
   organization: { name?: string; address?: string } | null;
   // Respaldo a futuro: si el backend algún día expone case_actions anidadas, se
   // leen bajo cualquiera de estos nombres; si no vienen, se usan los captions.
@@ -1448,9 +1454,56 @@ function mapMedical(raw: RawAnimal): MedicalRecord | undefined {
   return { sterilized, entries: allEntries };
 }
 
+// Saca la URL de foto de un avistamiento (case_action) leyendo su metadata, que
+// puede traer la foto bajo photoUrl / photo_url / url.
+function sightingPhotoUrl(caseAction: unknown): string | null {
+  if (!caseAction || typeof caseAction !== 'object') return null;
+  const meta = (caseAction as Record<string, unknown>).metadata;
+  if (!meta || typeof meta !== 'object') return null;
+  const obj = meta as Record<string, unknown>;
+  const url = obj.photoUrl ?? obj.photo_url ?? obj.url;
+  return typeof url === 'string' && url ? url : null;
+}
+
 function mapAnimal(raw: RawAnimal): Animal {
   const sortedPhotos = [...(raw.photos ?? [])].sort((a, b) => a.orderIndex - b.orderIndex);
-  const photos = sortedPhotos.map((photo) => photo.url).filter(Boolean);
+
+  // Álbum COMPLETO del recorrido, para que ninguna foto se pierda: fotos del reporte
+  // (calle + voluntario) -> avistamientos (case_actions con foto) -> fotos del animal
+  // (aliado/rehab/momentos de adopción). Se DEDUPLICAN por URL (la 1a foto del
+  // reporte se copia al animal al ingresar, así no sale dos veces).
+  const report = raw.report && typeof raw.report === 'object' ? raw.report : null;
+  const reportPhotos = Array.isArray(report?.photos)
+    ? [...report!.photos]
+        .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
+        .map((p) => p.url)
+    : [];
+  const sightingUrls = Array.isArray(report?.caseActions)
+    ? report!.caseActions.map(sightingPhotoUrl).filter((u): u is string => Boolean(u))
+    : [];
+
+  // Álbum con el "momento" de cada foto, deduplicado por URL. El orden es el
+  // recorrido: calle -> avistamiento -> rehabilitación/momentos. photos es solo las
+  // URLs en el mismo orden (para el carrusel).
+  const isAdopted = raw.status === 'adopted';
+  const album: { url: string; moment: string }[] = [];
+  const seen = new Set<string>();
+  const pushEntry = (url: string | null | undefined, moment: string) => {
+    if (!url || seen.has(url)) return;
+    seen.add(url);
+    album.push({ url, moment });
+  };
+  reportPhotos.forEach((url) => pushEntry(url, 'En la calle'));
+  sightingUrls.forEach((url) => pushEntry(url, 'Avistamiento'));
+  sortedPhotos.forEach((photo) =>
+    pushEntry(
+      photo.url,
+      (photo.caption && photo.caption.trim()) || (isAdopted ? 'Con su familia' : 'En rehabilitación'),
+    ),
+  );
+
+  const photos = album.map((entry) => entry.url);
+
   return {
     id: String(raw.id),
     name: raw.name,
@@ -1458,6 +1511,7 @@ function mapAnimal(raw: RawAnimal): Animal {
     size: 'Mediano',
     zone: raw.organization?.address ?? raw.organization?.name ?? 'Puebla',
     photos: photos.length > 0 ? photos : ['/placeholder-animal.svg'],
+    album: album.length > 0 ? album : undefined,
     // La descripción pública del aliado se guarda en `story`; dejamos `description`
     // como respaldo por si viniera en ese campo.
     story: raw.history ?? raw.story ?? raw.description ?? '',

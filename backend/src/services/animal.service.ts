@@ -109,6 +109,15 @@ export class AnimalService {
         photos: {
           orderBy: { orderIndex: 'asc' }
         },
+        // Reporte original: sus fotos de calle (ciudadano + voluntario) y los
+        // avistamientos (case_actions con foto en metadata). Se incluyen para que
+        // el álbum del animal muestre TODO el recorrido y no se pierda ninguna foto.
+        report: {
+          include: {
+            photos: { orderBy: { orderIndex: 'asc' } },
+            caseActions: { orderBy: { createdAt: 'asc' } }
+          }
+        },
         organization: {
           select: { name: true, address: true }
         },

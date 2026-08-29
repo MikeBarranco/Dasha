@@ -405,7 +405,16 @@ export class UserController {
         where: { adoptedByUserId: userId },
         include: {
           organization: { select: { name: true } },
-          photos: true
+          photos: { orderBy: { orderIndex: 'asc' } },
+          // Reporte original (fotos de calle + avistamientos) para que el álbum
+          // muestre TODO el recorrido, no solo lo que subió el aliado.
+          report: {
+            include: {
+              photos: { orderBy: { orderIndex: 'asc' } },
+              caseActions: { orderBy: { createdAt: 'asc' } }
+            }
+          },
+          timeline: { orderBy: { date: 'asc' } }
         }
       });
 

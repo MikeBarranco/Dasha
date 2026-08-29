@@ -77,6 +77,9 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
   const touchStartX = useRef(0);
   const multiTouch = useRef(false);
   const photo = animal.photos[activePhoto];
+  // "Momento" de la foto activa (En la calle / Avistamiento / En rehabilitación /
+  // Con su familia) para el álbum estilo galería; puede no existir en fotos viejas.
+  const moment = animal.album?.[activePhoto]?.moment;
   const { dragControls, scrollRef, onPointerDown, onPointerMove, onHandlePointerDown, onDragEnd } =
     useSheetDismiss(onClose);
 
@@ -139,6 +142,11 @@ export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
           <span className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-cobalto">
             {animal.status}
           </span>
+          {moment && (
+            <span className="pointer-events-none absolute bottom-3 left-3 rounded-full bg-black/55 px-3 py-1 text-xs font-medium text-white">
+              {moment}
+            </span>
+          )}
           <ShareButton
             title={`${animal.name} en Dasha`}
             text={`Conoce a ${animal.name}, ${animal.status.toLowerCase()}. Apóyalo en Dasha.`}
