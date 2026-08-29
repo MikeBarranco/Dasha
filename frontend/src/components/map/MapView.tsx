@@ -44,13 +44,12 @@ const baseStyle: StyleSpecification = {
   sources: {
     carto: {
       type: 'raster',
-      tiles: [
-        'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-        'https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-        'https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-      ],
+      // OpenStreetMap estandar (sin API key). Cambiado desde CARTO porque CARTO
+      // empezo a exigir llave y las teselas salian con la marca "API key required".
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
       tileSize: 256,
-      attribution: '© OpenStreetMap, © CARTO',
+      maxzoom: 19,
+      attribution: '© OpenStreetMap contributors',
     },
   },
   layers: [{ id: 'carto', type: 'raster', source: 'carto' }],

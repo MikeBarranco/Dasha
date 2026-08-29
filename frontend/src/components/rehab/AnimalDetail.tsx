@@ -41,7 +41,9 @@ type AnimalDetailProps = {
 export function AnimalDetail({ animal, onClose }: AnimalDetailProps) {
   useLockBodyScroll();
   const total = animal.photos.length;
-  const [activePhoto, setActivePhoto] = useState(total - 1);
+  // La ficha abre en la PRIMERA foto (portada elegida por el aliado, orderIndex 0),
+  // igual que la miniatura de la lista de rehabilitación.
+  const [activePhoto, setActivePhoto] = useState(0);
   const [showFull, setShowFull] = useState(false);
   const [donationMode, setDonationMode] = useState<'money' | 'items' | null>(null);
   const [showAdoption, setShowAdoption] = useState(false);
