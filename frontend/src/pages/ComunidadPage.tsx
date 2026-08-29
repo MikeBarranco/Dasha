@@ -23,6 +23,7 @@ import { Avatar } from '../components/ui/Avatar';
 import { cn } from '../lib/cn';
 import { useAuth } from '../lib/useAuth';
 import { compressImage } from '../lib/image';
+import { containsBannedWord } from '../lib/textFilter';
 import {
   getEvents,
   rsvpEvent,
@@ -79,6 +80,9 @@ export function ComunidadPage() {
   const [text, setText] = useState('');
   const [photo, setPhoto] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
+  // Avisos de moderación (lenguaje / anti-spam) del compositor y del comentario.
+  const [postError, setPostError] = useState<string | null>(null);
+  const [replyError, setReplyError] = useState<string | null>(null);
 
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
   const [reportReason, setReportReason] = useState(reportReasons[0]);
@@ -278,6 +282,7 @@ export function ComunidadPage() {
     }
     setOpenComments(post.id);
     setReplyText('');
+    setReplyError(null);
     // Muestra de inmediato las embebidas y refresca desde el backend.
     if (!repliesByPost[post.id]) {
       setRepliesByPost((current) => ({ ...current, [post.id]: post.replies ?? [] }));
@@ -292,6 +297,11 @@ export function ComunidadPage() {
     }
     const clean = replyText.trim();
     if (clean.length < 1 || sendingReply) return;
+    if (containsBannedWord(clean)) {
+      setReplyError('Cuidemos el tono de la comunidad. Evita groserías o insultos.');
+      return;
+    }
+    setReplyError(null);
     setSendingReply(true);
     const optimistic: ForumReply = {
       id: `local-${Date.now()}`,
@@ -310,8 +320,21 @@ export function ComunidadPage() {
     setReplyText('');
     try {
       await createForumReply(postId, clean);
-    } catch {
-      // Pendiente de backend: el comentario queda visible en local.
+    } catch (error) {
+      // Rechazado (lenguaje o anti-spam): quitamos el comentario optimista, el
+      // contador y avisamos el motivo.
+      setRepliesByPost((current) => ({
+        ...current,
+        [postId]: (current[postId] ?? []).filter((r) => r.id !== optimistic.id),
+      }));
+      setPosts((list) =>
+        list
+          ? list.map((p) =>
+              p.id === postId ? { ...p, comments: Math.max(0, p.comments - 1) } : p,
+            )
+          : list,
+      );
+      setReplyError(error instanceof Error ? error.message : 'No se pudo comentar. Intenta de nuevo.');
     } finally {
       setSendingReply(false);
     }
@@ -330,6 +353,13 @@ export function ComunidadPage() {
   const publish = async () => {
     const clean = text.trim();
     if (clean.length < 3 || posting) return;
+    // Filtro de lenguaje del lado del cliente: avisa al instante sin llamar al
+    // backend. El servidor revalida igual (por si alguien evita esta pantalla).
+    if (containsBannedWord(clean)) {
+      setPostError('Cuidemos el tono de la comunidad. Evita groserías o insultos.');
+      return;
+    }
+    setPostError(null);
     setPosting(true);
     const optimistic: ForumPost = {
       id: `local-${Date.now()}`,
@@ -344,12 +374,15 @@ export function ComunidadPage() {
     setPosts((list) => [optimistic, ...(list ?? [])]);
     try {
       await createForumPost({ text: clean, ...(photo ? { imageBase64: photo } : {}) });
-    } catch {
-      // Pendiente de backend: la publicación queda visible en local.
-    } finally {
-      setPosting(false);
       setText('');
       setPhoto(null);
+    } catch (error) {
+      // El backend rechazó (lenguaje o anti-spam): quitamos el optimista y
+      // mostramos el motivo, dejando el texto para que el usuario lo corrija.
+      setPosts((list) => (list ? list.filter((p) => p.id !== optimistic.id) : list));
+      setPostError(error instanceof Error ? error.message : 'No se pudo publicar. Intenta de nuevo.');
+    } finally {
+      setPosting(false);
     }
   };
 
@@ -573,7 +606,10 @@ export function ComunidadPage() {
             <div className="rounded-2xl border border-neutral-200 bg-white p-4">
               <textarea
                 value={text}
-                onChange={(event) => setText(event.target.value)}
+                onChange={(event) => {
+                  setText(event.target.value);
+                  if (postError) setPostError(null);
+                }}
                 maxLength={500}
                 rows={3}
                 placeholder="Comparte algo con la comunidad…"
@@ -611,6 +647,11 @@ export function ComunidadPage() {
                   <Send className="h-4 w-4" /> {posting ? 'Publicando…' : 'Publicar'}
                 </button>
               </div>
+              {postError && (
+                <p className="mt-2 flex items-start gap-1.5 text-xs text-alerta">
+                  <Flag className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" /> {postError}
+                </p>
+              )}
             </div>
           ) : (
             <div className="rounded-2xl border border-dashed border-neutral-300 bg-white/60 px-6 py-6 text-center">
@@ -778,7 +819,10 @@ export function ComunidadPage() {
                             <input
                               type="text"
                               value={replyText}
-                              onChange={(event) => setReplyText(event.target.value)}
+                              onChange={(event) => {
+                                setReplyText(event.target.value);
+                                if (replyError) setReplyError(null);
+                              }}
                               onKeyDown={(event) => {
                                 if (event.key === 'Enter') sendReply(post.id);
                               }}
@@ -800,7 +844,13 @@ export function ComunidadPage() {
                               )}
                             </button>
                           </div>
-                        ) : (
+                        ) : null}
+                        {account && replyError && (
+                          <p className="mt-2 flex items-start gap-1.5 text-xs text-alerta">
+                            <Flag className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" /> {replyError}
+                          </p>
+                        )}
+                        {!account && (
                           <button
                             type="button"
                             onClick={() => navigate('/login')}

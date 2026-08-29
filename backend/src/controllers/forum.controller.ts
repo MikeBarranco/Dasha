@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../config/db';
 import { ForumCategory } from '@prisma/client';
 import { v2 as cloudinary } from 'cloudinary';
+import { containsBannedWord } from '../utils/textFilter';
 
 export class ForumController {
   // GET /forum/posts
@@ -130,6 +131,16 @@ export class ForumController {
         return;
       }
 
+      // Moderación de lenguaje: rechazamos groserías/insultos evidentes. El
+      // mensaje va en `message` para que el frontend lo muestre tal cual.
+      if (containsBannedWord(title ? `${title} ${postContent}` : postContent)) {
+        res.status(400).json({
+          status: 'error',
+          message: 'Cuidemos el tono de la comunidad. Evita groserías o insultos en tu publicación.',
+        });
+        return;
+      }
+
       const imageUrls: string[] = [];
       if (imageBase64) {
         const uploadRes = await cloudinary.uploader.upload(imageBase64, { folder: 'dasha/forum' });
@@ -165,6 +176,15 @@ export class ForumController {
 
       if (!replyContent) {
         res.status(400).json({ error: 'El contenido es requerido' });
+        return;
+      }
+
+      // Moderación de lenguaje en comentarios (misma regla que las publicaciones).
+      if (containsBannedWord(replyContent)) {
+        res.status(400).json({
+          status: 'error',
+          message: 'Cuidemos el tono de la comunidad. Evita groserías o insultos en tu comentario.',
+        });
         return;
       }
 
