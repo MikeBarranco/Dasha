@@ -44,16 +44,25 @@ const baseStyle: StyleSpecification = {
   sources: {
     carto: {
       type: 'raster',
-      tiles: [
-        'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-        'https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-        'https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-      ],
+      // OpenStreetMap estandar (sin API key). Cambiado desde CARTO porque CARTO
+      // empezo a exigir llave y las teselas salian con la marca "API key required".
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
       tileSize: 256,
-      attribution: '© OpenStreetMap, © CARTO',
+      maxzoom: 19,
+      attribution: '© OpenStreetMap contributors',
     },
   },
-  layers: [{ id: 'carto', type: 'raster', source: 'carto' }],
+  layers: [
+    {
+      id: 'carto',
+      type: 'raster',
+      source: 'carto',
+      // Bajamos la saturacion del mapa base: las calles a color de OpenStreetMap
+      // se ven mas suaves (siguen con color) y asi el "mapa de calor" por colonia
+      // y los pines resaltan. Solo el mapa principal lo necesita (es el del heatmap).
+      paint: { 'raster-saturation': -0.5 },
+    },
+  ],
 };
 
 function severityColor(severity: Severity): string {

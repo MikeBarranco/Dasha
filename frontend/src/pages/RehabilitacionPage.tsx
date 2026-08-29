@@ -319,7 +319,7 @@ export function RehabilitacionPage() {
             >
               <div className="relative">
                 <img
-                  src={animal.photos[animal.photos.length - 1]}
+                  src={animal.photos[0]}
                   alt={animal.name}
                   onError={(event) => {
                     event.currentTarget.onerror = null;

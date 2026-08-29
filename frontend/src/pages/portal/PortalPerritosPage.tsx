@@ -141,7 +141,7 @@ export function PortalPerritosPage() {
                 className="flex w-full items-center gap-3 rounded-2xl border border-neutral-200 bg-white p-3 text-left transition-colors hover:border-cobalto/40"
               >
                 <img
-                  src={animal.photos[animal.photos.length - 1]}
+                  src={animal.photos[0]}
                   alt={animal.name}
                   onError={(event) => {
                     event.currentTarget.onerror = null;

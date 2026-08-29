@@ -26,8 +26,6 @@ const typeIcon: Record<NeedType, typeof Bone> = {
   other: HeartHandshake,
 };
 
-const formatMoney = (value: number) => `$${value.toLocaleString('es-MX')}`;
-
 export function NecesidadesPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -37,6 +35,9 @@ export function NecesidadesPage() {
   // monto y su valor actual.
   const [amountFor, setAmountFor] = useState<string | null>(null);
   const [amountValue, setAmountValue] = useState('');
+  // Necesidades a las que este usuario ya ofreció ayuda en esta sesión (quedan
+  // pendientes de que el aliado confirme); mostramos un acuse en vez del botón.
+  const [offeredIds, setOfferedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let active = true;
@@ -54,29 +55,16 @@ export function NecesidadesPage() {
       navigate('/login');
       return;
     }
-    const myName = user.name ? user.name.split(' ')[0] : 'Ti';
     setCoveringId(need.id);
     try {
       await coverNeed(need.id, amount);
-      setNeeds(
-        (list) =>
-          list?.map((item) => {
-            if (item.id !== need.id) return item;
-            // Aporte parcial (hay meta): sube lo reunido; si llega a la meta,
-            // queda cubierta. Sin monto: se cubre completa de una vez.
-            if (amount && item.targetAmount) {
-              const nowCovered = item.coveredAmount + amount;
-              const done = nowCovered >= item.targetAmount;
-              return {
-                ...item,
-                coveredAmount: nowCovered,
-                status: done ? 'covered' : item.status,
-                coveredByName: done ? myName : item.coveredByName,
-              };
-            }
-            return { ...item, status: 'covered', coveredByName: myName };
-          }) ?? list,
-      );
+      // El aporte queda PENDIENTE de que el aliado lo confirme; NO marcamos la
+      // necesidad como cubierta. Mostramos un acuse local de "pendiente".
+      setOfferedIds((current) => {
+        const next = new Set(current);
+        next.add(need.id);
+        return next;
+      });
       setAmountFor(null);
       setAmountValue('');
     } catch (err) {
@@ -160,7 +148,7 @@ export function NecesidadesPage() {
                   <div className="mt-3">
                     <div className="flex items-center justify-between text-xs font-medium text-neutral-600">
                       <span>
-                        {formatMoney(need.coveredAmount)} de {formatMoney(need.targetAmount)}
+                        {need.coveredAmount} de {need.targetAmount} {need.unit ?? ''}
                       </span>
                       <span>
                         {Math.min(100, Math.round((need.coveredAmount / need.targetAmount) * 100))}%
@@ -178,7 +166,12 @@ export function NecesidadesPage() {
                 )}
 
                 <div className="mt-4">
-                  {covered ? (
+                  {offeredIds.has(need.id) ? (
+                    <p className="flex items-center gap-1.5 text-sm font-medium text-naranja">
+                      <CheckCircle2 className="h-4 w-4" />
+                      ¡Gracias! Tu ayuda está pendiente de que el aliado la confirme.
+                    </p>
+                  ) : covered ? (
                     <p className="flex items-center gap-1.5 text-sm font-medium text-exito">
                       <CheckCircle2 className="h-4 w-4" />
                       Cubierto por {need.coveredByName ?? 'un patrocinador'}
@@ -187,9 +180,6 @@ export function NecesidadesPage() {
                     amountFor === need.id ? (
                       <div className="flex gap-2">
                         <div className="relative flex-1">
-                          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-neutral-400">
-                            $
-                          </span>
                           <input
                             value={amountValue}
                             onChange={(event) =>
@@ -197,9 +187,12 @@ export function NecesidadesPage() {
                             }
                             inputMode="numeric"
                             autoFocus
-                            placeholder="Monto"
-                            className="w-full rounded-xl border border-neutral-200 py-2.5 pl-7 pr-3 text-sm outline-none focus:ring-2 focus:ring-cobalto/30"
+                            placeholder="Cantidad"
+                            className="w-full rounded-xl border border-neutral-200 py-2.5 pl-3 pr-16 text-sm outline-none focus:ring-2 focus:ring-cobalto/30"
                           />
+                          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-neutral-400">
+                            {need.unit ?? ''}
+                          </span>
                         </div>
                         <button
                           type="button"

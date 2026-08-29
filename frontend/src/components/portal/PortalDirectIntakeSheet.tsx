@@ -4,7 +4,7 @@ import { X, ImagePlus, Loader2, Trash2 } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { useLockBodyScroll } from '../../lib/useLockBodyScroll';
 import { createDirectIntakeAnimal } from '../../lib/api';
-import { compressImage } from '../../lib/image';
+import { ImageCropper } from '../ui/ImageCropper';
 
 // Alta directa de un animal para adopción (refugio con perritos propios), sin
 // pasar por un rescate. Mismas convenciones que el reporte (dog/cat, tamaños).
@@ -52,19 +52,29 @@ export function PortalDirectIntakeSheet({ orgId, onClose, onCreated }: DirectInt
   const [addingPhoto, setAddingPhoto] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Foto en proceso de recorte: al elegir un archivo abrimos el recortador; la
+  // imagen ya recortada es la que se agrega a la galeria.
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
 
-  const pickPhoto = async (files: FileList | null) => {
+  const pickPhoto = (files: FileList | null) => {
     if (!files || files.length === 0 || addingPhoto) return;
     setAddingPhoto(true);
     setError(null);
-    try {
-      const dataUrl = await compressImage(files[0]);
-      setPhotos((current) => [...current, dataUrl]);
-    } catch {
-      setError('No se pudo procesar la imagen.');
-    } finally {
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropSrc(reader.result as string);
       setAddingPhoto(false);
-    }
+    };
+    reader.onerror = () => {
+      setError('No se pudo leer la imagen.');
+      setAddingPhoto(false);
+    };
+    reader.readAsDataURL(files[0]);
+  };
+
+  const addCroppedPhoto = (dataUrl: string) => {
+    setPhotos((current) => [...current, dataUrl]);
+    setCropSrc(null);
   };
 
   const canSave = photos.length > 0 && name.trim().length >= 2 && !saving;
@@ -99,6 +109,7 @@ export function PortalDirectIntakeSheet({ orgId, onClose, onCreated }: DirectInt
   };
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
       <motion.div
         className="absolute inset-0 bg-black/40"
@@ -159,6 +170,9 @@ export function PortalDirectIntakeSheet({ orgId, onClose, onCreated }: DirectInt
                   accept="image/*"
                   className="hidden"
                   disabled={addingPhoto}
+                  onClick={(event) => {
+                    (event.target as HTMLInputElement).value = '';
+                  }}
                   onChange={(event) => pickPhoto(event.target.files)}
                 />
               </label>
@@ -271,6 +285,10 @@ export function PortalDirectIntakeSheet({ orgId, onClose, onCreated }: DirectInt
         </form>
       </motion.div>
     </div>
+    {cropSrc && (
+      <ImageCropper src={cropSrc} onCancel={() => setCropSrc(null)} onConfirm={addCroppedPhoto} />
+    )}
+    </>
   );
 }
 
