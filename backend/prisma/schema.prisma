@@ -1137,6 +1137,7 @@ model Need {
   status         NeedStatus   @default(active)
   targetAmount   Decimal      @default(1) @map("target_amount") @db.Decimal(10, 2)
   coveredAmount  Decimal      @default(0) @map("covered_amount") @db.Decimal(10, 2)
+  unit           String?      @db.VarChar(20)
   createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz
   updatedAt      DateTime     @default(now()) @map("updated_at") @db.Timestamptz
 
@@ -1151,6 +1152,9 @@ model NeedContribution {
   needId    String   @map("need_id") @db.Uuid
   userId    String   @map("user_id") @db.Uuid
   amount    Decimal  @default(1) @db.Decimal(10, 2)
+  // Estado del aporte: pending (recién ofrecido, esperando al aliado) | confirmed
+  // (el aliado lo aceptó y suma a lo reunido) | rejected (el aliado lo descartó).
+  status    String   @default("pending")
   notes     String?
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 

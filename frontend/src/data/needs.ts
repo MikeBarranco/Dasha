@@ -17,12 +17,30 @@ export const needTypeLabels: Record<NeedType, string> = {
 // open = sin cubrir; covered = alguien se comprometió; delivered = ya entregado.
 export type NeedStatus = 'open' | 'covered' | 'delivered';
 
+// Lista CERRADA de unidades (no texto libre). DEBE coincidir con
+// NeedController.NEED_UNITS del backend. "pesos" cubre la necesidad monetaria.
+export const needUnitOptions = [
+  'kg',
+  'bolsas',
+  'latas',
+  'piezas',
+  'litros',
+  'cobijas',
+  'traslados',
+  'noches',
+  'pesos',
+] as const;
+
 export type Need = {
   id: string;
   type: NeedType;
   title: string;
   description: string;
+  // Texto de cantidad listo para mostrar (ej. "20 kg"), derivado de targetAmount +
+  // unit. Vacío si no hay cantidad.
   quantity: string;
+  // Unidad estructurada (kg, bolsas, pesos…), null si no tiene.
+  unit: string | null;
   organizationName: string;
   organizationId: string;
   animalName: string | null;
@@ -36,6 +54,14 @@ export type Need = {
   // necesidad se cubre completa de una vez.
   targetAmount: number | null;
   coveredAmount: number;
+  // Aporte PENDIENTE de confirmar (solo en la vista del portal del aliado): quien se
+  // ofreció y espera que el aliado lo confirme o rechace. null si no hay.
+  pendingOffer?: {
+    contributionId: string;
+    name: string;
+    phone: string | null;
+    amount: number;
+  } | null;
   createdAgo: string;
 };
 

@@ -2869,12 +2869,34 @@ function mapNeed(raw: Record<string, unknown>): Need {
   const targetNum = Number(raw.targetAmount ?? raw.target_amount ?? 0);
   const coveredNum = Number(raw.coveredAmount ?? raw.covered_amount ?? 0);
   const created = allyStr(raw.createdAt ?? raw.created_at);
+  const unit = allyStr(raw.unit).trim().toLowerCase() || null;
+  // Texto de cantidad: "20 kg" (targetAmount + unit) o el viejo campo quantity
+  // (datos antiguos que guardaban la cantidad dentro de la descripción).
+  const quantityText = targetNum > 0 && unit ? `${targetNum} ${unit}` : allyStr(raw.quantity);
+  // Aporte pendiente de confirmar (Isabel: pendingOffer = { id, amount, user }).
+  const pendingRaw =
+    raw.pendingOffer && typeof raw.pendingOffer === 'object'
+      ? (raw.pendingOffer as Record<string, unknown>)
+      : null;
+  const pendingUser =
+    pendingRaw && pendingRaw.user && typeof pendingRaw.user === 'object'
+      ? (pendingRaw.user as Record<string, unknown>)
+      : null;
+  const pendingOffer = pendingRaw
+    ? {
+        contributionId: allyStr(pendingRaw.id),
+        name: pendingUser ? allyStr(pendingUser.name) : '',
+        phone: (pendingUser ? allyStr(pendingUser.phone) : '') || null,
+        amount: Number(pendingRaw.amount) || 0,
+      }
+    : null;
   return {
     id: allyStr(raw.id ?? raw._id),
     type: needTypeValues.includes(typeRaw as NeedType) ? (typeRaw as NeedType) : 'other',
     title: allyStr(raw.title),
     description: allyStr(raw.description),
-    quantity: allyStr(raw.quantity),
+    quantity: quantityText,
+    unit,
     organizationName: org ? allyStr(org.name) : allyStr(raw.organizationName),
     organizationId: org ? allyStr(org.id) : allyStr(raw.organizationId ?? raw.organization_id),
     animalName: animal ? allyStr(animal.name) : allyStr(raw.animalName) || null,
@@ -2883,6 +2905,7 @@ function mapNeed(raw: Record<string, unknown>): Need {
     coveredByPhone,
     targetAmount: Number.isFinite(targetNum) && targetNum > 0 ? targetNum : null,
     coveredAmount: Number.isFinite(coveredNum) && coveredNum > 0 ? coveredNum : 0,
+    pendingOffer,
     createdAgo: created ? timeAgo(created) : '',
   };
 }
@@ -2918,6 +2941,17 @@ export async function coverNeed(id: string, amount?: number, message?: string): 
     method: 'POST',
     body: JSON.stringify(body),
   });
+}
+
+// El aliado confirma un aporte pendiente (recién ahí suma a lo reunido y, si llega a
+// la meta, la necesidad queda cubierta). POST /needs/contributions/:id/confirm.
+export async function confirmNeedContribution(contributionId: string): Promise<void> {
+  await authedRaw(`/needs/contributions/${contributionId}/confirm`, { method: 'POST' });
+}
+
+// El aliado rechaza un aporte pendiente (no suma nada; la necesidad sigue abierta).
+export async function rejectNeedContribution(contributionId: string): Promise<void> {
+  await authedRaw(`/needs/contributions/${contributionId}/reject`, { method: 'POST' });
 }
 
 // Necesidades del portal CON el teléfono de quien se comprometió (Isabel:
@@ -2957,20 +2991,25 @@ export type CreateNeedInput = {
   category: NeedCategory;
   title: string;
   description?: string;
-  quantity?: string;
+  // Cantidad estructurada: número + unidad de lista cerrada (needUnitOptions). La
+  // cantidad se manda al backend como targetAmount; ya no se pega en la descripción.
+  quantityValue?: number;
+  unit?: string;
   animalId?: string;
 };
 
 // El aliado crea una necesidad para su organización. POST /organizations/:id/needs
 export async function createNeed(orgId: string, input: CreateNeedInput): Promise<void> {
-  const quantity = input.quantity?.trim();
   const description = input.description?.trim();
-  const fullDescription = [quantity, description].filter(Boolean).join(' - ') || undefined;
   const body: Record<string, unknown> = {
     category: input.category,
     title: input.title.trim(),
   };
-  if (fullDescription) body.description = fullDescription;
+  if (description) body.description = description;
+  if (typeof input.quantityValue === 'number' && input.quantityValue > 0) {
+    body.targetAmount = input.quantityValue;
+  }
+  if (input.unit) body.unit = input.unit;
   if (input.animalId) body.animalId = input.animalId;
   await authedRaw(`/organizations/${orgId}/needs`, {
     method: 'POST',
