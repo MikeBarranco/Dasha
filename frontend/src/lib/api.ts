@@ -997,6 +997,9 @@ export type MyOrgInput = {
   phone?: string;
   whatsapp?: string;
   website?: string;
+  // Redes sociales del aliado (URL). Cadena vacía = borrar (backend => null).
+  facebookUrl?: string;
+  instagramUrl?: string;
   logoBase64?: string;
   coverBase64?: string;
 };
@@ -2361,6 +2364,8 @@ export async function getAlly(id: string): Promise<Ally | null> {
     phone: allyStr(raw.phone) || null,
     whatsapp: allyStr(raw.whatsapp) || null,
     website: allyStr(raw.website) || null,
+    facebookUrl: allyStr(raw.facebookUrl ?? raw.facebook_url) || null,
+    instagramUrl: allyStr(raw.instagramUrl ?? raw.instagram_url) || null,
     orgType: allyTypes.includes(orgTypeRaw as AllyType) ? (orgTypeRaw as AllyType) : 'ngo',
     isVerified: Boolean(raw.isVerified ?? raw.is_verified),
     lat: Number(raw.lat ?? 0),

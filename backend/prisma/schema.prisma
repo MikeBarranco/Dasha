@@ -519,6 +519,8 @@ model Organization {
   whatsapp        String?                                @db.VarChar(20)
   location        Unsupported("geography(Point, 4326)")?
   website         String?                                @db.VarChar(255)
+  facebookUrl     String?                                @db.VarChar(255)
+  instagramUrl    String?                                @db.VarChar(255)
   schedule        Json?
   promo           String?                                @db.VarChar(500)
   orgType         OrgType                                @map("org_type")
